@@ -1,0 +1,26 @@
+stages:
+  - build
+
+.docker_login: &docker_login
+  - mkdir -p /kaniko/.docker
+  - echo "{\"auths\":{\"$hub.docker.com\":{\"auth\":\"$(printf "%s:%s" "${HUB_LOGIN}" "${HUB_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+
+
+
+build_demo_image:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: ['']
+  before_script:
+    - *docker_login
+  tags:
+    - kubernetes
+  cache: {}
+  script:
+    - echo $CI_COMMIT_TAG > version
+    - >-
+      /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "austyh/testwise:latest"
