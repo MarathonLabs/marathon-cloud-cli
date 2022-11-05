@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 func main() {
@@ -23,12 +24,13 @@ func main() {
 		fmt.Println("Can't login: ", err.Error())
 		os.Exit(6)
 	}
-
+	fmt.Println(time.Now().Format(time.Stamp), "Creating new run")
 	runId, err := SendNewRun(token, apk, testApk, commitName, commitLink)
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(5)
 	}
+	go Subscribe(token, runId)
 	state, err := WaitRunForEnd(runId, token)
 	if err != nil {
 		fmt.Println(err.Error())
