@@ -70,6 +70,19 @@ func sendPostRequest(url string, reqBody *[]byte) *http.Response {
 	return res
 }
 
+func sendGetRequest(url string, token string) *http.Response {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error :", err.Error())
+		return nil
+	}
+	return res
+
+}
+
 //{"run_id":"0dfe9125-dad5-42c9-b642-5599530caa79","status":"ok"}
 
 type CreateRunResponse struct {

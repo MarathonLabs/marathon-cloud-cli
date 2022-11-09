@@ -19,6 +19,7 @@ func main() {
 	testApk := conf.GetString("TEST_APK")
 	commitName := conf.GetString("NAME")
 	commitLink := conf.GetString("LINK")
+	allureOutput := conf.GetString("ALLURE_OUTPUT")
 	token, err := Authorize(login, password)
 	if err != nil {
 		fmt.Println("Can't login: ", err.Error())
@@ -31,7 +32,12 @@ func main() {
 		os.Exit(5)
 	}
 	go Subscribe(token, runId)
+
 	state, err := WaitRunForEnd(runId, token)
+	if len(allureOutput) > 0 {
+		GetArtifacts(token, runId, allureOutput)
+	}
+
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(4)
@@ -39,4 +45,5 @@ func main() {
 	if state != "passed" {
 		os.Exit(3)
 	}
+
 }
