@@ -8,6 +8,6 @@ COPY . .
 RUN go build -o marathon-cli
 
 FROM golang:1.18.8-alpine3.16 as production-stage
-COPY --from=build-stage /app/marathon-cli /usr/bin/testwise
+COPY --from=build-stage /app/marathon-cli /usr/bin/marathon-cli
 RUN chmod +x /usr/bin/marathon-cli
 CMD ["/usr/bin/marathon-cli"]
