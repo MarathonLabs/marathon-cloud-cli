@@ -5,9 +5,9 @@ COPY go.mod .
 COPY go.sum .
 RUN go mod download
 COPY . .
-RUN go build -o testwise
+RUN go build -o marathon-cli
 
 FROM golang:1.18.8-alpine3.16 as production-stage
-COPY --from=build-stage /app/testwise /usr/bin/testwise
-RUN chmod +x /usr/bin/testwise
-CMD ["/usr/bin/testwise"]
+COPY --from=build-stage /app/marathon-cli /usr/bin/testwise
+RUN chmod +x /usr/bin/marathon-cli
+CMD ["/usr/bin/marathon-cli"]

@@ -23,4 +23,4 @@ build_demo_image:
       /kaniko/executor
       --context "${CI_PROJECT_DIR}"
       --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
-      --destination "austyh/testwise:latest"
+      --destination "austyh/marathonlabs:latest"
