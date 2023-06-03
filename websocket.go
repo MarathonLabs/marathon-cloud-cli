@@ -26,7 +26,7 @@ func Subscribe(token string, runId string) {
   interrupt := make(chan os.Signal, 1)
   signal.Notify(interrupt, os.Interrupt)
 
-  u := url.URL{Scheme: "ws", Host: "devruntime.testwise.pro:1005", Path: "/hello", RawQuery: "token=" + token + "&run_id=" + runId}
+  u := url.URL{Scheme: "ws", Host: "runtime.testwise.pro:1005", Path: "/hello", RawQuery: "token=" + token + "&run_id=" + runId}
 
   c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
   if err != nil {
