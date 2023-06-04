@@ -31,7 +31,7 @@ func Authorize(login string, password string) (string, error) {
 
 	reqBody, err := json.Marshal(authBody)
 
-	resp := sendPostRequest("https://dev.testwise.pro/api/v1/cli/auth", &reqBody)
+	resp := sendPostRequest("https://app.testwise.pro/api/v1/cli/auth", &reqBody)
 	if err != nil {
 		fmt.Println("Error while creating auth json: ", err.Error())
 	}
@@ -120,7 +120,7 @@ func SendNewRunWithKey(apiKey string, apkPath string, testApkPath string, commit
 
 	writer.Close()
 
-	r, err := http.NewRequest("POST", "https://dev.testwise.pro/api/v1/run?api_key=" + apiKey, body)
+	r, err := http.NewRequest("POST", "https://app.testwise.pro/api/v1/run?api_key=" + apiKey, body)
   if err != nil {
     fmt.Println(err)
   }
@@ -132,7 +132,6 @@ func SendNewRunWithKey(apiKey string, apkPath string, testApkPath string, commit
     fmt.Println(err)
 		return "", err
 	}
-  fmt.Println(string(bodyBytes))
 	var respData CreateRunResponse
 	err = json.Unmarshal(bodyBytes, &respData)
 
@@ -171,7 +170,7 @@ func SendNewRun(token string, apkPath string, testApkPath string, commitName str
 
 	writer.Close()
 
-	r, _ := http.NewRequest("POST", "https://dev.testwise.pro/api/v1/run", body)
+	r, _ := http.NewRequest("POST", "https://app.testwise.pro/api/v1/run", body)
 	r.Header.Add("Content-Type", writer.FormDataContentType())
 	r.Header.Add("Authorization", "Bearer "+token)
 	client := &http.Client{}
@@ -207,7 +206,7 @@ func WaitRunForEnd(runId string, token string) (string, error) {
 	var respData RunStats
 	for {
 		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://dev.testwise.pro/api/v1/run/"+runId, nil)
+		req, err := http.NewRequest("GET", "https://app.testwise.pro/api/v1/run/"+runId, nil)
 		if err != nil {
 			return "", err
 		}
@@ -227,7 +226,7 @@ func WaitRunForEnd(runId string, token string) (string, error) {
 		}
 		time.Sleep(5 * time.Second)
 	}
-	fmt.Println("Allure report - https://dev.testwise.pro/api/v1/report/" + respData.ID)
+	fmt.Println("Allure report - https://app.testwise.pro/api/v1/report/" + respData.ID)
 	fmt.Println("Passed - " + strconv.Itoa(int(respData.Passed.Int64)))
 	fmt.Println("Failed - " + strconv.Itoa(int(respData.Failed.Int64)))
 	fmt.Println("Ignored - " + strconv.Itoa(int(respData.Ignored.Int64)))
@@ -238,7 +237,7 @@ func WaitRunForEndWithApiKey(runId string, apiKey string) (string, error) {
 	var respData RunStats
 	for {
 		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://dev.testwise.pro/api/v1/run/"+runId + "?api_key=" + apiKey, nil)
+		req, err := http.NewRequest("GET", "https://app.testwise.pro/api/v1/run/"+runId + "?api_key=" + apiKey, nil)
 		if err != nil {
 			return "", err
 		}
@@ -257,6 +256,7 @@ func WaitRunForEndWithApiKey(runId string, apiKey string) (string, error) {
 		}
 		time.Sleep(5 * time.Second)
 	}
+	fmt.Println("Allure report - https://app.testwise.pro/api/v1/report/" + respData.ID)
 	fmt.Println("Passed - " + strconv.Itoa(int(respData.Passed.Int64)))
 	fmt.Println("Failed - " + strconv.Itoa(int(respData.Failed.Int64)))
 	fmt.Println("Ignored - " + strconv.Itoa(int(respData.Ignored.Int64)))
@@ -270,7 +270,7 @@ type TokenResponse struct {
 func RequestJwtToken(apiKey string) (string, error) {
     var tokenObj TokenResponse
   		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://dev.testwise.pro/api/v1/user/jwt?api_key=" + apiKey, nil)
+		req, err := http.NewRequest("GET", "https://app.testwise.pro/api/v1/user/jwt?api_key=" + apiKey, nil)
 		if err != nil {
 			return "", err
 		}

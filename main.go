@@ -47,9 +47,7 @@ func main() {
       os.Exit(3)
     }
   } else {
-    fmt.Println("Go with api_key")
     jwtToken, err := RequestJwtToken(apiKey) 
-    fmt.Println("JWT = ", jwtToken)
     if err != nil {
       fmt.Println(err)
       return
@@ -59,7 +57,6 @@ func main() {
       fmt.Println(err.Error())
       os.Exit(5)
     }
-    fmt.Println("runId = ", runId)
     go Subscribe(jwtToken, runId)
     state, err := WaitRunForEndWithApiKey(runId, apiKey)
     if len(allureOutput) > 0 {
