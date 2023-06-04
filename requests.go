@@ -59,7 +59,7 @@ func sendPostRequest(url string, reqBody *[]byte) *http.Response {
 		fmt.Println("Error :", err.Error())
 		return nil
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "devlication/json")
 
 	client := &http.Client{}
 	res, err := client.Do(req)
@@ -120,12 +120,16 @@ func SendNewRunWithKey(apiKey string, apkPath string, testApkPath string, commit
 
 	writer.Close()
 
-	r, _ := http.NewRequest("POST", "https://app.testwise.pro/api/v1/run?api_key=" + apiKey, body)
+	r, err := http.NewRequest("POST", "https://app.testwise.pro/api/v1/run?api_key=" + apiKey, body)
+  if err != nil {
+    fmt.Println(err)
+  }
 	r.Header.Add("Content-Type", writer.FormDataContentType())
 	client := &http.Client{}
 	resp, _ := client.Do(r)
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
+    fmt.Println(err)
 		return "", err
 	}
 	var respData CreateRunResponse
@@ -252,6 +256,7 @@ func WaitRunForEndWithApiKey(runId string, apiKey string) (string, error) {
 		}
 		time.Sleep(5 * time.Second)
 	}
+	fmt.Println("Allure report - https://app.testwise.pro/api/v1/report/" + respData.ID)
 	fmt.Println("Passed - " + strconv.Itoa(int(respData.Passed.Int64)))
 	fmt.Println("Failed - " + strconv.Itoa(int(respData.Failed.Int64)))
 	fmt.Println("Ignored - " + strconv.Itoa(int(respData.Ignored.Int64)))
