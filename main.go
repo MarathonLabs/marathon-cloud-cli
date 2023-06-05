@@ -1,18 +1,21 @@
 package main
 
 import (
-  "fmt"
-  "os"
-  "time"
+	"cli/allure"
+	"cli/config"
+	"cli/request"
+	"fmt"
+	"os"
+	"time"
 )
 
 func main() {
-  err := ReadFlags()
+  err := config.ReadFlags()
   if err != nil {
     fmt.Println("Error reading flags:\n", err.Error())
     os.Exit(7)
   }
-  conf := GetConfig()
+  conf := config.GetConfig()
   login := conf.GetString("LOGIN")
   password := conf.GetString("PASSWORD")
   apiKey := conf.GetString("API_KEY")
@@ -22,22 +25,22 @@ func main() {
   commitLink := conf.GetString("LINK")
   allureOutput := conf.GetString("ALLURE_OUTPUT")
   if len(apiKey) == 0 {
-    token, err := Authorize(login, password)
+    token, err := request.Authorize(login, password)
     if err != nil {
       fmt.Println("Can't login: ", err.Error())
       os.Exit(6)
     }
     fmt.Println(time.Now().Format(time.Stamp), "Creating new run")
-    runId, err := SendNewRun(token, apk, testApk, commitName, commitLink)
+    runId, err := request.SendNewRun(token, apk, testApk, commitName, commitLink)
     if err != nil {
       fmt.Println(err.Error())
       os.Exit(5)
     }
-    go Subscribe(token, runId)
+    go request.Subscribe(token, runId)
 
-    state, err := WaitRunForEnd(runId, token)
+    state, err := request.WaitRunForEnd(runId, token)
     if len(allureOutput) > 0 {
-      GetArtifacts(token, runId, allureOutput)
+      allure.GetArtifacts(token, runId, allureOutput)
     }
     if err != nil {
       fmt.Println(err.Error())
@@ -47,20 +50,20 @@ func main() {
       os.Exit(3)
     }
   } else {
-    jwtToken, err := RequestJwtToken(apiKey) 
+    jwtToken, err := request.RequestJwtToken(apiKey) 
     if err != nil {
       fmt.Println(err)
       return
     }
-    runId, err := SendNewRunWithKey(apiKey, apk, testApk, commitName, commitLink)
+    runId, err := request.SendNewRunWithKey(apiKey, apk, testApk, commitName, commitLink)
     if err != nil {
       fmt.Println(err.Error())
       os.Exit(5)
     }
-    go Subscribe(jwtToken, runId)
-    state, err := WaitRunForEndWithApiKey(runId, apiKey)
+    go request.Subscribe(jwtToken, runId)
+    state, err := request.WaitRunForEndWithApiKey(runId, apiKey)
     if len(allureOutput) > 0 {
-      GetArtifacts(jwtToken, runId, allureOutput)
+      allure.GetArtifacts(jwtToken, runId, allureOutput)
     }
     if err != nil {
       fmt.Println(err.Error())
@@ -73,4 +76,8 @@ func main() {
 
 
 
+}
+
+func ReadFlags() {
+	panic("unimplemented")
 }
