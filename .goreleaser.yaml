@@ -1,0 +1,25 @@
+project_name: marathon-cloud
+builds:
+  - binary: marathon-cloud
+    main: main.go
+universal_binaries:
+- replace: true
+archives:
+  - format: tar.gz
+    files:
+      - README.md
+      - LICENSE
+checksum:
+  name_template: 'checksums.txt'
+release:
+  disable: false
+brews:
+  - tap:
+      owner: Malinskiy
+      name: homebrew-tap
+      branch: master
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://github.com/MarathonLabs/marathon-cloud-cli"
+    description: "Command-line interface for using Marathon Cloud"
+    license: "MIT"
+    folder: Formula
