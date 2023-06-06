@@ -23,6 +23,11 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.18'
+      - name: Docker Hub Login
+        run: echo "$HUB_PASSWORD" | docker login --username $HUB_LOGIN --password-stdin
+        env:
+          HUB_LOGIN: ${{ secrets.HUB_LOGIN }}
+          HUB_PASSWORD: ${{ secrets.HUB_PASSWORD }}
       - uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
