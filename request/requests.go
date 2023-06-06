@@ -1,4 +1,4 @@
-package main
+package request
 
 import (
 	"bytes"
@@ -70,7 +70,7 @@ func sendPostRequest(url string, reqBody *[]byte) *http.Response {
 	return res
 }
 
-func sendGetRequest(url string, token string) *http.Response {
+func SendGetRequest(url string, token string) *http.Response {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	client := &http.Client{}

@@ -1,4 +1,4 @@
-package main
+package allure
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strings"
+  "cli/request"
 )
 
 type ArtifactTree struct {
@@ -17,7 +18,7 @@ type ArtifactTree struct {
 }
 
 func GetFolder(token string, folder string) *[]ArtifactTree {
-	resp := sendGetRequest("https://app.testwise.pro/api/v1/artifact/"+folder, token)
+	resp := request.SendGetRequest("https://app.testwise.pro/api/v1/artifact/"+folder, token)
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -32,7 +33,7 @@ func GetFolder(token string, folder string) *[]ArtifactTree {
 }
 
 func GetFoldersRecursively(token string, folder string, whereToSave string) {
-	resp := sendGetRequest("https://app.testwise.pro/api/v1/artifact/"+folder, token)
+	resp := request.SendGetRequest("https://app.testwise.pro/api/v1/artifact/"+folder, token)
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -72,7 +73,7 @@ func DownloadFile(token string, fileID string, whereToSave string) {
 	fileFolder := path.Join(whereToSave, subFolder)
 	os.MkdirAll(fileFolder, os.ModePerm)
 	validFileID := strings.ReplaceAll(fileID, "#", "%23")
-	resp := sendGetRequest("https://app.testwise.pro/api/v1/artifact?key="+validFileID, token)
+	resp := request.SendGetRequest("https://app.testwise.pro/api/v1/artifact?key="+validFileID, token)
 	defer resp.Body.Close()
 	filePath := path.Join(fileFolder, fileName)
 	out, err := os.Create(filePath)
