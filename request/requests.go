@@ -226,7 +226,7 @@ func WaitRunForEnd(runId string, token string) (string, error) {
 		}
 		time.Sleep(5 * time.Second)
 	}
-	fmt.Println("Allure report - https://app.testwise.pro/api/v1/report/" + respData.ID)
+	fmt.Println("Allure report - https://cloud.marathonlabs.io/api/v1/report/" + respData.ID)
 	fmt.Println("Passed - " + strconv.Itoa(int(respData.Passed.Int64)))
 	fmt.Println("Failed - " + strconv.Itoa(int(respData.Failed.Int64)))
 	fmt.Println("Ignored - " + strconv.Itoa(int(respData.Ignored.Int64)))
@@ -256,7 +256,7 @@ func WaitRunForEndWithApiKey(runId string, apiKey string) (string, error) {
 		}
 		time.Sleep(5 * time.Second)
 	}
-	fmt.Println("Allure report - https://app.testwise.pro/api/v1/report/" + respData.ID)
+	fmt.Println("Allure report - https://cloud.marathonlabs.io/api/v1/report/" + respData.ID)
 	fmt.Println("Passed - " + strconv.Itoa(int(respData.Passed.Int64)))
 	fmt.Println("Failed - " + strconv.Itoa(int(respData.Failed.Int64)))
 	fmt.Println("Ignored - " + strconv.Itoa(int(respData.Ignored.Int64)))
