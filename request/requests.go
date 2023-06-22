@@ -90,27 +90,29 @@ type CreateRunResponse struct {
 	Status string `json:"status"`
 }
 
-func SendNewRunWithKey(apiKey string, apkPath string, testApkPath string, commitName string, commitLink string) (string, error) {
-	apkFile, err := os.Open(apkPath)
+func SendNewRunWithKey(apiKey string, appPath string, testAppPath string, commitName string, commitLink string, platform string) (string, error) {
+	appFile, err := os.Open(appPath)
 	if err != nil {
 		fmt.Println("Can't read apk file")
 		return "", err
 	}
-	defer apkFile.Close()
-	testApkFile, err := os.Open(testApkPath)
+	defer appFile.Close()
+	testAppFile, err := os.Open(testAppPath)
 	if err != nil {
 		fmt.Println("Can't read testapk file")
 		return "", err
 	}
-	defer testApkFile.Close()
+	defer testAppFile.Close()
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	part, _ := writer.CreateFormFile("app", filepath.Base(apkFile.Name()))
-	io.Copy(part, apkFile)
-	part2, _ := writer.CreateFormFile("testapp", filepath.Base(apkFile.Name()))
 
-	io.Copy(part2, testApkFile)
+	part, _ := writer.CreateFormFile("app", filepath.Base(appFile.Name()))
+	io.Copy(part, appFile)
+	part2, _ := writer.CreateFormFile("testapp", filepath.Base(testAppFile.Name()))
+	io.Copy(part2, testAppFile)
+
+	writer.WriteField("platform", platform)
 	if len(commitName) > 0 {
 		writer.WriteField("name", commitName)
 	}
@@ -120,16 +122,16 @@ func SendNewRunWithKey(apiKey string, apkPath string, testApkPath string, commit
 
 	writer.Close()
 
-	r, err := http.NewRequest("POST", "https://app.testwise.pro/api/v1/run?api_key=" + apiKey, body)
-  if err != nil {
-    fmt.Println(err)
-  }
+	r, err := http.NewRequest("POST", "https://app.testwise.pro/api/v1/run?api_key="+apiKey, body)
+	if err != nil {
+		fmt.Println(err)
+	}
 	r.Header.Add("Content-Type", writer.FormDataContentType())
 	client := &http.Client{}
 	resp, _ := client.Do(r)
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-    fmt.Println(err)
+		fmt.Println(err)
 		return "", err
 	}
 	var respData CreateRunResponse
@@ -138,29 +140,31 @@ func SendNewRunWithKey(apiKey string, apkPath string, testApkPath string, commit
 	return respData.RunID, nil
 }
 
-
 // deprecate in October 2023
-func SendNewRun(token string, apkPath string, testApkPath string, commitName string, commitLink string) (string, error) {
-	apkFile, err := os.Open(apkPath)
+func SendNewRun(token string, appPath string, testAppPath string, commitName string, commitLink string, platform string) (string, error) {
+	appFile, err := os.Open(appPath)
 	if err != nil {
-		fmt.Println("Can't read apk file")
+		fmt.Println("Can't read app file")
 		return "", err
 	}
-	defer apkFile.Close()
-	testApkFile, err := os.Open(testApkPath)
+	defer appFile.Close()
+	testAppFile, err := os.Open(testAppPath)
 	if err != nil {
-		fmt.Println("Can't read testapk file")
+		fmt.Println("Can't read testapp file")
 		return "", err
 	}
-	defer testApkFile.Close()
+	defer testAppFile.Close()
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	part, _ := writer.CreateFormFile("app", filepath.Base(apkFile.Name()))
-	io.Copy(part, apkFile)
-	part2, _ := writer.CreateFormFile("testapp", filepath.Base(apkFile.Name()))
 
-	io.Copy(part2, testApkFile)
+	part, _ := writer.CreateFormFile("app", filepath.Base(appFile.Name()))
+	io.Copy(part, appFile)
+
+	part2, _ := writer.CreateFormFile("testapp", filepath.Base(testAppFile.Name()))
+	io.Copy(part2, testAppFile)
+
+	writer.WriteField("platform", platform)
 	if len(commitName) > 0 {
 		writer.WriteField("name", commitName)
 	}
@@ -200,7 +204,6 @@ type RunStats struct {
 	UpdatedAt    time.Time   `json:"updated"`
 }
 
-
 // Deprecate after October 2023
 func WaitRunForEnd(runId string, token string) (string, error) {
 	var respData RunStats
@@ -237,7 +240,7 @@ func WaitRunForEndWithApiKey(runId string, apiKey string) (string, error) {
 	var respData RunStats
 	for {
 		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://app.testwise.pro/api/v1/run/"+runId + "?api_key=" + apiKey, nil)
+		req, err := http.NewRequest("GET", "https://app.testwise.pro/api/v1/run/"+runId+"?api_key="+apiKey, nil)
 		if err != nil {
 			return "", err
 		}
@@ -264,30 +267,29 @@ func WaitRunForEndWithApiKey(runId string, apiKey string) (string, error) {
 }
 
 type TokenResponse struct {
-  Token string `json:"token"`
+	Token string `json:"token"`
 }
 
 func RequestJwtToken(apiKey string) (string, error) {
-    var tokenObj TokenResponse
-  		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://app.testwise.pro/api/v1/user/jwt?api_key=" + apiKey, nil)
-		if err != nil {
-			return "", err
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			return "", err
-		}
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return "", err
-		}
+	var tokenObj TokenResponse
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", "https://app.testwise.pro/api/v1/user/jwt?api_key="+apiKey, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
 
-		err = json.Unmarshal(bodyBytes, &tokenObj)
-    if err != nil {
-      return "", err
-    }
-    return tokenObj.Token, nil
+	err = json.Unmarshal(bodyBytes, &tokenObj)
+	if err != nil {
+		return "", err
+	}
+	return tokenObj.Token, nil
 
 }
-
