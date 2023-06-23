@@ -16,10 +16,17 @@ alias marathon-cloud='docker run -v "$(pwd)":/work -it --rm marathonlabs/maratho
 ## Usage
 ```bash
 Usage of marathon-cloud:
-  -apk string
-        application apk filepath, example: /home/user/workspace/app.apk. Required
-  -testapk string
-        test apk file path, example: /home/user/workspace/test.apk. Required
+  -app string
+        application filepath. Required
+        android example: /home/user/workspace/sample.apk 
+        ios example: /home/user/workspace/sample.zip
+  -testapp string
+        test apk file path. Required
+        android example: /home/user/workspace/testSample.apk 
+        ios example: /home/user/workspace/sampleUITests-Runner.zip
+  -platform string 
+        testing platform. Required
+        possible values: "Android" or "iOS"
   -api-key string
         api-key for client. Required
   -link string
