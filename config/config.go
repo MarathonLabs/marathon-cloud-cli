@@ -29,6 +29,7 @@ func ReadFlags() error {
 	CONFIG_LOGIN := flag.String("e", "", "user email, example: user@domain.com. Deprecated")
 	CONFIG_PASSWORD := flag.String("p", "", "user password, example: 123456. Deprecated")
 	CONFIG_PLATFORM := flag.String("platform", "", "testing platform (Android or iOS only)")
+	CONFIG_OS_VERSION := flag.String("os-version", "", "Android or iOS OS version")
 
 	args := os.Args
 	if len(args) > 1 && args[1] == "help" {
@@ -86,6 +87,7 @@ func ReadFlags() error {
 	config.Set("NAME", *CONFIG_COMMIT_NAME)
 	config.Set("LINK", *CONFIG_COMMIT_LINK)
 	config.Set("ALLURE_OUTPUT", *CONFIG_ALLURE_OUTPUT)
+	config.Set("OS_VERSION", *CONFIG_OS_VERSION)
 
 	return nil
 }
