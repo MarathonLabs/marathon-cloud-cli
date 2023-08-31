@@ -26,6 +26,7 @@ func main() {
 	commitLink := conf.GetString("LINK")
 	allureOutput := conf.GetString("ALLURE_OUTPUT")
 	platform := conf.GetString("PLATFORM")
+	osVersion := conf.GetString("OS_VERSION")
 
 	if len(apiKey) == 0 {
 		token, err := request.Authorize(login, password)
@@ -58,7 +59,7 @@ func main() {
 			fmt.Println(err)
 			return
 		}
-		runId, err := request.SendNewRunWithKey(apiKey, app, testApp, commitName, commitLink, platform)
+		runId, err := request.SendNewRunWithKey(apiKey, app, testApp, commitName, commitLink, platform, osVersion)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(5)

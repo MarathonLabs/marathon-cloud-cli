@@ -29,6 +29,8 @@ Usage of marathon-cloud:
         possible values: "Android" or "iOS"
   -api-key string
         api-key for client. Required
+  -os-version string
+        Android or iOS OS version
   -link string
         link to commit
   -name string
