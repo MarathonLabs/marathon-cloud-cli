@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,8 @@ type ArtifactTree struct {
 	Name   string `json:"name"`
 }
 
+var maxConcurrentDownloads = 5 // Limit the number of concurrent downloads.
+
 func GetArtifacts(token string, runId string, whereToSave string) {
 	rootFolders := getFolder(token, runId)
 	if rootFolders == nil || len(*rootFolders) == 0 {
@@ -27,9 +30,30 @@ func GetArtifacts(token string, runId string, whereToSave string) {
 		return
 	}
 
+	// Semaphore to limit concurrent downloads
+	sem := make(chan struct{}, maxConcurrentDownloads)
+	// Channel to capture errors from goroutines
+	errors := make(chan error)
+
+	// Counter to wait for all goroutines to finish
+	var wg sync.WaitGroup
+
+	// Start a goroutine to continuously read and handle errors
+	go func() {
+		for err := range errors {
+			if err != nil {
+				fmt.Println("Error during download:", err)
+			}
+		}
+	}()
+
 	for _, folder := range *rootFolders {
-		getFoldersRecursively(token, folder.ID, whereToSave)
+		getFoldersRecursively(token, folder.ID, whereToSave, sem, errors, &wg)
 	}
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+	close(errors)
 
 	// Post-processing: move contents from runId folder to root
 	relocateContents(whereToSave, runId)
@@ -50,8 +74,8 @@ func getFolder(token string, folder string) *[]ArtifactTree {
 
 	var lastRetrievedFolders []ArtifactTree
 
-	for i := 0; i < 3; i++ {
-		time.Sleep(10 * time.Second)
+	for i := 0; i < 5; i++ {
+		time.Sleep(5 * time.Second)
 
 		resp := request.SendGetRequest("https://app.testwise.pro/api/v1/artifact/"+folder, token)
 		if resp == nil || resp.Body == nil {
@@ -92,7 +116,7 @@ func getFolder(token string, folder string) *[]ArtifactTree {
 	return &lastRetrievedFolders
 }
 
-func getFoldersRecursively(token string, folderID string, whereToSave string) {
+func getFoldersRecursively(token string, folderID string, whereToSave string, sem chan struct{}, errors chan<- error, wg *sync.WaitGroup) {
 	resp := request.SendGetRequest("https://app.testwise.pro/api/v1/artifact/"+folderID, token)
 	defer resp.Body.Close()
 
@@ -111,19 +135,28 @@ func getFoldersRecursively(token string, folderID string, whereToSave string) {
 
 	for _, folder := range folders {
 		if folder.IsFile {
-			downloadFile(token, folder.ID, whereToSave)
+			wg.Add(1)
+			go func(id string) {
+				defer wg.Done()
+				sem <- struct{}{} // Acquire semaphore
+				err := downloadFile(token, id, whereToSave)
+				<-sem // Release semaphore
+				if err != nil {
+					errors <- err
+				}
+			}(folder.ID)
 		} else {
-			getFoldersRecursively(token, folder.ID, whereToSave)
+			getFoldersRecursively(token, folder.ID, whereToSave, sem, errors, wg)
 		}
 	}
 }
 
-func downloadFile(token string, fileID string, whereToSave string) {
+func downloadFile(token string, fileID string, whereToSave string) error {
 	if fileID == "" {
-		fmt.Println("Empty fileID provided.")
-		return
+		return fmt.Errorf("empty fileID provided")
 	}
 
+	// Split the fileID path to figure out the folder structure and file name.
 	keyArray := strings.Split(fileID, "/")
 	subFolder := ""
 	if len(keyArray) > 1 {
@@ -132,28 +165,32 @@ func downloadFile(token string, fileID string, whereToSave string) {
 	fileName := keyArray[len(keyArray)-1]
 	fileFolder := path.Join(whereToSave, subFolder)
 
+	// Ensure the directory structure exists.
 	err := os.MkdirAll(fileFolder, os.ModePerm)
 	if err != nil {
-		fmt.Println("Failed to create directory:", err.Error())
-		return
+		return fmt.Errorf("failed to create directory: %v", err)
 	}
 
+	// Replace any '#' in the fileID with '%23' for the URL request. This is URL encoding.
 	validFileID := strings.ReplaceAll(fileID, "#", "%23")
 	resp := request.SendGetRequest("https://app.testwise.pro/api/v1/artifact?key="+validFileID, token)
 	defer resp.Body.Close()
 
+	// Create the file at the determined path.
 	filePath := path.Join(fileFolder, fileName)
 	out, err := os.Create(filePath)
 	if err != nil {
-		fmt.Println("Got error while os.Create:", err.Error())
-		return
+		return fmt.Errorf("got error while os.Create: %v", err)
 	}
 	defer out.Close()
 
+	// Copy the response body (the downloaded data) to our file.
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		fmt.Println("Error writing file:", err.Error())
+		return fmt.Errorf("error writing file: %v", err)
 	}
+
+	return nil
 }
 
 func relocateContents(whereToSave string, runId string) {
