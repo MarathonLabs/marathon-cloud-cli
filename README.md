@@ -37,5 +37,7 @@ Usage of marathon-cloud:
         name for run, for example it could be description of commit
   -o string
         allure raw results output folder
+  -system-image string
+        OS-specific system image. For Android one of [default,google_apis]. For iOS only [default]
 ```
 
