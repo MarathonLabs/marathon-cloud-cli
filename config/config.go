@@ -14,7 +14,7 @@ var config *viper.Viper
 func ReadFlags() error {
 	config = viper.New()
 
-  CONFIG_HOST := flag.String("host", "app.testwise.pro", "Marathon Cloud API host")
+	CONFIG_HOST := flag.String("host", "app.testwise.pro", "Marathon Cloud API host")
 	CONFIG_APP := flag.String(
 		"app",
 		"",
@@ -40,7 +40,7 @@ func ReadFlags() error {
 
 	flag.Parse()
 
-  config.Set("HOST", *CONFIG_HOST);
+	config.Set("HOST", *CONFIG_HOST)
 
 	// app
 	if len(*CONFIG_APP) > 0 {
@@ -88,7 +88,7 @@ func ReadFlags() error {
 		return errors.New("api-key or login with password must be specified")
 	}
 
-  config.Set("NAME", *CONFIG_COMMIT_NAME)
+	config.Set("NAME", *CONFIG_COMMIT_NAME)
 	config.Set("LINK", *CONFIG_COMMIT_LINK)
 	config.Set("ALLURE_OUTPUT", *CONFIG_ALLURE_OUTPUT)
 	config.Set("OS_VERSION", *CONFIG_OS_VERSION)
