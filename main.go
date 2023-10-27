@@ -17,6 +17,7 @@ func main() {
 	}
 
 	conf := config.GetConfig()
+	host := conf.GetString("HOST")
 	login := conf.GetString("LOGIN")
 	password := conf.GetString("PASSWORD")
 	apiKey := conf.GetString("API_KEY")
@@ -28,6 +29,7 @@ func main() {
 	platform := conf.GetString("PLATFORM")
 	osVersion := conf.GetString("OS_VERSION")
 	isolated := conf.GetString("ISOLATED")
+	systemImage := conf.GetString("SYSTEM_IMAGE")
 
 	if len(apiKey) == 0 {
 		token, err := request.Authorize(login, password)
@@ -61,6 +63,7 @@ func main() {
 			return
 		}
 		runId, err := request.SendNewRunWithKey(apiKey, app, testApp, commitName, commitLink, platform, osVersion, isolated)
+		runId, err := request.SendNewRunWithKey(host, apiKey, app, testApp, commitName, commitLink, platform, osVersion, systemImage)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(5)

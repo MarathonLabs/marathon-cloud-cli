@@ -14,6 +14,7 @@ var config *viper.Viper
 func ReadFlags() error {
 	config = viper.New()
 
+	CONFIG_HOST := flag.String("host", "app.testwise.pro", "Marathon Cloud API host")
 	CONFIG_APP := flag.String(
 		"app",
 		"",
@@ -31,6 +32,7 @@ func ReadFlags() error {
 	CONFIG_PLATFORM := flag.String("platform", "", "testing platform (Android or iOS only)")
 	CONFIG_OS_VERSION := flag.String("os-version", "", "Android or iOS OS version")
 	CONFIG_ISOLATED := flag.String("isolated", "", "Run each test using isolated execution. Default is false.")
+	CONFIG_SYSTEM_IMAGE := flag.String("system-image", "", "OS-specific system image. For Android one of [default,google_apis]. For iOS only [default]")
 
 	args := os.Args
 	if len(args) > 1 && args[1] == "help" {
@@ -38,6 +40,8 @@ func ReadFlags() error {
 	}
 
 	flag.Parse()
+
+	config.Set("HOST", *CONFIG_HOST)
 
 	// app
 	if len(*CONFIG_APP) > 0 {
@@ -93,6 +97,7 @@ func ReadFlags() error {
 	config.Set("LINK", *CONFIG_COMMIT_LINK)
 	config.Set("ALLURE_OUTPUT", *CONFIG_ALLURE_OUTPUT)
 	config.Set("OS_VERSION", *CONFIG_OS_VERSION)
+	config.Set("SYSTEM_IMAGE", *CONFIG_SYSTEM_IMAGE)
 
 	return nil
 }

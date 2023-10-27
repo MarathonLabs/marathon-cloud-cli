@@ -90,7 +90,7 @@ type CreateRunResponse struct {
 	Status string `json:"status"`
 }
 
-func SendNewRunWithKey(apiKey string, appPath string, testAppPath string, commitName string, commitLink string, platform string, osVersion string, isolated string) (string, error) {
+func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath string, commitName string, commitLink string, platform string, osVersion string, systemImage string, isolated string) (string, error) {
 	appFile, err := os.Open(appPath)
 	if err != nil {
 		fmt.Println("Can't read apk file")
@@ -124,11 +124,14 @@ func SendNewRunWithKey(apiKey string, appPath string, testAppPath string, commit
 	}
 	if isolated == "true" || isolated == "false" {
 		writer.WriteField("isolated", isolated)
+  }
+	if len(systemImage) > 0 {
+		writer.WriteField("system_image", systemImage)
 	}
 
 	writer.Close()
 
-	r, err := http.NewRequest("POST", "https://app.testwise.pro/api/v1/run?api_key="+apiKey, body)
+	r, err := http.NewRequest("POST", "https://"+host+"/api/v1/run?api_key="+apiKey, body)
 	if err != nil {
 		fmt.Println(err)
 	}
