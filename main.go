@@ -28,6 +28,7 @@ func main() {
 	allureOutput := conf.GetString("ALLURE_OUTPUT")
 	platform := conf.GetString("PLATFORM")
 	osVersion := conf.GetString("OS_VERSION")
+	isolated := conf.GetString("ISOLATED")
 	systemImage := conf.GetString("SYSTEM_IMAGE")
 
 	if len(apiKey) == 0 {
@@ -61,7 +62,7 @@ func main() {
 			fmt.Println(err)
 			return
 		}
-		runId, err := request.SendNewRunWithKey(host, apiKey, app, testApp, commitName, commitLink, platform, osVersion, systemImage)
+		runId, err := request.SendNewRunWithKey(host, apiKey, app, testApp, commitName, commitLink, platform, osVersion, systemImage, isolated)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(5)
