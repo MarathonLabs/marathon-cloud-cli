@@ -62,8 +62,7 @@ func main() {
 			fmt.Println(err)
 			return
 		}
-		runId, err := request.SendNewRunWithKey(apiKey, app, testApp, commitName, commitLink, platform, osVersion, isolated)
-		runId, err := request.SendNewRunWithKey(host, apiKey, app, testApp, commitName, commitLink, platform, osVersion, systemImage)
+		runId, err := request.SendNewRunWithKey(host, apiKey, app, testApp, commitName, commitLink, platform, osVersion, systemImage, isolated)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(5)
