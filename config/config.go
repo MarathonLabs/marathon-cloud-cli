@@ -30,6 +30,7 @@ func ReadFlags() error {
 	CONFIG_PASSWORD := flag.String("p", "", "user password, example: 123456. Deprecated")
 	CONFIG_PLATFORM := flag.String("platform", "", "testing platform (Android or iOS only)")
 	CONFIG_OS_VERSION := flag.String("os-version", "", "Android or iOS OS version")
+	CONFIG_ISOLATED := flag.String("isolated", "", "Run each test using isolated execution. Default is false.")
 
 	args := os.Args
 	if len(args) > 1 && args[1] == "help" {
@@ -78,6 +79,10 @@ func ReadFlags() error {
 	// api key
 	if len(*CONFIG_API_KEY) > 0 {
 		config.Set("API_KEY", *CONFIG_API_KEY)
+	}
+
+	if len(*CONFIG_ISOLATED) > 0 {
+		config.Set("ISOLATED", *CONFIG_ISOLATED)
 	}
 
 	if len(*CONFIG_API_KEY) == 0 && (len(*CONFIG_LOGIN) == 0 || len(*CONFIG_PASSWORD) == 0) {
