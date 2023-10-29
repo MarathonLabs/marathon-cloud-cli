@@ -39,5 +39,7 @@ Usage of marathon-cloud:
         allure raw results output folder
   -system-image string
         OS-specific system image. For Android one of [default,google_apis]. For iOS only [default]
+  -isolated bool
+        Run each test using isolated execution. Default is false.
 ```
 
