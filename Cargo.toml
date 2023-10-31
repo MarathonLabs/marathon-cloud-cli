@@ -1,0 +1,29 @@
+[package]
+name = "marathon-cloud"
+version = "0.2.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.75"
+clap = { version = "4.4.7", features = ["derive"] }
+log = "0.4.20"
+serde = { version = "1.0", features = ["derive"] }
+serde-enum-str = "0.4.0"
+serde_json = "1.0.107"
+simple_logger = "4.2.0"
+tempfile = "3.8.1"
+reqwest = { version = "0.11", features = ["json", "multipart", "stream"] }
+time = { version = "0.3", features = ["serde-well-known"]}
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+futures = "0.3"
+async-trait = "0.1"
+num_cpus = "1"
+clap-verbosity-flag = "2.1"
+indicatif = "0.17"
+console = "0.15"
+
+[dev-dependencies]
+rstest = "0.18.2"
