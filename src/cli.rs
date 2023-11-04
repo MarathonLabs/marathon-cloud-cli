@@ -45,7 +45,8 @@ impl Cli {
                                 test_application,
                                 os_version,
                                 system_image.map(|x| x.to_string()),
-                                "android".to_owned(),
+                                "Android".to_owned(),
+                                true,
                             )
                             .await
                     }
@@ -64,7 +65,8 @@ impl Cli {
                                 test_application,
                                 None,
                                 None,
-                                "ios".to_owned(),
+                                "iOS".to_owned(),
+                                true,
                             )
                             .await?;
                         Ok(())
@@ -101,7 +103,7 @@ struct RunArgs {
     #[arg(short, long, help = "Output folder for test run results")]
     output: Option<PathBuf>,
 
-    #[arg(long, help = "Marathon Cloud API key")]
+    #[arg(long, env("MARATHON_CLOUD_API_KEY"), help = "Marathon Cloud API key")]
     api_key: String,
 
     #[arg(long, help = "Run each test in isolation, i.e. isolated batching.")]
@@ -140,7 +142,7 @@ struct DownloadArgs {
     #[arg(short, long, help = "Output folder for test run results")]
     output: PathBuf,
 
-    #[arg(long, help = "Marathon Cloud API key")]
+    #[arg(long, env("MARATHON_CLOUD_API_KEY"), help = "Marathon Cloud API key")]
     api_key: String,
 
     #[arg(long, help = "Test run id")]
@@ -211,8 +213,8 @@ pub enum Platform {
 impl Display for Platform {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Platform::Android => f.write_str("android"),
-            Platform::iOS => f.write_str("ios"),
+            Platform::Android => f.write_str("Android"),
+            Platform::iOS => f.write_str("iOS"),
         }
     }
 }

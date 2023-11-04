@@ -66,6 +66,7 @@ impl TriggerTestRunInteractor {
         os_version: Option<String>,
         system_image: Option<String>,
         platform: String,
+        progress: bool,
     ) -> Result<()> {
         let client = RapiReqwestClient::new(base_url, api_key);
         let steps = match (wait, output) {
@@ -88,6 +89,7 @@ impl TriggerTestRunInteractor {
                 os_version,
                 system_image,
                 isolated,
+                progress,
             )
             .await?;
 

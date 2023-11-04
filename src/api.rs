@@ -1,8 +1,12 @@
-use std::path::{Path, PathBuf};
+use std::{
+    cmp::min,
+    path::{Path, PathBuf},
+};
 
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::StreamExt;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::{multipart::Part, Body, Client, StatusCode};
 use serde::Deserialize;
 use time::OffsetDateTime;
@@ -10,7 +14,10 @@ use tokio::{
     fs::{create_dir_all, File},
     io,
 };
-use tokio_util::codec::{BytesCodec, FramedRead};
+use tokio_util::{
+    codec::{BytesCodec, FramedRead},
+    io::ReaderStream,
+};
 
 use crate::errors::{ApiError, InputError};
 
@@ -27,6 +34,7 @@ pub trait RapiClient {
         os_version: Option<String>,
         system_image: Option<String>,
         isolated: Option<bool>,
+        progress: bool,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -99,42 +107,124 @@ impl RapiClient for RapiReqwestClient {
         os_version: Option<String>,
         system_image: Option<String>,
         isolated: Option<bool>,
+        progress: bool,
     ) -> Result<String> {
         let url = format!("{}/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
         let url = reqwest::Url::parse_with_params(&url, &params)
             .map_err(|error| ApiError::InvalidParameters { error })?;
 
-        let test_app_file_name = test_app
-            .file_name()
-            .map(|val| val.to_string_lossy().to_string())
-            .ok_or(InputError::InvalidFileName { path: test_app.clone() })?;
-
         let mut form = reqwest::multipart::Form::new().text("platform", platform);
 
         let file = File::open(&test_app)
             .await
             .map_err(|error| InputError::OpenFileFailure {
-                path: test_app,
+                path: test_app.clone(),
                 error,
             })?;
-        let reader = Body::wrap_stream(FramedRead::new(file, BytesCodec::new()));
+        let test_app_file_name = test_app
+            .file_name()
+            .map(|val| val.to_string_lossy().to_string())
+            .ok_or(InputError::InvalidFileName {
+                path: test_app.clone(),
+            })?;
+        let test_app_total_size = (&file).metadata().await?.len();
+        let mut test_app_reader = ReaderStream::new(file);
+        let mut multi_progress: Option<MultiProgress> = if progress {
+            Some(MultiProgress::new())
+        } else {
+            None
+        };
+        let test_app_progress_bar;
+        let test_app_body;
+        if progress {
+            let sty = ProgressStyle::with_template(
+                "[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}",
+            )
+            .unwrap()
+            .progress_chars("##-");
+
+            test_app_progress_bar = multi_progress
+                .as_mut()
+                .unwrap()
+                .add(ProgressBar::new(test_app_total_size));
+            test_app_progress_bar.set_style(sty.clone());
+            test_app_progress_bar.set_message("Test application");
+            let mut test_app_progress = 0u64;
+            let test_app_stream = async_stream::stream! {
+                while let Some(chunk) = test_app_reader.next().await {
+                    let test_app_progress_bar = test_app_progress_bar.clone();
+                    if let Ok(chunk) = &chunk {
+                        let new = min(test_app_progress + (chunk.len() as u64), test_app_total_size);
+                        test_app_progress = new;
+                        test_app_progress_bar.set_position(new);
+                        if test_app_progress >= test_app_total_size {
+                            test_app_progress_bar.finish_with_message("Test application uploaded");
+                        }
+                    }
+                    yield chunk;
+                }
+            };
+            test_app_body = Body::wrap_stream(test_app_stream);
+        } else {
+            test_app_body = Body::wrap_stream(test_app_reader);
+        }
         form = form.part(
             "testapp",
-            Part::stream(reader).file_name(test_app_file_name),
+            Part::stream_with_length(test_app_body, test_app_total_size)
+                .file_name(test_app_file_name),
         );
 
         if let Some(app) = app {
+            let file = File::open(&app)
+                .await
+                .map_err(|error| InputError::OpenFileFailure { path: app.clone(), error })?;
+
             let app_file_name = app
                 .file_name()
                 .map(|val| val.to_string_lossy().to_string())
                 .ok_or(InputError::InvalidFileName { path: app.clone() })?;
 
-            let file = File::open(&app)
-                .await
-                .map_err(|error| InputError::OpenFileFailure { path: app, error })?;
-            let reader = Body::wrap_stream(FramedRead::new(file, BytesCodec::new()));
-            form = form.part("app", Part::stream(reader).file_name(app_file_name));
+            let app_total_size = (&file).metadata().await?.len();
+            let mut app_reader = ReaderStream::new(file);
+            let app_body;
+
+            if progress {
+                let app_progress_bar = multi_progress
+                    .unwrap()
+                    .add(ProgressBar::new(app_total_size));
+                let sty = ProgressStyle::with_template(
+                    "[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}",
+                )
+                .unwrap()
+                .progress_chars("##-");
+                app_progress_bar.set_style(sty);
+                app_progress_bar.set_message("Application");
+
+                let mut app_progress = 0u64;
+                let app_stream = async_stream::stream! {
+                    while let Some(chunk) = app_reader.next().await {
+                        let app_progress_bar = app_progress_bar.clone();
+                        if let Ok(chunk) = &chunk {
+                            let new = min(app_progress + (chunk.len() as u64), app_total_size);
+                            app_progress = new;
+                            app_progress_bar.set_position(new);
+                            if app_progress >= app_total_size {
+                                app_progress_bar.finish_with_message("Application uploaded");
+                            }
+                        }
+                        yield chunk;
+                    }
+                };
+                app_body = Body::wrap_stream(app_stream);
+            } else {
+                app_body = Body::wrap_stream(app_reader);
+            }
+
+            form = form.part(
+                "app",
+                Part::stream_with_length(app_body, app_total_size).file_name(app_file_name),
+            );
         }
 
         if let Some(name) = name {
