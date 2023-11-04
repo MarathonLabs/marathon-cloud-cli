@@ -47,8 +47,7 @@ impl Cli {
                                 system_image.map(|x| x.to_string()),
                                 "android".to_owned(),
                             )
-                            .await?;
-                        Ok(())
+                            .await
                     }
                     RunCommands::iOS {
                         application,

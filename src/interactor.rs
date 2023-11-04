@@ -68,6 +68,16 @@ impl TriggerTestRunInteractor {
         platform: String,
     ) -> Result<()> {
         let client = RapiReqwestClient::new(base_url, api_key);
+        let steps = match (wait, output) {
+            (true, Some(_)) => 5,
+            (true, None) => 2,
+            _ => 1,
+        };
+
+        println!(
+            "{} Submitting new run...",
+            style(format!("[1/{}]", steps)).bold().dim()
+        );
         let id = client
             .create_run(
                 application,
@@ -82,6 +92,10 @@ impl TriggerTestRunInteractor {
             .await?;
 
         if wait {
+            println!(
+                "{} Waiting for test run to finish...",
+                style(format!("[2/{}]", steps)).bold().dim()
+            );
             loop {
                 let stat = client.get_run(&id).await?;
                 if stat.completed.is_some() {
@@ -106,9 +120,15 @@ impl TriggerTestRunInteractor {
                     );
 
                     if let Some(output) = output {
+                        println!("{} Fetching file list...", style(format!("[3/{}]", steps)).bold().dim());
                         let token = client.get_token().await?;
                         let artifacts = fetch_artifact_list(&client, &id, &token).await?;
-                        download_artifacts(&client, artifacts, output, &token, false).await?;
+                        println!("{} Downloading files...", style(format!("[4/{}]", steps)).bold().dim());
+                        download_artifacts(&client, artifacts, output, &token, true).await?;
+                        println!(
+                            "{} Patching local relative paths...",
+                            style(format!("[5/{}]", steps)).bold().dim()
+                        );
                     }
                     return Ok(());
                 }

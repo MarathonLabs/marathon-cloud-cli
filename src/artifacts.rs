@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 
 use ::futures::{stream, StreamExt, TryStreamExt};
-use anyhow::anyhow;
 use anyhow::Result;
 use indicatif::ProgressBar;
 use log::debug;
 
 use crate::api::{Artifact, RapiClient, RapiReqwestClient};
+use crate::errors::ArtifactError;
 
 pub async fn fetch_artifact_list(
     client: &RapiReqwestClient,
@@ -26,7 +26,7 @@ pub async fn fetch_artifact_list(
             .buffer_unordered(num_cpus::get())
             .try_concat()
             .await
-            .map_err(|_| anyhow!("Failed to retrieve artifact list"))?;
+            .map_err(|error| ArtifactError::ListFailed { error })?;
 
         list.clear();
         for f in stats {
@@ -81,7 +81,7 @@ pub async fn download_artifacts(
         .buffer_unordered(num_cpus::get())
         .try_collect()
         .await
-        .map_err(|_| anyhow!("Failed to retrieve artifacts"))?;
+        .map_err(|error| ArtifactError::DownloadFailed { error })?;
 
     if let Some(progress_bar) = progress_bar {
         progress_bar.finish_with_message("done");

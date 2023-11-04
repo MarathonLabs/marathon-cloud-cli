@@ -24,6 +24,8 @@ num_cpus = "1"
 clap-verbosity-flag = "2.1"
 indicatif = "0.17"
 console = "0.15"
+thiserror = "1.0"
+url = "2.4"
 
 [dev-dependencies]
 rstest = "0.18.2"

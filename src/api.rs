@@ -3,11 +3,16 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::StreamExt;
-use reqwest::{multipart::Part, Body, Client};
+use reqwest::{multipart::Part, Body, Client, StatusCode};
 use serde::Deserialize;
 use time::OffsetDateTime;
-use tokio::{fs::{File, create_dir_all}, io};
+use tokio::{
+    fs::{create_dir_all, File},
+    io,
+};
 use tokio_util::codec::{BytesCodec, FramedRead};
+
+use crate::errors::{ApiError, InputError};
 
 #[async_trait]
 pub trait RapiClient {
@@ -70,14 +75,17 @@ impl RapiClient for RapiReqwestClient {
     async fn get_token(&self) -> Result<String> {
         let url = format!("{}/user/jwt", self.base_url);
         let params = [("api_key", self.api_key.clone())];
-        let url = reqwest::Url::parse_with_params(&url, &params)?;
+        let url = reqwest::Url::parse_with_params(&url, &params)
+            .map_err(|error| ApiError::InvalidParameters { error })?;
         let response = self
             .client
             .get(url)
             .send()
-            .await?
+            .await
+            .map_err(api_error_adapter)?
             .json::<GetTokenResponse>()
-            .await?;
+            .await
+            .map_err(|error| ApiError::DeserializationFailure { error })?;
         Ok(response.token)
     }
 
@@ -94,16 +102,22 @@ impl RapiClient for RapiReqwestClient {
     ) -> Result<String> {
         let url = format!("{}/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
-        let url = reqwest::Url::parse_with_params(&url, &params)?;
+        let url = reqwest::Url::parse_with_params(&url, &params)
+            .map_err(|error| ApiError::InvalidParameters { error })?;
 
         let test_app_file_name = test_app
             .file_name()
             .map(|val| val.to_string_lossy().to_string())
-            .unwrap_or_default();
+            .ok_or(InputError::InvalidFileName { path: test_app.clone() })?;
 
         let mut form = reqwest::multipart::Form::new().text("platform", platform);
 
-        let file = File::open(&test_app).await?;
+        let file = File::open(&test_app)
+            .await
+            .map_err(|error| InputError::OpenFileFailure {
+                path: test_app,
+                error,
+            })?;
         let reader = Body::wrap_stream(FramedRead::new(file, BytesCodec::new()));
         form = form.part(
             "testapp",
@@ -114,9 +128,11 @@ impl RapiClient for RapiReqwestClient {
             let app_file_name = app
                 .file_name()
                 .map(|val| val.to_string_lossy().to_string())
-                .unwrap_or_default();
+                .ok_or(InputError::InvalidFileName { path: app.clone() })?;
 
-            let file = File::open(&app).await?;
+            let file = File::open(&app)
+                .await
+                .map_err(|error| InputError::OpenFileFailure { path: app, error })?;
             let reader = Body::wrap_stream(FramedRead::new(file, BytesCodec::new()));
             form = form.part("app", Part::stream(reader).file_name(app_file_name));
         }
@@ -146,9 +162,11 @@ impl RapiClient for RapiReqwestClient {
             .post(url)
             .multipart(form)
             .send()
-            .await?
+            .await
+            .map_err(api_error_adapter)?
             .json::<CreateRunResponse>()
-            .await?;
+            .await
+            .map_err(|error| ApiError::DeserializationFailure { error })?;
 
         Ok(response.run_id)
     }
@@ -156,9 +174,18 @@ impl RapiClient for RapiReqwestClient {
     async fn get_run(&self, id: &str) -> Result<TestRun> {
         let url = format!("{}/run/{}", self.base_url, id);
         let params = [("api_key", self.api_key.clone())];
-        let url = reqwest::Url::parse_with_params(&url, &params)?;
+        let url = reqwest::Url::parse_with_params(&url, &params)
+            .map_err(|error| ApiError::InvalidParameters { error })?;
 
-        let response = self.client.get(url).send().await?.json::<TestRun>().await?;
+        let response = self
+            .client
+            .get(url)
+            .send()
+            .await
+            .map_err(api_error_adapter)?
+            .json::<TestRun>()
+            .await
+            .map_err(|error| ApiError::DeserializationFailure { error })?;
         Ok(response)
     }
 
@@ -170,9 +197,12 @@ impl RapiClient for RapiReqwestClient {
             .get(url)
             .header("Authorization", format!("Bearer {}", jwt_token))
             .send()
-            .await?
+            .await
+            .map_err(api_error_adapter)?
             .json::<Vec<Artifact>>()
-            .await?;
+            .await
+            .map_err(|error| ApiError::DeserializationFailure { error })?;
+
         Ok(response)
     }
 
@@ -184,12 +214,10 @@ impl RapiClient for RapiReqwestClient {
     ) -> Result<()> {
         let url = format!("{}/artifact", self.base_url);
         let params = [("key", artifact.id.to_owned())];
-        let url = reqwest::Url::parse_with_params(&url, &params)?;
+        let url = reqwest::Url::parse_with_params(&url, &params)
+            .map_err(|error| ApiError::InvalidParameters { error })?;
 
-        let relative_path = artifact
-            .id
-            .strip_prefix('/')
-            .unwrap_or(&artifact.id);
+        let relative_path = artifact.id.strip_prefix('/').unwrap_or(&artifact.id);
         let relative_path = Path::new(&relative_path);
         let mut absolute_path = base_path.clone();
         absolute_path.push(relative_path);
@@ -199,7 +227,8 @@ impl RapiClient for RapiReqwestClient {
             .get(url)
             .header("Authorization", format!("Bearer {}", jwt_token))
             .send()
-            .await?
+            .await
+            .map_err(api_error_adapter)?
             .bytes_stream();
 
         let dst_dir = absolute_path.parent();
@@ -215,6 +244,17 @@ impl RapiClient for RapiReqwestClient {
         }
 
         Ok(())
+    }
+}
+
+fn api_error_adapter(error: reqwest::Error) -> ApiError {
+    if let Some(status) = error.status() {
+        match status {
+            StatusCode::UNAUTHORIZED => ApiError::Unauthorized { error },
+            _ => ApiError::RequestFailed { error },
+        }
+    } else {
+        ApiError::RequestFailed { error }
     }
 }
 
