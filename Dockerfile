@@ -2,4 +2,4 @@ ARG VERSION=3.18
 FROM alpine:${VERSION}
 ENTRYPOINT ["marathon-cloud"]
 WORKDIR "/work"
-COPY marathon-cloud /usr/local/bin
+COPY target/release/marathon-cloud /usr/local/bin

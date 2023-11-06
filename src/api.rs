@@ -15,7 +15,6 @@ use tokio::{
     io,
 };
 use tokio_util::{
-    codec::{BytesCodec, FramedRead},
     io::ReaderStream,
 };
 

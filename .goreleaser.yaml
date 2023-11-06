@@ -1,20 +1,23 @@
 project_name: marathon-cloud
-before:
-  hooks:
-    - go mod tidy
 builds:
   - id: marathon-cloud
     binary: marathon-cloud
-    main: main.go
-    env:
-    - CGO_ENABLED=0
+    main: dummy.go
+    goos:
+      # - darwin
+      - linux
+      # - windows
     goarch:
       - amd64
-      - arm
       - arm64
-    goarm:
-      - "6"
-      - "7"
+    ignore:
+      - goos: windows 
+        goarch: arm64
+    hooks:
+      # This is called for every architecture.
+      # eg: ./build.sh linux_amd64 marathon-cloud
+      post: 
+        - ./build.sh "{{ .Target }}" "{{ .ProjectName }}"
 universal_binaries:
 - replace: true
 archives:
