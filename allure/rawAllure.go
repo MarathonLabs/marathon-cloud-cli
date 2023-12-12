@@ -21,103 +21,64 @@ type ArtifactTree struct {
 	Name   string `json:"name"`
 }
 
-var maxConcurrentDownloads = 5 // Limit the number of concurrent downloads.
+type FileNode struct {
+	ID       string `json:"id"`
+	IsFile   bool   `json:"is_file"`
+	Name     string `json:"name"`
+	Downloaded bool `json:"downloaded"`
+}
+
+var maxConcurrentDownloads = 10 // Limit the number of concurrent downloads.
 
 func GetArtifacts(host string, token string, runId string, whereToSave string) {
-	rootFolders := getFolder(host, token, runId)
-	if rootFolders == nil || len(*rootFolders) == 0 {
-		fmt.Println("Failed to retrieve root folders.")
-		return
-	}
+  fmt.Println("Start downloading artifacts")
 
-	// Semaphore to limit concurrent downloads
-	sem := make(chan struct{}, maxConcurrentDownloads)
-	// Channel to capture errors from goroutines
-	errors := make(chan error)
+  var fileTree []FileNode
+  var wg sync.WaitGroup
 
-	// Counter to wait for all goroutines to finish
-	var wg sync.WaitGroup
+  // Semaphore and error channel
+  sem := make(chan struct{}, maxConcurrentDownloads)
+  errors := make(chan error)
 
-	// Start a goroutine to continuously read and handle errors
-	go func() {
-		for err := range errors {
-			if err != nil {
-				fmt.Println("Error during download:", err)
-			}
-		}
-	}()
+  // Error handling goroutine
+  go func() {
+      for err := range errors {
+          if err != nil {
+              fmt.Println("Error during download:", err)
+          }
+      }
+  }()
 
-	for _, folder := range *rootFolders {
-		getFoldersRecursively(host, token, folder.ID, whereToSave, sem, errors, &wg)
-	}
+  // Step 1: Traverse and store file tree
+  traverseAndStoreFileTree(host, token, runId, &fileTree, &wg, sem)
+  wg.Wait()  // Wait for file tree traversal to complete
 
-	// Wait for all goroutines to finish
-	wg.Wait()
-	close(errors)
+  // Steps 2-3: Check for new files and redownload failed ones
+  for {
+    if !downloadFilesAndCheckForNew(host, token, runId, &fileTree, whereToSave, sem, errors, 3) {  // Assuming 3 retries
+      break
+    }
+    time.Sleep(time.Duration(60) * time.Second)
+  }
+
+  close(errors)  // Close the error channel after all operations are done
 
 	// Post-processing: move contents from runId folder to root
 	relocateContents(whereToSave, runId)
 	// Update Allure json paths
 	updateJsonPaths(whereToSave)
+
+	fmt.Println("Finish downloading artifacts ")
 }
 
-func getFolder(host string, token string, folder string) *[]ArtifactTree {
-	expectedFolders := map[string]bool{
-		"bill":        false,
-		"devices":     false,
-		"html":        false,
-		"logs":        false,
-		"report":      false,
-		"test_result": false,
-		"tests":       false,
-	}
-
-	var lastRetrievedFolders []ArtifactTree
-
-	for i := 0; i < 5; i++ {
-		time.Sleep(5 * time.Second)
-
-		resp := request.SendGetRequest("https://"+host+"/api/v1/artifact/"+folder, token)
-		if resp == nil || resp.Body == nil {
-			continue
-		}
-
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		resp.Body.Close() // Always close the body.
-
-		var folders []ArtifactTree
-		json.Unmarshal(bodyBytes, &folders)
-
-		// Update the status of found expected folders
-		for _, f := range folders {
-			if _, exists := expectedFolders[f.Name]; exists {
-				expectedFolders[f.Name] = true
-			}
-		}
-
-		// Check if all expected folders are found
-		allFound := true
-		for _, found := range expectedFolders {
-			if !found {
-				allFound = false
-				break
-			}
-		}
-
-		if allFound {
-			return &folders
-		}
-
-		// Store the last set of folders retrieved
-		lastRetrievedFolders = folders
-	}
-
-	// If all expected folders aren't found after 3 attempts, return the last set of folders found
-	return &lastRetrievedFolders
-}
-
-func getFoldersRecursively(host string, token string, folderID string, whereToSave string, sem chan struct{}, errors chan<- error, wg *sync.WaitGroup) {
+func traverseAndStoreFileTree(host string, token string, folderID string, fileTree *[]FileNode, wg *sync.WaitGroup, sem chan struct{}) {
+  sem <- struct{}{} // Acquire semaphore
 	resp := request.SendGetRequest("https://"+host+"/api/v1/artifact/"+folderID, token)
+  <-sem // Release semaphore
+
+	if resp == nil || resp.Body == nil {
+		return
+	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
@@ -134,21 +95,83 @@ func getFoldersRecursively(host string, token string, folderID string, whereToSa
 	}
 
 	for _, folder := range folders {
-		if folder.IsFile {
+		node := FileNode{
+			ID:         folder.ID,
+			IsFile:     folder.IsFile,
+			Name:       folder.Name,
+			Downloaded: false,
+		}
+		*fileTree = append(*fileTree, node)
+
+		if !folder.IsFile {
 			wg.Add(1)
-			go func(id string) {
+			go func(fID string) {
 				defer wg.Done()
-				sem <- struct{}{} // Acquire semaphore
-				err := downloadFile(host, token, id, whereToSave)
-				<-sem // Release semaphore
-				if err != nil {
-					errors <- err
-				}
+				traverseAndStoreFileTree(host, token, fID, fileTree, wg, sem)
 			}(folder.ID)
-		} else {
-			getFoldersRecursively(host, token, folder.ID, whereToSave, sem, errors, wg)
 		}
 	}
+}
+
+func downloadFileWithRetry(host string, token string, fileNode *FileNode, whereToSave string, sem chan struct{}, errors chan<- error, maxRetries int) {
+    var err error
+    for i := 0; i < maxRetries; i++ {
+        sem <- struct{}{} // Acquire semaphore
+        err = downloadFile(host, token, fileNode.ID, whereToSave)
+        <-sem // Release semaphore
+
+        if err == nil {
+            fileNode.Downloaded = true
+            return
+        }
+
+        // Exponential backoff
+        time.Sleep(time.Duration(i) * time.Second)
+    }
+    errors <- err // Send error to error channel if all retries fail
+}
+
+func downloadFilesAndCheckForNew(host string, token string, runId string, fileTree *[]FileNode, whereToSave string, sem chan struct{}, errors chan<- error, maxRetries int) bool {
+    newFilesAdded := false
+    var notDownloadedCount int
+    var wg sync.WaitGroup
+
+    // Retry downloading for files that failed in previous attempts
+    for i := range *fileTree {
+        if (*fileTree)[i].IsFile && !(*fileTree)[i].Downloaded {
+            newFilesAdded = true
+            wg.Add(1)
+            go func(node *FileNode) {
+                defer wg.Done()
+                downloadFileWithRetry(host, token, node, whereToSave, sem, errors, maxRetries)
+            }(&(*fileTree)[i])
+        }
+    }
+    wg.Wait()
+
+    // Re-traverse the file tree to check for new files
+    var newFileTree []FileNode
+    traverseAndStoreFileTree(host, token, runId, &newFileTree, &wg, sem)
+    wg.Wait() // Wait for re-traversal to complete
+
+    // Check for new files and add them to the fileTree
+    for _, newNode := range newFileTree {
+        found := false
+        for _, existingNode := range *fileTree {
+            if newNode.ID == existingNode.ID {
+                found = true
+                break
+            }
+        }
+        if !found {
+            newFilesAdded = true
+            notDownloadedCount++
+            *fileTree = append(*fileTree, newNode)
+        }
+    }
+  
+    fmt.Printf("Number of files not yet downloaded: %d\n", notDownloadedCount)
+    return newFilesAdded
 }
 
 func downloadFile(host string, token string, fileID string, whereToSave string) error {
