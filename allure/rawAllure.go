@@ -28,7 +28,7 @@ type FileNode struct {
 	Downloaded bool `json:"downloaded"`
 }
 
-var maxConcurrentDownloads = 10 // Limit the number of concurrent downloads.
+var maxConcurrentDownloads = 20 // Limit the number of concurrent downloads.
 
 func GetArtifacts(host string, token string, runId string, whereToSave string) {
   fmt.Println("Start downloading artifacts")
@@ -170,7 +170,6 @@ func downloadFilesAndCheckForNew(host string, token string, runId string, fileTr
         }
     }
   
-    fmt.Printf("Number of files not yet downloaded: %d\n", notDownloadedCount)
     return newFilesAdded
 }
 
