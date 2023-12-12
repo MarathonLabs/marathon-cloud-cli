@@ -23,8 +23,8 @@ type ArtifactTree struct {
 
 var maxConcurrentDownloads = 5 // Limit the number of concurrent downloads.
 
-func GetArtifacts(token string, runId string, whereToSave string) {
-	rootFolders := getFolder(token, runId)
+func GetArtifacts(host string, token string, runId string, whereToSave string) {
+	rootFolders := getFolder(host, token, runId)
 	if rootFolders == nil || len(*rootFolders) == 0 {
 		fmt.Println("Failed to retrieve root folders.")
 		return
@@ -48,7 +48,7 @@ func GetArtifacts(token string, runId string, whereToSave string) {
 	}()
 
 	for _, folder := range *rootFolders {
-		getFoldersRecursively(token, folder.ID, whereToSave, sem, errors, &wg)
+		getFoldersRecursively(host, token, folder.ID, whereToSave, sem, errors, &wg)
 	}
 
 	// Wait for all goroutines to finish
@@ -61,7 +61,7 @@ func GetArtifacts(token string, runId string, whereToSave string) {
 	updateJsonPaths(whereToSave)
 }
 
-func getFolder(token string, folder string) *[]ArtifactTree {
+func getFolder(host string, token string, folder string) *[]ArtifactTree {
 	expectedFolders := map[string]bool{
 		"bill":        false,
 		"devices":     false,
@@ -77,7 +77,7 @@ func getFolder(token string, folder string) *[]ArtifactTree {
 	for i := 0; i < 5; i++ {
 		time.Sleep(5 * time.Second)
 
-		resp := request.SendGetRequest("https://app.testwise.pro/api/v1/artifact/"+folder, token)
+		resp := request.SendGetRequest("https://"+host+"/api/v1/artifact/"+folder, token)
 		if resp == nil || resp.Body == nil {
 			continue
 		}
@@ -116,8 +116,8 @@ func getFolder(token string, folder string) *[]ArtifactTree {
 	return &lastRetrievedFolders
 }
 
-func getFoldersRecursively(token string, folderID string, whereToSave string, sem chan struct{}, errors chan<- error, wg *sync.WaitGroup) {
-	resp := request.SendGetRequest("https://app.testwise.pro/api/v1/artifact/"+folderID, token)
+func getFoldersRecursively(host string, token string, folderID string, whereToSave string, sem chan struct{}, errors chan<- error, wg *sync.WaitGroup) {
+	resp := request.SendGetRequest("https://"+host+"/api/v1/artifact/"+folderID, token)
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
@@ -139,19 +139,19 @@ func getFoldersRecursively(token string, folderID string, whereToSave string, se
 			go func(id string) {
 				defer wg.Done()
 				sem <- struct{}{} // Acquire semaphore
-				err := downloadFile(token, id, whereToSave)
+				err := downloadFile(host, token, id, whereToSave)
 				<-sem // Release semaphore
 				if err != nil {
 					errors <- err
 				}
 			}(folder.ID)
 		} else {
-			getFoldersRecursively(token, folder.ID, whereToSave, sem, errors, wg)
+			getFoldersRecursively(host, token, folder.ID, whereToSave, sem, errors, wg)
 		}
 	}
 }
 
-func downloadFile(token string, fileID string, whereToSave string) error {
+func downloadFile(host string, token string, fileID string, whereToSave string) error {
 	if fileID == "" {
 		return fmt.Errorf("empty fileID provided")
 	}
@@ -173,7 +173,7 @@ func downloadFile(token string, fileID string, whereToSave string) error {
 
 	// Replace any '#' in the fileID with '%23' for the URL request. This is URL encoding.
 	validFileID := strings.ReplaceAll(fileID, "#", "%23")
-	resp := request.SendGetRequest("https://app.testwise.pro/api/v1/artifact?key="+validFileID, token)
+	resp := request.SendGetRequest("https://"+host+"/api/v1/artifact?key="+validFileID, token)
 	defer resp.Body.Close()
 
 	// Create the file at the determined path.
