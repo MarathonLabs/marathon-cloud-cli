@@ -58,7 +58,7 @@ func GetArtifacts(host string, token string, runId string, whereToSave string) {
     if !downloadFilesAndCheckForNew(host, token, runId, &fileTree, whereToSave, sem, errors, 3) {  // Assuming 3 retries
       break
     }
-    time.Sleep(time.Duration(60) * time.Second)
+    time.Sleep(time.Duration(10) * time.Second)
   }
 
   close(errors)  // Close the error channel after all operations are done
