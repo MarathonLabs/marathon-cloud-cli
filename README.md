@@ -42,5 +42,5 @@ Usage of marathon-cloud:
   -isolated bool
         Run each test using isolated execution. Default is false.
   -filter-file bool
-        File containing test filters in YAML format, following the schema described at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic
+        File containing test filters in YAML format, following the schema described at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic (only Android now)
 ```
