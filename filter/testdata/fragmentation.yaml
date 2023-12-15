@@ -1,0 +1,6 @@
+filteringConfiguration:
+  allowlist:
+    - type: "fragmentation"
+      index: 1
+      count: 5
+

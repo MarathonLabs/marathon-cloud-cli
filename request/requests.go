@@ -90,7 +90,7 @@ type CreateRunResponse struct {
 	Status string `json:"status"`
 }
 
-func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath string, commitName string, commitLink string, platform string, osVersion string, systemImage string, isolated string) (string, error) {
+func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath string, commitName string, commitLink string, platform string, osVersion string, systemImage string, isolated string, filteringConfigJson string) (string, error) {
 	appFile, err := os.Open(appPath)
 	if err != nil {
 		fmt.Println("Can't read apk file")
@@ -127,6 +127,9 @@ func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath s
   }
 	if len(systemImage) > 0 {
 		writer.WriteField("system_image", systemImage)
+	}
+  if len(filteringConfigJson) > 0 {
+		writer.WriteField("filtering_configuration", filteringConfigJson)
 	}
 
 	writer.Close()

@@ -4,6 +4,7 @@ import (
 	"cli/allure"
 	"cli/config"
 	"cli/request"
+	"cli/filter"
 	"fmt"
 	"os"
 	"time"
@@ -30,6 +31,17 @@ func main() {
 	osVersion := conf.GetString("OS_VERSION")
 	isolated := conf.GetString("ISOLATED")
 	systemImage := conf.GetString("SYSTEM_IMAGE")
+	filterFile := conf.GetString("FILTER_FILE")
+
+  var filteringConfigJson = ""
+	if len(filterFile) != 0 {
+    filteringConfigJson, err = filter.ValidateYAMLAndConvertToJSON(filterFile) 
+    if err != nil {
+      fmt.Printf("Error happened attempting to read %s\n", filterFile)
+			fmt.Println(err.Error())
+			os.Exit(8)
+    }
+  }
 
 	if len(apiKey) == 0 {
 		token, err := request.Authorize(host, login, password)
@@ -62,7 +74,7 @@ func main() {
 			fmt.Println(err)
 			return
 		}
-		runId, err := request.SendNewRunWithKey(host, apiKey, app, testApp, commitName, commitLink, platform, osVersion, systemImage, isolated)
+		runId, err := request.SendNewRunWithKey(host, apiKey, app, testApp, commitName, commitLink, platform, osVersion, systemImage, isolated, filteringConfigJson)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(5)
