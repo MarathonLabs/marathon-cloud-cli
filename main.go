@@ -44,22 +44,22 @@ func main() {
   }
 
 	if len(apiKey) == 0 {
-		token, err := request.Authorize(login, password)
+		token, err := request.Authorize(host, login, password)
 		if err != nil {
 			fmt.Println("Can't login: ", err.Error())
 			os.Exit(6)
 		}
 		fmt.Println(time.Now().Format(time.Stamp), "Creating new run")
-		runId, err := request.SendNewRun(token, app, testApp, commitName, commitLink, platform)
+		runId, err := request.SendNewRun(host, token, app, testApp, commitName, commitLink, platform)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(5)
 		}
 		go request.Subscribe(token, runId)
 
-		state, err := request.WaitRunForEnd(runId, token)
+		state, err := request.WaitRunForEnd(host, runId, token)
 		if len(allureOutput) > 0 {
-			allure.GetArtifacts(token, runId, allureOutput)
+			allure.GetArtifacts(host, token, runId, allureOutput)
 		}
 		if err != nil {
 			fmt.Println(err.Error())
@@ -69,7 +69,7 @@ func main() {
 			os.Exit(3)
 		}
 	} else {
-		jwtToken, err := request.RequestJwtToken(apiKey)
+		jwtToken, err := request.RequestJwtToken(host, apiKey)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -80,9 +80,9 @@ func main() {
 			os.Exit(5)
 		}
 		go request.Subscribe(jwtToken, runId)
-		state, err := request.WaitRunForEndWithApiKey(runId, apiKey)
+		state, err := request.WaitRunForEndWithApiKey(host, runId, apiKey)
 		if len(allureOutput) > 0 {
-			allure.GetArtifacts(jwtToken, runId, allureOutput)
+			allure.GetArtifacts(host, jwtToken, runId, allureOutput)
 		}
 		if err != nil {
 			fmt.Println(err.Error())

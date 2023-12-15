@@ -30,8 +30,8 @@ func Subscribe(token string, runId string) {
 
   c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
   if err != nil {
-    fmt.Println("Dial fatal")
-    log.Fatal("dial:", err)
+    fmt.Println("Not blocking Dial error. Ignore it now. The error:", err)
+    return
   }
   defer c.Close()
 

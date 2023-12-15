@@ -26,12 +26,12 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
-func Authorize(login string, password string) (string, error) {
+func Authorize(host string, login string, password string) (string, error) {
 	authBody := Login{Email: login, Password: password}
 
 	reqBody, err := json.Marshal(authBody)
 
-	resp := sendPostRequest("https://app.testwise.pro/api/v1/cli/auth", &reqBody)
+	resp := sendPostRequest("https://"+host+"/api/v1/cli/auth", &reqBody)
 	if err != nil {
 		fmt.Println("Error while creating auth json: ", err.Error())
 	}
@@ -153,7 +153,7 @@ func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath s
 }
 
 // deprecate in October 2023
-func SendNewRun(token string, appPath string, testAppPath string, commitName string, commitLink string, platform string) (string, error) {
+func SendNewRun(host string, token string, appPath string, testAppPath string, commitName string, commitLink string, platform string) (string, error) {
 	appFile, err := os.Open(appPath)
 	if err != nil {
 		fmt.Println("Can't read app file")
@@ -186,7 +186,7 @@ func SendNewRun(token string, appPath string, testAppPath string, commitName str
 
 	writer.Close()
 
-	r, _ := http.NewRequest("POST", "https://app.testwise.pro/api/v1/run", body)
+	r, _ := http.NewRequest("POST", "https://"+host+"/api/v1/run", body)
 	r.Header.Add("Content-Type", writer.FormDataContentType())
 	r.Header.Add("Authorization", "Bearer "+token)
 	client := &http.Client{}
@@ -217,11 +217,11 @@ type RunStats struct {
 }
 
 // Deprecate after October 2023
-func WaitRunForEnd(runId string, token string) (string, error) {
+func WaitRunForEnd(host string, runId string, token string) (string, error) {
 	var respData RunStats
 	for {
 		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://app.testwise.pro/api/v1/run/"+runId, nil)
+		req, err := http.NewRequest("GET", "https://"+host+"/api/v1/run/"+runId, nil)
 		if err != nil {
 			return "", err
 		}
@@ -248,11 +248,11 @@ func WaitRunForEnd(runId string, token string) (string, error) {
 	return respData.State, nil
 }
 
-func WaitRunForEndWithApiKey(runId string, apiKey string) (string, error) {
+func WaitRunForEndWithApiKey(host string, runId string, apiKey string) (string, error) {
 	var respData RunStats
 	for {
 		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://app.testwise.pro/api/v1/run/"+runId+"?api_key="+apiKey, nil)
+		req, err := http.NewRequest("GET", "https://"+host+"/api/v1/run/"+runId+"?api_key="+apiKey, nil)
 		if err != nil {
 			return "", err
 		}
@@ -282,10 +282,10 @@ type TokenResponse struct {
 	Token string `json:"token"`
 }
 
-func RequestJwtToken(apiKey string) (string, error) {
+func RequestJwtToken(host string, apiKey string) (string, error) {
 	var tokenObj TokenResponse
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://app.testwise.pro/api/v1/user/jwt?api_key="+apiKey, nil)
+	req, err := http.NewRequest("GET", "https://"+host+"/api/v1/user/jwt?api_key="+apiKey, nil)
 	if err != nil {
 		return "", err
 	}
