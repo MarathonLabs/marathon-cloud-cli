@@ -41,6 +41,6 @@ Usage of marathon-cloud:
         OS-specific system image. For Android one of [default,google_apis]. For iOS only [default]
   -isolated bool
         Run each test using isolated execution. Default is false.
-  -filter-file bool
+  -filter-file string
         File containing test filters in YAML format, following the schema described at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic (only Android now)
 ```
