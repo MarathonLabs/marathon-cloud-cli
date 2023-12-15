@@ -34,7 +34,7 @@ func main() {
 	filterFile := conf.GetString("FILTER_FILE")
 
   var filteringConfigJson = ""
-	if len(filterFile) == 0 {
+	if len(filterFile) != 0 {
     filteringConfigJson, err = filter.ValidateYAMLAndConvertToJSON(filterFile) 
     if err != nil {
       fmt.Printf("Error happened attempting to read %s\n", filterFile)
