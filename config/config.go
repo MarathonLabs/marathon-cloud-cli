@@ -33,6 +33,7 @@ func ReadFlags() error {
 	CONFIG_OS_VERSION := flag.String("os-version", "", "Android or iOS OS version")
 	CONFIG_ISOLATED := flag.String("isolated", "", "Run each test using isolated execution. Default is false.")
 	CONFIG_SYSTEM_IMAGE := flag.String("system-image", "", "OS-specific system image. For Android one of [default,google_apis]. For iOS only [default]")
+	CONFIG_FILTER_FILE := flag.String("filter-file", "", "File containing test filters in YAML format, following the schema described at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic")
 
 	args := os.Args
 	if len(args) > 1 && args[1] == "help" {
@@ -98,6 +99,7 @@ func ReadFlags() error {
 	config.Set("ALLURE_OUTPUT", *CONFIG_ALLURE_OUTPUT)
 	config.Set("OS_VERSION", *CONFIG_OS_VERSION)
 	config.Set("SYSTEM_IMAGE", *CONFIG_SYSTEM_IMAGE)
+	config.Set("FILTER_FILE", *CONFIG_FILTER_FILE)
 
 	return nil
 }
