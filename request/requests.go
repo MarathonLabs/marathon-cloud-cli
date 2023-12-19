@@ -91,26 +91,30 @@ type CreateRunResponse struct {
 }
 
 func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath string, commitName string, commitLink string, platform string, osVersion string, systemImage string, isolated string, filteringConfigJson string) (string, error) {
-	appFile, err := os.Open(appPath)
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+  
+	fmt.Println("Application file uploading...")
+  appFile, err := os.Open(appPath)
 	if err != nil {
 		fmt.Println("Can't read apk file")
 		return "", err
 	}
 	defer appFile.Close()
-	testAppFile, err := os.Open(testAppPath)
+	part, _ := writer.CreateFormFile("app", filepath.Base(appFile.Name()))
+	io.Copy(part, appFile)
+	fmt.Println("Application file uploading done")
+
+	fmt.Println("Test Application file uploading...")
+  testAppFile, err := os.Open(testAppPath)
 	if err != nil {
 		fmt.Println("Can't read testapk file")
 		return "", err
 	}
 	defer testAppFile.Close()
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	part, _ := writer.CreateFormFile("app", filepath.Base(appFile.Name()))
-	io.Copy(part, appFile)
 	part2, _ := writer.CreateFormFile("testapp", filepath.Base(testAppFile.Name()))
 	io.Copy(part2, testAppFile)
+	fmt.Println("Test Application file uploading done")
 
 	writer.WriteField("platform", platform)
 	if len(commitName) > 0 {
@@ -140,6 +144,8 @@ func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath s
 	}
 	r.Header.Add("Content-Type", writer.FormDataContentType())
 	client := &http.Client{}
+
+	fmt.Println("Making request to start the test run...")
 	resp, _ := client.Do(r)
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -148,7 +154,11 @@ func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath s
 	}
 	var respData CreateRunResponse
 	err = json.Unmarshal(bodyBytes, &respData)
+  if err != nil {
+		fmt.Println(err)
+	}
 
+	fmt.Println("The test run was started. RunID=" + respData.RunID)
 	return respData.RunID, nil
 }
 
@@ -249,6 +259,7 @@ func WaitRunForEnd(host string, runId string, token string) (string, error) {
 }
 
 func WaitRunForEndWithApiKey(host string, runId string, apiKey string) (string, error) {
+	fmt.Println("Waiting for the test run finish...")
 	var respData RunStats
 	for {
 		client := &http.Client{}
