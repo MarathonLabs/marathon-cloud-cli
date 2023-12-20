@@ -146,7 +146,16 @@ func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath s
 	client := &http.Client{}
 
 	fmt.Println("Making request to start the test run...")
-	resp, _ := client.Do(r)
+	resp, err := client.Do(r)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+  if resp.StatusCode != 200 {
+    err = fmt.Errorf("Received error with status code = %d", resp.StatusCode)
+		return "", err
+  }
+
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
@@ -271,6 +280,11 @@ func WaitRunForEndWithApiKey(host string, runId string, apiKey string) (string, 
 		if err != nil {
 			return "", err
 		}
+    if resp.StatusCode != 200 {
+      fmt.Println(fmt.Sprintf("Status code = %d. Maybe it is a critical error", resp.StatusCode))
+      continue
+    }
+
 		bodyBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return "", err
@@ -294,6 +308,7 @@ type TokenResponse struct {
 }
 
 func RequestJwtToken(host string, apiKey string) (string, error) {
+	fmt.Println("Token is requesting...")
 	var tokenObj TokenResponse
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", "https://"+host+"/api/v1/user/jwt?api_key="+apiKey, nil)
@@ -304,6 +319,11 @@ func RequestJwtToken(host string, apiKey string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+  if resp.StatusCode != 200 {
+    err = fmt.Errorf("Received error with status code = %d", resp.StatusCode)
+		return "", err
+  }
+
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
@@ -313,6 +333,6 @@ func RequestJwtToken(host string, apiKey string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	fmt.Println("Token was received")
 	return tokenObj.Token, nil
-
 }
