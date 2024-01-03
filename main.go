@@ -32,6 +32,7 @@ func main() {
 	isolated := conf.GetString("ISOLATED")
 	systemImage := conf.GetString("SYSTEM_IMAGE")
 	filterFile := conf.GetString("FILTER_FILE")
+	flavor := conf.GetString("FLAVOR")
 
   var filteringConfigJson = ""
 	if len(filterFile) != 0 {
@@ -74,7 +75,7 @@ func main() {
 			fmt.Println(err)
 			return
 		}
-		runId, err := request.SendNewRunWithKey(host, apiKey, app, testApp, commitName, commitLink, platform, osVersion, systemImage, isolated, filteringConfigJson)
+		runId, err := request.SendNewRunWithKey(host, apiKey, app, testApp, commitName, commitLink, platform, osVersion, systemImage, isolated, filteringConfigJson, flavor)
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(5)

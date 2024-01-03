@@ -23,17 +23,18 @@ func ReadFlags() error {
 		"testapp",
 		"",
 		"test app filepath, example: android => /home/user/workspace/testSample.apk; iOS => /home/user/workspace/sampleUITests-Runner.zip. Required")
-	CONFIG_COMMIT_NAME := flag.String("name", "", "name for run, for example it could be description of commit")
-	CONFIG_COMMIT_LINK := flag.String("link", "", "link to commit")
-	CONFIG_ALLURE_OUTPUT := flag.String("o", "", "allure raw results output folder")
-	CONFIG_API_KEY := flag.String("api-key", "", "api-key for client. Required")
-	CONFIG_LOGIN := flag.String("e", "", "user email, example: user@domain.com. Deprecated")
-	CONFIG_PASSWORD := flag.String("p", "", "user password, example: 123456. Deprecated")
-	CONFIG_PLATFORM := flag.String("platform", "", "testing platform (Android or iOS only)")
+	CONFIG_COMMIT_NAME := flag.String("name", "", "Name for run, for example it could be description of commit")
+	CONFIG_COMMIT_LINK := flag.String("link", "", "Link to commit")
+	CONFIG_ALLURE_OUTPUT := flag.String("o", "", "Allure raw results output folder")
+	CONFIG_API_KEY := flag.String("api-key", "", "Api-key for client. Required")
+	CONFIG_LOGIN := flag.String("e", "", "User email, example: user@domain.com. Deprecated")
+	CONFIG_PASSWORD := flag.String("p", "", "User password, example: 123456. Deprecated")
+	CONFIG_PLATFORM := flag.String("platform", "", "Testing platform (Android or iOS only)")
 	CONFIG_OS_VERSION := flag.String("os-version", "", "Android or iOS OS version")
 	CONFIG_ISOLATED := flag.String("isolated", "", "Run each test using isolated execution. Default is false.")
 	CONFIG_SYSTEM_IMAGE := flag.String("system-image", "", "OS-specific system image. For Android one of [default,google_apis]. For iOS only [default]")
 	CONFIG_FILTER_FILE := flag.String("filter-file", "", "File containing test filters in YAML format, following the schema described at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic (only Android now)")
+  CONFIG_FLAVOR := flag.String("flavor", "", "Type of tests to run. Default: [native]. Possible values: [native, js-test-appium, python-robotframework-appium]")
 
 	args := os.Args
 	if len(args) > 1 && args[1] == "help" {
@@ -100,6 +101,7 @@ func ReadFlags() error {
 	config.Set("OS_VERSION", *CONFIG_OS_VERSION)
 	config.Set("SYSTEM_IMAGE", *CONFIG_SYSTEM_IMAGE)
 	config.Set("FILTER_FILE", *CONFIG_FILTER_FILE)
+	config.Set("FLAVOR", *CONFIG_FLAVOR)
 
 	return nil
 }

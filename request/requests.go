@@ -90,7 +90,7 @@ type CreateRunResponse struct {
 	Status string `json:"status"`
 }
 
-func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath string, commitName string, commitLink string, platform string, osVersion string, systemImage string, isolated string, filteringConfigJson string) (string, error) {
+func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath string, commitName string, commitLink string, platform string, osVersion string, systemImage string, isolated string, filteringConfigJson string, flavor string) (string, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
   
@@ -134,6 +134,9 @@ func SendNewRunWithKey(host string, apiKey string, appPath string, testAppPath s
 	}
   if len(filteringConfigJson) > 0 {
 		writer.WriteField("filtering_configuration", filteringConfigJson)
+	}
+  if len(flavor) > 0 {
+		writer.WriteField("flavor", flavor)
 	}
 
 	writer.Close()
