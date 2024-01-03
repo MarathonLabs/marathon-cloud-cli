@@ -33,7 +33,7 @@ func ReadFlags() error {
 	CONFIG_OS_VERSION := flag.String("os-version", "", "Android or iOS OS version")
 	CONFIG_ISOLATED := flag.String("isolated", "", "Run each test using isolated execution. Default is false.")
 	CONFIG_SYSTEM_IMAGE := flag.String("system-image", "", "OS-specific system image. For Android one of [default,google_apis]. For iOS only [default]")
-	CONFIG_FILTER_FILE := flag.String("filter-file", "", "File containing test filters in YAML format, following the schema described at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic (only Android now)")
+	CONFIG_FILTER_FILE := flag.String("filter-file", "", "File containing test filters in YAML format, following the schema described at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic. For iOS see also https://docs.marathonlabs.io/runner/next/ios#test-plans.")
   CONFIG_FLAVOR := flag.String("flavor", "", "Type of tests to run. Default: [native]. Possible values: [native, js-test-appium, python-robotframework-appium]")
 
 	args := os.Args
