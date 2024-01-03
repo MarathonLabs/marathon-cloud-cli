@@ -44,4 +44,6 @@ Usage of marathon-cloud:
   -filter-file string
         File containing test filters in YAML format, following the schema described at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic. 
         For iOS see also https://docs.marathonlabs.io/runner/next/ios#test-plans.
+  -flavor string
+        Type of tests to run. Default: [native]. Possible values: [native, js-test-appium, python-robotframework-appium]
 ```
