@@ -111,6 +111,11 @@ struct RunArgs {
 
     #[arg(
         long,
+        help = "Test filters supplied as a YAML file following the schema at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic. For iOS see also https://docs.marathonlabs.io/runner/next/ios#test-plans"
+    )] filter_file: Option<PathBuf>,
+
+    #[arg(
+        long,
         default_value_t = true,
         help = "Wait for test run to finish if true, exits after triggering a run if false"
     )]

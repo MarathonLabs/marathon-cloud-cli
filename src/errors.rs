@@ -33,5 +33,14 @@ pub enum InputError {
 
     #[error("Can't open file. Double check you've supplied correct path\npath= ${path}")]
     OpenFileFailure { path: PathBuf, error: io::Error },
+}
 
+#[derive(Error, Debug)]
+pub enum FilteringConfigurationError {
+    #[error("Filter type ${mtype} is not supported by Marathon Cloud")]
+    UnsupportedFilterType { mtype: String },
+    #[error("Filter type ${mtype} is invalid")]
+    InvalidFilterType { mtype: String },
+    #[error("Invalid configuration for filter ${mtype}: ${message}")]
+    InvalidFilterConfiguration { mtype: String, message: String},
 }

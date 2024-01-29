@@ -1,12 +1,12 @@
 use anyhow::Result;
-mod cli;
 mod api;
 mod artifacts;
-mod interactor;
+mod cli;
 mod errors;
+mod filtering;
+mod interactor;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     cli::Cli::run().await
 }
-
