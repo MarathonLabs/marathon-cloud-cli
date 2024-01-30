@@ -7,12 +7,13 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - name: Setup up rust
+        uses: ATiltedTree/setup-rust@v1
         with:
-          go-version: '1.18'
-      - name: Build
-        run: go build -v ./...
-      - name: Test
-        run: go test -v ./...
+          rust-version: stable
+          components: clippy
+      - name: Build | Test 
+        run: cargo test
+      - name: Lint
+        run: cargo clippy
