@@ -39,5 +39,11 @@ Usage of marathon-cloud:
         allure raw results output folder
   -system-image string
         OS-specific system image. For Android one of [default,google_apis]. For iOS only [default]
+  -isolated bool
+        Run each test using isolated execution. Default is false.
+  -filter-file string
+        File containing test filters in YAML format, following the schema described at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic. 
+        For iOS see also https://docs.marathonlabs.io/runner/next/ios#test-plans.
+  -flavor string
+        Type of tests to run. Default: [native]. Possible values: [native, js-test-appium, python-robotframework-appium].
 ```
-
