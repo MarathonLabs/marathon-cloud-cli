@@ -10,7 +10,7 @@ use serde_with::skip_serializing_none;
 
 use crate::errors::{FilteringConfigurationError, InputError};
 
-pub async fn convert(cnf: PathBuf) -> Result<String> {
+pub async fn convert(cnf: PathBuf) -> Result<FilteringConfiguration> {
     let content = fs::read_to_string(&cnf)
         .await
         .map_err(|error| InputError::OpenFileFailure {
@@ -28,8 +28,7 @@ pub async fn convert(cnf: PathBuf) -> Result<String> {
     )
     .await?;
 
-    let result = serde_json::to_string(&filtering_configuration)?;
-    Ok(result)
+    Ok(filtering_configuration.filtering_configuration)
 }
 
 pub async fn validate(cnf: &mut FilteringConfiguration, workdir: &Path) -> Result<()> {
@@ -213,6 +212,7 @@ mod tests {
             .join("filtering")
             .join("valid.yaml");
         let result = convert(fixture).await?;
+        let result = serde_json::to_string(&result)?;
         assert_eq!(
             result,
             r#"{"filteringConfiguration":{"allowlist":[{"type":"fully-qualified-test-name","regex":".*Test"}]}}"#
@@ -228,6 +228,7 @@ mod tests {
             .join("filtering")
             .join("validComplex.yaml");
         let result = convert(fixture).await?;
+        let result = serde_json::to_string(&result)?;
 
         assert_eq!(
             result,
@@ -309,6 +310,7 @@ mod tests {
             .join("filtering")
             .join("filetype.yaml");
         let result = convert(fixture).await?;
+        let result = serde_json::to_string(&result)?;
         assert_eq!(
             result,
             r#"{"filteringConfiguration":{"allowlist":[{"type":"fully-qualified-test-name","values":["com.malinskiy.adam.SimpleTest#test1","com.malinskiy.adam.SimpleTest#test2"]}]}}"#

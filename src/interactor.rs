@@ -9,6 +9,7 @@ use tokio::time::{sleep, Instant};
 use crate::{
     api::{RapiClient, RapiReqwestClient},
     artifacts::{download_artifacts, fetch_artifact_list},
+    filtering,
 };
 
 pub struct DownloadArtifactsInteractor {}
@@ -60,6 +61,7 @@ impl TriggerTestRunInteractor {
         api_key: &str,
         wait: bool,
         isolated: Option<bool>,
+        filter_file: Option<PathBuf>,
         output: &Option<PathBuf>,
         application: Option<PathBuf>,
         test_application: PathBuf,
@@ -79,6 +81,11 @@ impl TriggerTestRunInteractor {
             "{} Submitting new run...",
             style(format!("[1/{}]", steps)).bold().dim()
         );
+        let filter_file = filter_file.map(filtering::convert);
+        let filtering_configuration = match filter_file {
+            Some(future) => Some(future.await?),
+            None => None,
+        };
         let id = client
             .create_run(
                 application,
@@ -89,6 +96,7 @@ impl TriggerTestRunInteractor {
                 os_version,
                 system_image,
                 isolated,
+                filtering_configuration,
                 progress,
             )
             .await?;
@@ -122,10 +130,16 @@ impl TriggerTestRunInteractor {
                     );
 
                     if let Some(output) = output {
-                        println!("{} Fetching file list...", style(format!("[3/{}]", steps)).bold().dim());
+                        println!(
+                            "{} Fetching file list...",
+                            style(format!("[3/{}]", steps)).bold().dim()
+                        );
                         let token = client.get_token().await?;
                         let artifacts = fetch_artifact_list(&client, &id, &token).await?;
-                        println!("{} Downloading files...", style(format!("[4/{}]", steps)).bold().dim());
+                        println!(
+                            "{} Downloading files...",
+                            style(format!("[4/{}]", steps)).bold().dim()
+                        );
                         download_artifacts(&client, artifacts, output, &token, true).await?;
                         println!(
                             "{} Patching local relative paths...",

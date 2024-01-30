@@ -14,11 +14,9 @@ use tokio::{
     fs::{create_dir_all, File},
     io,
 };
-use tokio_util::{
-    io::ReaderStream,
-};
+use tokio_util::io::ReaderStream;
 
-use crate::errors::{ApiError, InputError};
+use crate::{errors::{ApiError, InputError}, filtering::FilteringConfiguration};
 
 #[async_trait]
 pub trait RapiClient {
@@ -33,6 +31,7 @@ pub trait RapiClient {
         os_version: Option<String>,
         system_image: Option<String>,
         isolated: Option<bool>,
+        filtering_configuration: Option<FilteringConfiguration>,
         progress: bool,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
@@ -106,6 +105,7 @@ impl RapiClient for RapiReqwestClient {
         os_version: Option<String>,
         system_image: Option<String>,
         isolated: Option<bool>,
+        filtering_configuration: Option<FilteringConfiguration>,
         progress: bool,
     ) -> Result<String> {
         let url = format!("{}/run", self.base_url);
@@ -244,6 +244,10 @@ impl RapiClient for RapiReqwestClient {
 
         if let Some(isolated) = isolated {
             form = form.text("isolated", isolated.to_string())
+        }
+
+        if let Some(filtering_configuration) = filtering_configuration {
+            form = form.text("filtering_configuration", serde_json::to_string(&filtering_configuration)?);
         }
 
         let response = self

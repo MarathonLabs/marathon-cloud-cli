@@ -40,6 +40,7 @@ impl Cli {
                                 &args.api_key,
                                 args.wait,
                                 args.isolated,
+                                args.filter_file,
                                 &args.output,
                                 application,
                                 test_application,
@@ -60,6 +61,7 @@ impl Cli {
                                 &args.api_key,
                                 args.wait,
                                 args.isolated,
+                                args.filter_file,
                                 &args.output,
                                 Some(application),
                                 test_application,
@@ -112,7 +114,8 @@ struct RunArgs {
     #[arg(
         long,
         help = "Test filters supplied as a YAML file following the schema at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic. For iOS see also https://docs.marathonlabs.io/runner/next/ios#test-plans"
-    )] filter_file: Option<PathBuf>,
+    )]
+    filter_file: Option<PathBuf>,
 
     #[arg(
         long,
