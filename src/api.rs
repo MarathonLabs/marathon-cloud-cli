@@ -16,7 +16,7 @@ use tokio::{
 };
 use tokio_util::io::ReaderStream;
 
-use crate::{errors::{ApiError, InputError}, filtering::FilteringConfiguration};
+use crate::{errors::{ApiError, InputError}, filtering::SparseMarathonfile};
 
 #[async_trait]
 pub trait RapiClient {
@@ -31,7 +31,7 @@ pub trait RapiClient {
         os_version: Option<String>,
         system_image: Option<String>,
         isolated: Option<bool>,
-        filtering_configuration: Option<FilteringConfiguration>,
+        filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
@@ -105,7 +105,7 @@ impl RapiClient for RapiReqwestClient {
         os_version: Option<String>,
         system_image: Option<String>,
         isolated: Option<bool>,
-        filtering_configuration: Option<FilteringConfiguration>,
+        filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
     ) -> Result<String> {
         let url = format!("{}/run", self.base_url);

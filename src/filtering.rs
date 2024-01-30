@@ -10,7 +10,7 @@ use serde_with::skip_serializing_none;
 
 use crate::errors::{FilteringConfigurationError, InputError};
 
-pub async fn convert(cnf: PathBuf) -> Result<FilteringConfiguration> {
+pub async fn convert(cnf: PathBuf) -> Result<SparseMarathonfile> {
     let content = fs::read_to_string(&cnf)
         .await
         .map_err(|error| InputError::OpenFileFailure {
@@ -18,7 +18,7 @@ pub async fn convert(cnf: PathBuf) -> Result<FilteringConfiguration> {
             error,
         })?;
 
-    let mut filtering_configuration: Marathonfile = serde_yaml::from_str(&content)?;
+    let mut filtering_configuration: SparseMarathonfile = serde_yaml::from_str(&content)?;
 
     let absolute_path = fs::canonicalize(&cnf).await?;
     let workdir = absolute_path.parent().unwrap_or(Path::new(""));
@@ -28,7 +28,7 @@ pub async fn convert(cnf: PathBuf) -> Result<FilteringConfiguration> {
     )
     .await?;
 
-    Ok(filtering_configuration.filtering_configuration)
+    Ok(filtering_configuration)
 }
 
 pub async fn validate(cnf: &mut FilteringConfiguration, workdir: &Path) -> Result<()> {
@@ -163,7 +163,7 @@ async fn validate_filter(
 
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize)]
-pub struct Marathonfile {
+pub struct SparseMarathonfile {
     #[serde(rename = "filteringConfiguration")]
     pub filtering_configuration: FilteringConfiguration,
 }
