@@ -240,6 +240,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap_complete"
+version = "4.4.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df631ae429f6613fcd3a7c1adbdb65f637271e561b03680adaa6573015dfb106"
+dependencies = [
+ "clap",
+]
+
+[[package]]
 name = "clap_derive"
 version = "4.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -827,13 +836,14 @@ checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 
 [[package]]
 name = "marathon-cloud"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
  "clap",
  "clap-verbosity-flag",
+ "clap_complete",
  "console",
  "futures",
  "indicatif",

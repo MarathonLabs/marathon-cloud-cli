@@ -1,13 +1,21 @@
 [package]
+authors = ["Anton Malinskiy <am@marathonlabs.io>"]
+categories = ["command-line-utilities"]
+description = "Command-line client for Marathon Cloud"
+homepage = "https://github.com/sharkdp/bat"
+license = "MIT"
 name = "marathon-cloud"
-version = "0.2.0"
+repository = "https://github.com/MarathonLabs/marathon-cloud-cli"
+version = "1.0.0"
 edition = "2021"
+rust-version = "1.70"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1.0.75"
 clap = { version = "4.4.7", features = ["derive", "env"] }
+clap_complete = "4"
 log = "0.4.20"
 serde = { version = "1.0", features = ["derive"] }
 serde-enum-str = "0.4.0"

@@ -1,13 +1,19 @@
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
+use clap::CommandFactory;
 use std::{fmt::Display, path::PathBuf};
 
 use crate::interactor::{DownloadArtifactsInteractor, TriggerTestRunInteractor};
 
 #[derive(Parser)]
-#[command(name = "marathon-cloud")]
-#[command(about = "Marathon Cloud command-line interface", long_about = None)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    name = "marathon-cloud",
+    about = "Marathon Cloud command-line interface",
+    long_about = None,
+    author, 
+    version, 
+    about, 
+)]
 pub struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -88,6 +94,12 @@ impl Cli {
                     .await?;
                 Ok(())
             }
+            Some(Commands::Completions { shell }) => {
+                let mut app = Self::command();
+                let bin_name = app.get_name().to_string();
+                clap_complete::generate(shell, &mut app, bin_name, &mut std::io::stdout());
+                Ok(())
+            }
             None => Ok(()),
         }
     }
@@ -97,6 +109,8 @@ impl Cli {
 enum Commands {
     Run(RunArgs),
     Download(DownloadArgs),
+    #[clap(about = "Output shell completion code for the specified shell (bash, zsh, fish)")]
+    Completions { shell: clap_complete::Shell },
 }
 
 #[derive(Debug, Args)]
