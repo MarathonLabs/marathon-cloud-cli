@@ -107,7 +107,9 @@ impl Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    #[clap(about = "Submit a test run")]
     Run(RunArgs),
+    #[clap(about = "Download artifacts from a previous test run")]
     Download(DownloadArgs),
     #[clap(about = "Output shell completion code for the specified shell (bash, zsh, fish)")]
     Completions { shell: clap_complete::Shell },
