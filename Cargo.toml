@@ -2,7 +2,7 @@
 authors = ["Anton Malinskiy <am@marathonlabs.io>"]
 categories = ["command-line-utilities"]
 description = "Command-line client for Marathon Cloud"
-homepage = "https://github.com/sharkdp/bat"
+homepage = "https://github.com/MarathonLabs/marathon-cloud-cli"
 license = "MIT"
 name = "marathon-cloud"
 repository = "https://github.com/MarathonLabs/marathon-cloud-cli"
