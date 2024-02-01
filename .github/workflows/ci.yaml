@@ -187,7 +187,7 @@ jobs:
         # Setup paths
         BIN_NAME="${{ needs.crate_metadata.outputs.name }}${EXE_suffix}"
         # For macos we use universal binary
-        if [[ ${{ matrix.job.os }} = macos-* ]]
+        if [[ ${{ matrix.job.os }} = macos-* ]]; then
           BIN_PATH="target/universal-apple-darwin/release/${BIN_NAME}"
         else
           BIN_PATH="target/${{ matrix.job.target }}/release/${BIN_NAME}"
