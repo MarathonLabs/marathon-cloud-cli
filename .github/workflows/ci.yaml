@@ -188,11 +188,11 @@ jobs:
               $BUILD_CMD build --locked --release --target=$i
           done
 
-          BIN_INTEL_PATH="target/x86_64-apple-darwin/release/${BIN_NAME}"
-          BIN_APPLE_PATH="target/aarch64-apple-darwin/release/${BIN_NAME}"
+          BIN_INTEL_PATH="target/x86_64-apple-darwin/release/${{ steps.bin.outputs.BIN_NAME}}"
+          BIN_APPLE_PATH="target/aarch64-apple-darwin/release/${{ steps.bin.outputs.BIN_NAME}}"
 
           mkdir -p target/universal-apple-darwin/release
-          lipo -create -output target/universal-apple-darwin/release/${BIN_NAME} ${BIN_INTEL_PATH} ${BIN_APPLE_PATH}
+          lipo -create -output target/universal-apple-darwin/release/${{ steps.bin.outputs.BIN_NAME}} ${BIN_INTEL_PATH} ${BIN_APPLE_PATH}
         else
           $BUILD_CMD build --locked --release --target=${{ matrix.job.target }}
         fi
