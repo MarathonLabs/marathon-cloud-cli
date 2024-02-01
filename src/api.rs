@@ -16,7 +16,10 @@ use tokio::{
 };
 use tokio_util::io::ReaderStream;
 
-use crate::{errors::{ApiError, InputError}, filtering::SparseMarathonfile};
+use crate::{
+    errors::{ApiError, InputError},
+    filtering::SparseMarathonfile,
+};
 
 #[async_trait]
 pub trait RapiClient {
@@ -177,7 +180,10 @@ impl RapiClient for RapiReqwestClient {
         if let Some(app) = app {
             let file = File::open(&app)
                 .await
-                .map_err(|error| InputError::OpenFileFailure { path: app.clone(), error })?;
+                .map_err(|error| InputError::OpenFileFailure {
+                    path: app.clone(),
+                    error,
+                })?;
 
             let app_file_name = app
                 .file_name()
@@ -247,7 +253,10 @@ impl RapiClient for RapiReqwestClient {
         }
 
         if let Some(filtering_configuration) = filtering_configuration {
-            form = form.text("filtering_configuration", serde_json::to_string(&filtering_configuration)?);
+            form = form.text(
+                "filtering_configuration",
+                serde_json::to_string(&filtering_configuration)?,
+            );
         }
 
         let response = self

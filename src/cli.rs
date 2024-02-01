@@ -1,6 +1,6 @@
 use anyhow::Result;
-use clap::{Args, Parser, Subcommand};
 use clap::CommandFactory;
+use clap::{Args, Parser, Subcommand};
 use std::{fmt::Display, path::PathBuf};
 
 use crate::interactor::{DownloadArtifactsInteractor, TriggerTestRunInteractor};
@@ -10,9 +10,9 @@ use crate::interactor::{DownloadArtifactsInteractor, TriggerTestRunInteractor};
     name = "marathon-cloud",
     about = "Marathon Cloud command-line interface",
     long_about = None,
-    author, 
-    version, 
-    about, 
+    author,
+    version,
+    about,
 )]
 pub struct Cli {
     #[command(subcommand)]

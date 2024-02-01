@@ -76,7 +76,8 @@ async fn validate_filters(
                 match filter.filters.as_mut() {
                     Some(filters) => {
                         for filter in filters.iter_mut() {
-                            validate_filter(filter, supported_types, unsupported_types, workdir).await?;
+                            validate_filter(filter, supported_types, unsupported_types, workdir)
+                                .await?;
                         }
                     }
                     None => {

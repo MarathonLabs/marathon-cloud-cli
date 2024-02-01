@@ -88,4 +88,3 @@ pub async fn download_artifacts(
     }
     Ok(())
 }
-

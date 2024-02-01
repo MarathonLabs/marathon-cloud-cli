@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use reqwest::Error as ReqwestError;
 use thiserror::Error;
-use tokio::{task::JoinError, io};
+use tokio::{io, task::JoinError};
 use url::ParseError;
 
 #[derive(Error, Debug)]
@@ -42,5 +42,5 @@ pub enum FilteringConfigurationError {
     #[error("Filter type ${mtype} is invalid")]
     InvalidFilterType { mtype: String },
     #[error("Invalid configuration for filter ${mtype}: ${message}")]
-    InvalidFilterConfiguration { mtype: String, message: String},
+    InvalidFilterConfiguration { mtype: String, message: String },
 }
