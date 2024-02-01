@@ -102,18 +102,17 @@ jobs:
       fail-fast: false
       matrix:
         job:
-          - { target: aarch64-unknown-linux-gnu   , os: ubuntu-22.04, dpkg_arch: arm64,            use-cross: true }
-          - { target: arm-unknown-linux-gnueabihf , os: ubuntu-22.04, dpkg_arch: armhf,            use-cross: true }
-          - { target: arm-unknown-linux-musleabihf, os: ubuntu-22.04, dpkg_arch: musl-linux-armhf, use-cross: true }
-          - { target: i686-pc-windows-msvc        , os: windows-2019,                                              }
-          - { target: i686-unknown-linux-gnu      , os: ubuntu-22.04, dpkg_arch: i686,             use-cross: true }
-          - { target: i686-unknown-linux-musl     , os: ubuntu-22.04, dpkg_arch: musl-linux-i686,  use-cross: true }
-          - { target: x86_64-apple-darwin         , os: macos-13,                                                  }
-          - { target: aarch64-apple-darwin        , os: macos-13,                                                  }
-          - { target: x86_64-pc-windows-gnu       , os: windows-2019,                                              }
-          - { target: x86_64-pc-windows-msvc      , os: windows-2019,                                              }
-          - { target: x86_64-unknown-linux-gnu    , os: ubuntu-22.04, dpkg_arch: amd64,            use-cross: true }
-          - { target: x86_64-unknown-linux-musl   , os: ubuntu-22.04, dpkg_arch: musl-linux-amd64, use-cross: true }
+          - { target: aarch64-unknown-linux-gnu                 , os: ubuntu-22.04, dpkg_arch: arm64,            use-cross: true }
+          - { target: arm-unknown-linux-gnueabihf               , os: ubuntu-22.04, dpkg_arch: armhf,            use-cross: true }
+          - { target: arm-unknown-linux-musleabihf              , os: ubuntu-22.04, dpkg_arch: musl-linux-armhf, use-cross: true }
+          - { target: i686-pc-windows-msvc                      , os: windows-2019,                                              }
+          - { target: i686-unknown-linux-gnu                    , os: ubuntu-22.04, dpkg_arch: i686,             use-cross: true }
+          - { target: i686-unknown-linux-musl                   , os: ubuntu-22.04, dpkg_arch: musl-linux-i686,  use-cross: true }
+          - { target: 'x86_64-apple-darwin,aarch64-apple-darwin', os: macos-13,                                                  }
+          - { target: x86_64-pc-windows-gnu                     , os: windows-2019,                                              }
+          - { target: x86_64-pc-windows-msvc                    , os: windows-2019,                                              }
+          - { target: x86_64-unknown-linux-gnu                  , os: ubuntu-22.04, dpkg_arch: amd64,            use-cross: true }
+          - { target: x86_64-unknown-linux-musl                 , os: ubuntu-22.04, dpkg_arch: musl-linux-amd64, use-cross: true }
     env:
       BUILD_CMD: cargo
     steps:
@@ -156,7 +155,24 @@ jobs:
 
     - name: Build
       shell: bash
-      run: $BUILD_CMD build --locked --release --target=${{ matrix.job.target }}
+      run: |
+        if [[ ${{ matrix.job.os }} = macos-* ]]
+        then
+          # For macos we build universal binary
+          for i in $(echo "${{ matrix.job.target}}" | sed "s/,/ /g")
+          do
+              $BUILD_CMD build --locked --release --target=$i
+          done
+
+          BIN_INTEL_PATH="target/x86_64-apple-darwin/release/${BIN_NAME}"
+          BIN_APPLE_PATH="target/aarch64-apple-darwin/release/${BIN_NAME}"
+
+          mkdir -p target/universal-apple-darwin/release
+          lipo -create -output target/universal-apple-darwin/release/${BIN_NAME} ${BIN_INTEL_PATH} ${BIN_APPLE_PATH}
+        else
+          $BUILD_CMD build --locked --release --target=${{ matrix.job.target }}
+        fi
+
 
     - name: Set binary name & path
       id: bin
@@ -170,9 +186,15 @@ jobs:
 
         # Setup paths
         BIN_NAME="${{ needs.crate_metadata.outputs.name }}${EXE_suffix}"
-        BIN_PATH="target/${{ matrix.job.target }}/release/${BIN_NAME}"
+        # For macos we use universal binary
+        if [[ ${{ matrix.job.os }} = macos-* ]]
+          BIN_PATH="target/universal-apple-darwin/release/${BIN_NAME}"
+        else
+          BIN_PATH="target/${{ matrix.job.target }}/release/${BIN_NAME}"
+        fi
 
         # Let subsequent steps know where to find the binary
+
         echo "BIN_PATH=${BIN_PATH}" >> $GITHUB_OUTPUT
         echo "BIN_NAME=${BIN_NAME}" >> $GITHUB_OUTPUT
 
@@ -188,9 +210,11 @@ jobs:
     - name: Run tests
       shell: bash
       run: |
-        if [[ ${{ matrix.job.os }} = windows-* ]]
-        then
+        if [[ ${{ matrix.job.os }} = windows-* ]]; then
           powershell.exe -command "$BUILD_CMD test --locked --target=${{ matrix.job.target }} ${{ steps.test-options.outputs.CARGO_TEST_OPTIONS}}"
+        elif [[ ${{ matrix.job.os }} = macos-* ]]; then
+          # For macos universal binary we test using x86 since GitHub Actions do not yet support arm execution environment
+          $BUILD_CMD test --locked --target=x86_64-apple-darwin ${{ steps.test-options.outputs.CARGO_TEST_OPTIONS}}
         else
           $BUILD_CMD test --locked --target=${{ matrix.job.target }} ${{ steps.test-options.outputs.CARGO_TEST_OPTIONS}}
         fi
@@ -202,7 +226,11 @@ jobs:
         then
           mkdir -p target/release/man
           powershell.exe -command "$BUILD_CMD run --target=${{ matrix.job.target }} --bin marathon-cloud-mangen target\\release\\man"
-         else
+        elif [[ ${{ matrix.job.os }} = macos-* ]]; then
+          # For macos universal binary we test using x86 since GitHub Actions do not yet support arm execution environment
+          mkdir -p target/release/man
+          OUT_DIR=target/release/man/ $BUILD_CMD run --target=x86_64-apple-darwin --bin marathon-cloud-mangen
+        else
           mkdir -p target/release/man
           OUT_DIR=target/release/man/ $BUILD_CMD run --target=${{ matrix.job.target }} --bin marathon-cloud-mangen
         fi
@@ -217,6 +245,13 @@ jobs:
           powershell.exe -command "$BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions fish" > target/release/autocomplete/marathon-cloud.fish
           powershell.exe -command "$BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions powershell" > target/release/autocomplete/_marathon-cloud.ps1
           powershell.exe -command "$BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions zsh" > target/release/autocomplete/marathon-cloud.zsh
+        elif [[ ${{ matrix.job.os }} = macos-* ]]; then
+          # For macos universal binary we test using x86 since GitHub Actions do not yet support arm execution environment
+          mkdir -p target/release/autocomplete 
+          $BUILD_CMD -q run --target=x86_64-apple-darwin -- completions bash > target/release/autocomplete/marathon-cloud.bash
+          $BUILD_CMD -q run --target=x86_64-apple-darwin -- completions fish > target/release/autocomplete/marathon-cloud.fish
+          $BUILD_CMD -q run --target=x86_64-apple-darwin -- completions powershell > target/release/autocomplete/_marathon-cloud.ps1
+          $BUILD_CMD -q run --target=x86_64-apple-darwin -- completions zsh > target/release/autocomplete/marathon-cloud.zsh
         else
           mkdir -p target/release/autocomplete 
           $BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions bash > target/release/autocomplete/marathon-cloud.bash
