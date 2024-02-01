@@ -43,6 +43,7 @@ thiserror = "1.0"
 url = "2.5"
 async-stream = "0.3"
 clap_mangen = "0.2.18"
+h2 = "0.3.24"
 
 [dev-dependencies]
 rstest = "0.18.2"
