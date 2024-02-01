@@ -203,8 +203,7 @@ jobs:
           powershell.exe -command "$BUILD_CMD run --bin marathon-cloud-mangen"
         else
           mkdir -p target/release/man
-          export OUT_DIR=target/release/man/
-          $BUILD_CMD run --bin marathon-cloud-mangen
+          OUT_DIR=target/release/man/ $BUILD_CMD run --bin marathon-cloud-mangen
         fi
 
     - name: Generate completions 
