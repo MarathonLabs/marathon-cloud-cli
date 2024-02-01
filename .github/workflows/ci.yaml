@@ -153,27 +153,6 @@ jobs:
         cargo -V
         rustc -V
 
-    - name: Build
-      shell: bash
-      run: |
-        if [[ ${{ matrix.job.os }} = macos-* ]]
-        then
-          # For macos we build universal binary
-          for i in $(echo "${{ matrix.job.target}}" | sed "s/,/ /g")
-          do
-              $BUILD_CMD build --locked --release --target=$i
-          done
-
-          BIN_INTEL_PATH="target/x86_64-apple-darwin/release/${BIN_NAME}"
-          BIN_APPLE_PATH="target/aarch64-apple-darwin/release/${BIN_NAME}"
-
-          mkdir -p target/universal-apple-darwin/release
-          lipo -create -output target/universal-apple-darwin/release/${BIN_NAME} ${BIN_INTEL_PATH} ${BIN_APPLE_PATH}
-        else
-          $BUILD_CMD build --locked --release --target=${{ matrix.job.target }}
-        fi
-
-
     - name: Set binary name & path
       id: bin
       shell: bash
@@ -197,6 +176,28 @@ jobs:
 
         echo "BIN_PATH=${BIN_PATH}" >> $GITHUB_OUTPUT
         echo "BIN_NAME=${BIN_NAME}" >> $GITHUB_OUTPUT
+
+    - name: Build
+      shell: bash
+      run: |
+        if [[ ${{ matrix.job.os }} = macos-* ]]
+        then
+          # For macos we build universal binary
+          for i in $(echo "${{ matrix.job.target}}" | sed "s/,/ /g")
+          do
+              $BUILD_CMD build --locked --release --target=$i
+          done
+
+          BIN_INTEL_PATH="target/x86_64-apple-darwin/release/${BIN_NAME}"
+          BIN_APPLE_PATH="target/aarch64-apple-darwin/release/${BIN_NAME}"
+
+          mkdir -p target/universal-apple-darwin/release
+          lipo -create -output target/universal-apple-darwin/release/${BIN_NAME} ${BIN_INTEL_PATH} ${BIN_APPLE_PATH}
+        else
+          $BUILD_CMD build --locked --release --target=${{ matrix.job.target }}
+        fi
+
+
 
     - name: Set testing options
       id: test-options
