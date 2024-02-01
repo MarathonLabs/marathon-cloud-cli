@@ -200,10 +200,10 @@ jobs:
         if [[ ${{ matrix.job.os }} = windows-* ]]
         then
           export OUT_DIR=target/release/man/
-          powershell.exe -command "$BUILD_CMD run --bin marathon-cloud-mangen"
+          powershell.exe -command "$BUILD_CMD run --target=${{ matrix.job.target }} --bin marathon-cloud-mangen"
         else
           mkdir -p target/release/man
-          OUT_DIR=target/release/man/ $BUILD_CMD run --bin marathon-cloud-mangen
+          OUT_DIR=target/release/man/ $BUILD_CMD run --target=${{ matrix.job.target }} --bin marathon-cloud-mangen
         fi
 
     - name: Generate completions 
@@ -212,16 +212,16 @@ jobs:
         if [[ ${{ matrix.job.os }} = windows-* ]]
         then
           mkdir -p target/release/autocomplete 
-          powershell.exe -command "$BUILD_CMD -q run -- completions bash" > target/release/autocomplete/marathon-cloud.bash
-          powershell.exe -command "$BUILD_CMD -q run -- completions fish" > target/release/autocomplete/marathon-cloud.fish
-          powershell.exe -command "$BUILD_CMD -q run -- completions powershell" > target/release/autocomplete/_marathon-cloud.ps1
-          powershell.exe -command "$BUILD_CMD -q run -- completions zsh" > target/release/autocomplete/marathon-cloud.zsh
+          powershell.exe -command "$BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions bash" > target/release/autocomplete/marathon-cloud.bash
+          powershell.exe -command "$BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions fish" > target/release/autocomplete/marathon-cloud.fish
+          powershell.exe -command "$BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions powershell" > target/release/autocomplete/_marathon-cloud.ps1
+          powershell.exe -command "$BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions zsh" > target/release/autocomplete/marathon-cloud.zsh
         else
           mkdir -p target/release/autocomplete 
-          $BUILD_CMD -q run -- completions bash > target/release/autocomplete/marathon-cloud.bash
-          $BUILD_CMD -q run -- completions fish > target/release/autocomplete/marathon-cloud.fish
-          $BUILD_CMD -q run -- completions powershell > target/release/autocomplete/_marathon-cloud.ps1
-          $BUILD_CMD -q run -- completions zsh > target/release/autocomplete/marathon-cloud.zsh
+          $BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions bash > target/release/autocomplete/marathon-cloud.bash
+          $BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions fish > target/release/autocomplete/marathon-cloud.fish
+          $BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions powershell > target/release/autocomplete/_marathon-cloud.ps1
+          $BUILD_CMD -q run --target=${{ matrix.job.target }} -- completions zsh > target/release/autocomplete/marathon-cloud.zsh
         fi
 
     - name: Create tarball
