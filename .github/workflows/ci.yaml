@@ -1,6 +1,6 @@
 env:
   CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
-  MSRV_FEATURES: --no-default-features --features minimal-application,bugreport,build-assets
+  MSRV_FEATURES: --no-default-features
 
 on:
   workflow_dispatch:
