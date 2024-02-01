@@ -1,10 +1,5 @@
 use anyhow::Result;
-mod api;
-mod artifacts;
-mod cli;
-mod errors;
-mod filtering;
-mod interactor;
+use marathon_cloud::cli;
 
 #[tokio::main]
 async fn main() -> Result<()> {
