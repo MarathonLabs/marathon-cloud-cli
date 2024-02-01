@@ -1,45 +1,50 @@
 name: version-bump
 
 on:
-  workflow_dispatch:
-    inputs:
-      target_branch:
-        description: >-
-          JSON array of branches to target. The first branch in the array will
-          be marked as the latest release.
-        required: false
-        type: string
-        default: '["main"]'
+  workflow_run:
+    workflows: ["cicd"]
+    types:
+      - completed
 permissions:
   contents: write
 jobs:
   bump-version:
-    strategy:
-      matrix:
-        target_branch: ${{ fromJSON(inputs.target_branch) }}
     runs-on: ubuntu-latest
     env:
       CARGO_EDIT_VERSION: 0.12.2
     steps:
       - uses: actions/checkout@v4
+      - name: Check for release
+        id: is-release
+        shell: bash
+        run: |
+          unset IS_RELEASE ; if [[ $GITHUB_REF =~ ^refs/tags/[0-9].* ]]; then IS_RELEASE='true' ; fi
+          echo "IS_RELEASE=${IS_RELEASE}" >> $GITHUB_OUTPUT
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        if: steps.is-release.outputs.IS_RELEASE
       - name: Cache cargo edit
+        if: steps.is-release.outputs.IS_RELEASE
         uses: actions/cache@v4
         with:
           path: ${{ runner.tool_cache }}/cargo-edit
           key: cargo-edit-${{ env.CARGO_EDIT_VERSION }}
       - name: Add the tool cache directory to the search path
+        if: steps.is-release.outputs.IS_RELEASE
         run: echo "${{ runner.tool_cache }}/cargo-edit/bin/" >>$GITHUB_PATH
       - name: Ensure cargo-edit is installed
+        if: steps.is-release.outputs.IS_RELEASE
         run: |
           cargo install \
             --root ${{ runner.tool_cache }}/cargo-edit \
             --version ${{ env.CARGO_EDIT_VERSION }} \
             cargo-edit
       - run: cargo set-version --bump patch
+        if: steps.is-release.outputs.IS_RELEASE
       - run: git diff
+        if: steps.is-release.outputs.IS_RELEASE
       - name: Push changes
+        if: steps.is-release.outputs.IS_RELEASE
         run: |
           git config --global user.name 'Anton Malinlskiy'
           git config --global user.email 'malinskiy@users.noreply.github.com'
