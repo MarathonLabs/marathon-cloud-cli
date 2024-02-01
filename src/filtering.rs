@@ -106,7 +106,7 @@ async fn validate_filter(
             mtype: filter.mtype.clone(),
         });
     } else if !supported_types.iter().any(|&t| t == filter.mtype) {
-        anyhow::bail!(FilteringConfigurationError::UnsupportedFilterType {
+        anyhow::bail!(FilteringConfigurationError::InvalidFilterType {
             mtype: filter.mtype.clone(),
         });
     }

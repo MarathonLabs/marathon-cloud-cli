@@ -210,6 +210,7 @@ enum RunCommands {
         #[arg(value_enum, long, help = "Runtime system image")]
         system_image: Option<AndroidSystemImage>,
     },
+    #[allow(non_camel_case_types)]
     #[command(name = "ios")]
     iOS {
         #[arg(
@@ -231,6 +232,7 @@ enum RunCommands {
 #[derive(Debug)]
 pub enum Platform {
     Android,
+    #[allow(non_camel_case_types)]
     iOS,
 }
 
