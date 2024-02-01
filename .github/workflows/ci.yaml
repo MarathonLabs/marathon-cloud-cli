@@ -195,17 +195,31 @@ jobs:
         fi
 
     - name: Generate manpage
-      run: mkdir -p target/release/man && OUT_DIR=target/release/man/ cargo run --bin marathon-cloud-mangen
-
+      run: 
+        if [[ ${{ matrix.job.os }} = windows-* ]]
+        then
+          export OUT_DIR=target/release/man/
+          powershell.exe -command "$BUILD_CMD run --bin marathon-cloud-mangen"
+        else
+          mkdir -p target/release/man && OUT_DIR=target/release/man/ $BUILD_CMD run --bin marathon-cloud-mangen
+        fi
 
     - name: Generate completions 
       run: |
-        mkdir -p target/release/autocomplete 
-        cargo -q run -- completions bash > target/release/autocomplete/marathon-cloud.bash
-        cargo -q run -- completions fish > target/release/autocomplete/marathon-cloud.fish
-        cargo -q run -- completions powershell > target/release/autocomplete/_marathon-cloud.ps1
-        cargo -q run -- completions zsh > target/release/autocomplete/marathon-cloud.zsh
-        
+        if [[ ${{ matrix.job.os }} = windows-* ]]
+        then
+          mkdir -p target/release/autocomplete 
+          powershell.exe -command "$BUILD_CMD -q run -- completions bash" > target/release/autocomplete/marathon-cloud.bash
+          powershell.exe -command "$BUILD_CMD -q run -- completions fish" > target/release/autocomplete/marathon-cloud.fish
+          powershell.exe -command "$BUILD_CMD -q run -- completions powershell" > target/release/autocomplete/_marathon-cloud.ps1
+          powershell.exe -command "$BUILD_CMD -q run -- completions zsh" > target/release/autocomplete/marathon-cloud.zsh
+        else
+          mkdir -p target/release/autocomplete 
+          $BUILD_CMD -q run -- completions bash > target/release/autocomplete/marathon-cloud.bash
+          $BUILD_CMD -q run -- completions fish > target/release/autocomplete/marathon-cloud.fish
+          $BUILD_CMD -q run -- completions powershell > target/release/autocomplete/_marathon-cloud.ps1
+          $BUILD_CMD -q run -- completions zsh > target/release/autocomplete/marathon-cloud.zsh
+        fi
 
     - name: Create tarball
       id: package
