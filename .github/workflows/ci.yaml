@@ -199,9 +199,8 @@ jobs:
       run: |
         if [[ ${{ matrix.job.os }} = windows-* ]]
         then
-          export OUT_DIR=target/release/man/
-          OUT_DIR=target/release/man/ powershell.exe -command "$BUILD_CMD run --target=${{ matrix.job.target }} --bin marathon-cloud-mangen"
-        else
+          powershell.exe -command "$BUILD_CMD run --target=${{ matrix.job.target }} --bin marathon-cloud-mangen target\release\man\"
+         else
           mkdir -p target/release/man
           OUT_DIR=target/release/man/ $BUILD_CMD run --target=${{ matrix.job.target }} --bin marathon-cloud-mangen
         fi
