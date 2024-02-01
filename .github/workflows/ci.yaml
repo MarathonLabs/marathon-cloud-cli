@@ -196,7 +196,7 @@ jobs:
 
     - name: Generate manpage
       shell: bash
-      run: 
+      run: |
         if [[ ${{ matrix.job.os }} = windows-* ]]
         then
           export OUT_DIR=target/release/man/
