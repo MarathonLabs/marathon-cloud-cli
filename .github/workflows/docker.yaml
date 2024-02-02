@@ -16,6 +16,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Determine version
+        id: determine-version
         shell: bash
         run: |
           git fetch --force --tags
@@ -30,7 +31,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - run: docker buildx build --platform linux/arm64/v8,linux/amd64 --build-arg=VERSION=3.18 --build-arg=RUST_VERSION=1.75.0 --tag marathonlabs/marathon-cloud:${{ steps.is-release.outputs.VERSION }} .
+      - run: docker buildx build --platform linux/arm64/v8,linux/amd64 --build-arg=VERSION=3.18 --build-arg=RUST_VERSION=1.75.0 --tag marathonlabs/marathon-cloud:${{ steps.determine-version.outputs.VERSION }} .
       - name: Docker Hub Login
         run: echo "$HUB_PASSWORD" | docker login --username $HUB_LOGIN --password-stdin
         env:
