@@ -470,10 +470,10 @@ jobs:
         if: steps.is-release.outputs.IS_RELEASE
         run: |
           gem install liquid-cli
-          DARWIN_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/{{ steps.is-release.outputs.VERSION }}/marathon-cloud-v{{ steps.is-release.outputs.VERSION }}-universal-apple-darwin.tar.gz"
-          LINUX_AMD64_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/{{ steps.is-release.outputs.VERSION }}/marathon-cloud-v{{ steps.is-release.outputs.VERSION }}-x86_64-unknown-linux-gnu.tar.gz"
-          LINUX_ARM64_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/{{ steps.is-release.outputs.VERSION }}/marathon-cloud-v{{ steps.is-release.outputs.VERSION }}-aarch64-unknown-linux-gnu.tar.gz"
-          LINUX_ARM_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/{{ steps.is-release.outputs.VERSION }}/marathon-cloud-v{{ steps.is-release.outputs.VERSION }}-arm-unknown-linux-gnueabihf.tar.gz"
+          DARWIN_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/${{ steps.is-release.outputs.VERSION }}/marathon-cloud-v${{ steps.is-release.outputs.VERSION }}-universal-apple-darwin.tar.gz"
+          LINUX_AMD64_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/${{ steps.is-release.outputs.VERSION }}/marathon-cloud-v${{ steps.is-release.outputs.VERSION }}-x86_64-unknown-linux-gnu.tar.gz"
+          LINUX_ARM64_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/${{ steps.is-release.outputs.VERSION }}/marathon-cloud-v${{ steps.is-release.outputs.VERSION }}-aarch64-unknown-linux-gnu.tar.gz"
+          LINUX_ARM_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/${{ steps.is-release.outputs.VERSION }}/marathon-cloud-v${{ steps.is-release.outputs.VERSION }}-arm-unknown-linux-gnueabihf.tar.gz"
           DARWIN_SHA256=$(curl -L --retry 5 --retry-max-time 120 $DARWIN_URL | sha256sum)
           LINUX_AMD64_SHA256=$(curl -L --retry 5 --retry-max-time 120 $LINUX_AMD64_URL | sha256sum)
           LINUX_ARM64_SHA256=$(curl -L --retry 5 --retry-max-time 120 $LINUX_ARM64_URL | sha256sum)
