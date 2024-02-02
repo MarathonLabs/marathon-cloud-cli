@@ -474,10 +474,10 @@ jobs:
           LINUX_AMD64_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/{{ steps.is-release.outputs.VERSION }}/marathon-cloud-v{{ steps.is-release.outputs.VERSION }}-x86_64-unknown-linux-gnu.tar.gz"
           LINUX_ARM64_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/{{ steps.is-release.outputs.VERSION }}/marathon-cloud-v{{ steps.is-release.outputs.VERSION }}-aarch64-unknown-linux-gnu.tar.gz"
           LINUX_ARM_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/{{ steps.is-release.outputs.VERSION }}/marathon-cloud-v{{ steps.is-release.outputs.VERSION }}-arm-unknown-linux-gnueabihf.tar.gz"
-          DARWIN_SHA256=$(curl -L --retry 5 --retry-max-time 120 DARWIN_URL | sha256sum)
-          LINUX_AMD64_SHA256=$(curl -L --retry 5 --retry-max-time 120 LINUX_AMD64_URL | sha256sum)
-          LINUX_ARM64_SHA256=$(curl -L --retry 5 --retry-max-time 120 LINUX_ARM64_URL | sha256sum)
-          LINUX_ARM_SHA256=$(curl -L --retry 5 --retry-max-time 120 LINUX_ARM_URL | sha256sum)
+          DARWIN_SHA256=$(curl -L --retry 5 --retry-max-time 120 $DARWIN_URL | sha256sum)
+          LINUX_AMD64_SHA256=$(curl -L --retry 5 --retry-max-time 120 $LINUX_AMD64_URL | sha256sum)
+          LINUX_ARM64_SHA256=$(curl -L --retry 5 --retry-max-time 120 $LINUX_ARM64_URL | sha256sum)
+          LINUX_ARM_SHA256=$(curl -L --retry 5 --retry-max-time 120 $LINUX_ARM_URL | sha256sum)
           PARAMS=$(echo "{\"version\":\"{{ steps.is-release.outputs.VERSION }}\",\"darwin\":{\"url\":\"$DARWIN_URL\",\"sha256\":\"$DARWIN_SHA256\"},\"linux\":{\"amd64\":{\"url\":\"$LINUX_AMD64_URL\",\"sha256\":\"$LINUX_AMD64_SHA256\"},\"arm64\":{\"url\":\"$LINUX_ARM64_URL\",\"sha256\":\"$LINUX_ARM64_SHA256\"},\"arm\":{\"url\":\"$LINUX_ARM_URL\",\"sha256\":\"$LINUX_ARM_SHA256\"}}}")
           cat .github/marathon-cloud.rb.liquid | liquid $(cat .github/marathon-cloud.sample.json | jq -c) > homebrew-tap/Formula/marathon-cloud-rs.rb
           (cd homebrew-tap && git diff)
