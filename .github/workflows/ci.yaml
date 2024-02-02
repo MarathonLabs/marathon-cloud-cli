@@ -478,7 +478,7 @@ jobs:
           LINUX_AMD64_SHA256=$(curl -L --retry 5 --retry-max-time 120 $LINUX_AMD64_URL | sha256sum)
           LINUX_ARM64_SHA256=$(curl -L --retry 5 --retry-max-time 120 $LINUX_ARM64_URL | sha256sum)
           LINUX_ARM_SHA256=$(curl -L --retry 5 --retry-max-time 120 $LINUX_ARM_URL | sha256sum)
-          echo "{\"version\":\"{{ steps.is-release.outputs.VERSION }}\",\"darwin\":{\"url\":\"$DARWIN_URL\",\"sha256\":\"$DARWIN_SHA256\"},\"linux\":{\"amd64\":{\"url\":\"$LINUX_AMD64_URL\",\"sha256\":\"$LINUX_AMD64_SHA256\"},\"arm64\":{\"url\":\"$LINUX_ARM64_URL\",\"sha256\":\"$LINUX_ARM64_SHA256\"},\"arm\":{\"url\":\"$LINUX_ARM_URL\",\"sha256\":\"$LINUX_ARM_SHA256\"}}}" > .github/marathon-cloud.json
+          echo "{\"version\":\"${{ steps.is-release.outputs.VERSION }}\",\"darwin\":{\"url\":\"$DARWIN_URL\",\"sha256\":\"$DARWIN_SHA256\"},\"linux\":{\"amd64\":{\"url\":\"$LINUX_AMD64_URL\",\"sha256\":\"$LINUX_AMD64_SHA256\"},\"arm64\":{\"url\":\"$LINUX_ARM64_URL\",\"sha256\":\"$LINUX_ARM64_SHA256\"},\"arm\":{\"url\":\"$LINUX_ARM_URL\",\"sha256\":\"$LINUX_ARM_SHA256\"}}}" > .github/marathon-cloud.json
           cat .github/marathon-cloud.json | jq .
           cat .github/marathon-cloud.rb.liquid | liquid "$(< .github/marathon-cloud.json)" > homebrew-tap/Formula/marathon-cloud-rs.rb
           ls homebrew-tap/Formula
