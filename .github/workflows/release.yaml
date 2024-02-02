@@ -1,39 +1,30 @@
 name: release
 
 on:
+  pull_request:
   push:
+    branches:
+      - main 
     # run only against tags
     tags:
       - '*'
 
-permissions:
-  contents: write
-  # packages: write
-  # issues: write
-
 jobs:
-  goreleaser:
+  docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - run: git fetch --force --tags
-      - name: Setup up rust
-        uses: ATiltedTree/setup-rust@v1
-        with:
-          rust-version: stable
-          components: clippy
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - run: |
+          docker buildx build --platform linux/arm64/v8,linux/amd64 --build-arg=VERSION=3.18 --tag marathonlabs/marathon-cloud:latest .
       - name: Docker Hub Login
         run: echo "$HUB_PASSWORD" | docker login --username $HUB_LOGIN --password-stdin
         env:
           HUB_LOGIN: ${{ secrets.HUB_LOGIN }}
           HUB_PASSWORD: ${{ secrets.HUB_PASSWORD }}
-      - uses: goreleaser/goreleaser-action@v4
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
