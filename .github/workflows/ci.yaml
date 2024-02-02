@@ -463,6 +463,9 @@ jobs:
           ref: 'master'
           path: 'homebrew-tap'
           token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3
       - name: Render new formulae
         if: steps.is-release.outputs.IS_RELEASE
         run: |
