@@ -36,10 +36,20 @@ jobs:
       id: crate_metadata
       run: |
         cargo metadata --no-deps --format-version 1 | jq -r '"name=" + .packages[0].name' | tee -a $GITHUB_OUTPUT
-        cargo metadata --no-deps --format-version 1 | jq -r '"version=" + .packages[0].version' | tee -a $GITHUB_OUTPUT
         cargo metadata --no-deps --format-version 1 | jq -r '"maintainer=" + .packages[0].authors[0]' | tee -a $GITHUB_OUTPUT
         cargo metadata --no-deps --format-version 1 | jq -r '"homepage=" + .packages[0].homepage' | tee -a $GITHUB_OUTPUT
         cargo metadata --no-deps --format-version 1 | jq -r '"msrv=" + .packages[0].rust_version' | tee -a $GITHUB_OUTPUT
+
+        unset IS_RELEASE ; ; then IS_RELEASE='true' ; fi
+        echo "IS_RELEASE=${IS_RELEASE}" >> $GITHUB_OUTPUT
+
+        if [[ $GITHUB_REF =~ ^refs/tags/[0-9].* ]]; then
+          VERSION=$(echo $GITHUB_REF | cut -d / -f 3)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        else
+          cargo metadata --no-deps --format-version 1 | jq -r '"version=" + .packages[0].version' | tee -a $GITHUB_OUTPUT
+        fi
+
     outputs:
       name: ${{ steps.crate_metadata.outputs.name }}
       version: ${{ steps.crate_metadata.outputs.version }}
@@ -144,26 +154,9 @@ jobs:
       with:
         targets: ${{ matrix.job.target }}
 
-    - name: Cache cargo edit
-      if: steps.is-release.outputs.IS_RELEASE
-      uses: actions/cache@v4
-      with:
-        path: ${{ runner.tool_cache }}/cargo-edit
-        key: cargo-edit-${{ env.CARGO_EDIT_VERSION }}
-
-    - name: Add the tool cache directory to the search path
-      if: steps.is-release.outputs.IS_RELEASE
-      run: echo "${{ runner.tool_cache }}/cargo-edit/bin/" >>$GITHUB_PATH
-
-    - name: Ensure cargo-edit is installed
-      if: steps.is-release.outputs.IS_RELEASE
-      run: |
-        cargo install \
-          --root ${{ runner.tool_cache }}/cargo-edit \
-          --version ${{ env.CARGO_EDIT_VERSION }} \
-          cargo-edit
-
-    - run: cargo set-version ${{ steps.is-release.outputs.VERSION }}
+    - run: | 
+        cargo install --version ${{ env.CARGO_EDIT_VERSION }} cargo-edit
+        cargo set-version ${{ steps.is-release.outputs.VERSION }}
       if: steps.is-release.outputs.IS_RELEASE
 
     - name: Install cross
