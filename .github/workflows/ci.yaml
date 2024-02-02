@@ -40,9 +40,6 @@ jobs:
         cargo metadata --no-deps --format-version 1 | jq -r '"homepage=" + .packages[0].homepage' | tee -a $GITHUB_OUTPUT
         cargo metadata --no-deps --format-version 1 | jq -r '"msrv=" + .packages[0].rust_version' | tee -a $GITHUB_OUTPUT
 
-        unset IS_RELEASE ; ; then IS_RELEASE='true' ; fi
-        echo "IS_RELEASE=${IS_RELEASE}" >> $GITHUB_OUTPUT
-
         if [[ $GITHUB_REF =~ ^refs/tags/[0-9].* ]]; then
           VERSION=$(echo $GITHUB_REF | cut -d / -f 3)
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
