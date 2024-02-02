@@ -116,9 +116,20 @@ jobs:
           - { target: x86_64-unknown-linux-musl                 , os: ubuntu-22.04, dpkg_arch: musl-linux-amd64, use-cross: true }
     env:
       BUILD_CMD: cargo
+      CARGO_EDIT_VERSION: 0.12.2
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
+
+    - name: Check for release
+      id: is-release
+      shell: bash
+      run: |
+        unset IS_RELEASE ; if [[ $GITHUB_REF =~ ^refs/tags/[0-9].* ]]; then IS_RELEASE='true' ; fi
+        echo "IS_RELEASE=${IS_RELEASE}" >> $GITHUB_OUTPUT
+        unset VERSION
+        VERSION=$(echo $GITHUB_REF | cut -d / -f 3)
+        echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
 
     - name: Install prerequisites
       shell: bash
@@ -132,6 +143,28 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ matrix.job.target }}
+
+    - name: Cache cargo edit
+      if: steps.is-release.outputs.IS_RELEASE
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.tool_cache }}/cargo-edit
+        key: cargo-edit-${{ env.CARGO_EDIT_VERSION }}
+
+    - name: Add the tool cache directory to the search path
+      if: steps.is-release.outputs.IS_RELEASE
+      run: echo "${{ runner.tool_cache }}/cargo-edit/bin/" >>$GITHUB_PATH
+
+    - name: Ensure cargo-edit is installed
+      if: steps.is-release.outputs.IS_RELEASE
+      run: |
+        cargo install \
+          --root ${{ runner.tool_cache }}/cargo-edit \
+          --version ${{ env.CARGO_EDIT_VERSION }} \
+          cargo-edit
+
+    - run: cargo set-version ${{ steps.is-release.outputs.VERSION }}
+      if: steps.is-release.outputs.IS_RELEASE
 
     - name: Install cross
       if: matrix.job.use-cross
@@ -197,8 +230,6 @@ jobs:
         else
           $BUILD_CMD build --locked --release --target=${{ matrix.job.target }}
         fi
-
-
 
     - name: Set testing options
       id: test-options
@@ -409,13 +440,6 @@ jobs:
       with:
         name: ${{ steps.debian-package.outputs.DPKG_NAME }}
         path: ${{ steps.debian-package.outputs.DPKG_PATH }}
-
-    - name: Check for release
-      id: is-release
-      shell: bash
-      run: |
-        unset IS_RELEASE ; if [[ $GITHUB_REF =~ ^refs/tags/[0-9].* ]]; then IS_RELEASE='true' ; fi
-        echo "IS_RELEASE=${IS_RELEASE}" >> $GITHUB_OUTPUT
 
     - name: Publish archives and packages
       uses: softprops/action-gh-release@v1
