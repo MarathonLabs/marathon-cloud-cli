@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "darwin": {
+    "url": "A",
+    "sha256": "B"
+  },
+  "linux": {
+    "amd64": {
+      "url": "C",
+      "sha256": "D"
+    },
+    "arm64": {
+      "url": "E",
+      "sha256": "F"
+    },
+    "arm": {
+      "url": "G",
+      "sha256": "H"
+    }
+  }
+}

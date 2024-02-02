@@ -1,0 +1,45 @@
+# typed: false
+# frozen_string_literal: true
+
+class MarathonCloud < Formula
+  desc "Command-line interface for Marathon Cloud"
+  homepage "https://github.com/MarathonLabs/marathon-cloud-cli"
+  version "{{ version }}"
+  license "MIT"
+
+  on_macos do
+    url "{{ darwin.url }}"
+    sha256 "{{ darwin.sha256 }}"
+
+    def install
+      bin.install "marathon-cloud"
+    end
+  end
+
+  on_linux do
+    if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
+      url "{{ linux.arm64.url }}"
+      sha256 "{{ linux.arm64.sha256 }}"
+
+      def install
+        bin.install "marathon-cloud"
+      end
+    end
+    if Hardware::CPU.intel?
+      url "{{ linux.amd64.url }}"
+      sha256 "{{ linux.amd64.sha256 }}"
+
+      def install
+        bin.install "marathon-cloud"
+      end
+    end
+    if Hardware::CPU.arm? && !Hardware::CPU.is_64_bit?
+      url "{{ linux.arm.url }}"
+      sha256 "{{ linux.arm.sha256 }}"
+
+      def install
+        bin.install "marathon-cloud"
+      end
+    end
+  end
+end
