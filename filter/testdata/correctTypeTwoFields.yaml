@@ -1,7 +1,0 @@
-filteringConfiguration:
-  allowlist:
-    - type: "fully-qualified-test-name"
-      regex: ".*Test"
-      values:
-        - "com.example.MyTest"
-

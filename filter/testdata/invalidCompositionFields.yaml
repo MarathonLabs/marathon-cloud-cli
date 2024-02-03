@@ -1,7 +1,0 @@
-filteringConfiguration:
-  allowlist:
-    - type: "composition"
-      filters:
-        - type: "package"
-          regex: "com.example.*"
-
