@@ -109,6 +109,12 @@ impl TriggerTestRunInteractor {
             loop {
                 let stat = client.get_run(&id).await?;
                 if stat.completed.is_some() {
+                    match stat.state.as_ref() {
+                        "passed" => println!("Marathon Cloud execution finished"),
+                        "failure" => println!("Marathon Cloud execution finished with failures"),
+                        _ => println!("Marathon cloud execution crashed"),
+                        
+                    };
                     println!("Report - {}/report/{}", base_url, id);
                     println!(
                         "Passed - {}",

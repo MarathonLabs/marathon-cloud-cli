@@ -56,7 +56,8 @@ impl Cli {
                                 "Android".to_owned(),
                                 true,
                             )
-                            .await
+                            .await?;
+                            Ok(())
                     }
                     RunCommands::iOS {
                         application,
