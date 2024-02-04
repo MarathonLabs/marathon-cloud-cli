@@ -57,7 +57,7 @@ impl Cli {
                                 true,
                             )
                             .await?;
-                            Ok(())
+                        Ok(())
                     }
                     RunCommands::iOS {
                         application,

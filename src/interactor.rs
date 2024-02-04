@@ -113,7 +113,6 @@ impl TriggerTestRunInteractor {
                         "passed" => println!("Marathon Cloud execution finished"),
                         "failure" => println!("Marathon Cloud execution finished with failures"),
                         _ => println!("Marathon cloud execution crashed"),
-                        
                     };
                     println!("Report - {}/report/{}", base_url, id);
                     println!(
