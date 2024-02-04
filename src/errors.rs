@@ -6,6 +6,12 @@ use tokio::{io, task::JoinError};
 use url::ParseError;
 
 #[derive(Error, Debug)]
+pub enum ExecutionError {
+    #[error("Test run failed")]
+    TestRunFailed {},
+}
+
+#[derive(Error, Debug)]
 pub enum ApiError {
     #[error("Unauthorized client. Double check you've supplied correct api key or you have appropriate permissions\nerror = ${error}")]
     Unauthorized { error: ReqwestError },

@@ -9,7 +9,7 @@ use tokio::time::{sleep, Instant};
 use crate::{
     api::{RapiClient, RapiReqwestClient},
     artifacts::{download_artifacts, fetch_artifact_list},
-    filtering,
+    filtering, errors::ExecutionError,
 };
 
 pub struct DownloadArtifactsInteractor {}
@@ -177,7 +177,12 @@ impl TriggerTestRunInteractor {
                             style(format!("[5/{}]", steps)).bold().dim()
                         );
                     }
-                    return Ok(());
+
+                    return if stat.state == "failed" {
+                       anyhow::bail!(ExecutionError::TestRunFailed{})
+                    } else {
+                            Ok(())
+                    };
                 }
                 sleep(Duration::new(5, 0)).await;
             }

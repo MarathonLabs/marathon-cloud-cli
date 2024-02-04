@@ -1,6 +1,7 @@
 use std::{
     cmp::min,
-    path::{Path, PathBuf}, time::Duration,
+    path::{Path, PathBuf},
+    time::Duration,
 };
 
 use anyhow::Result;
@@ -148,10 +149,7 @@ impl RapiClient for RapiReqwestClient {
 
             let pb = ProgressBar::new(test_app_total_size);
             pb.enable_steady_tick(Duration::from_millis(120));
-            test_app_progress_bar = multi_progress
-                .as_mut()
-                .unwrap()
-                .add(pb);
+            test_app_progress_bar = multi_progress.as_mut().unwrap().add(pb);
             test_app_progress_bar.set_style(sty.clone());
             let mut test_app_progress = 0u64;
             let test_app_stream = async_stream::stream! {
@@ -198,9 +196,7 @@ impl RapiClient for RapiReqwestClient {
             if progress {
                 let pb = ProgressBar::new(app_total_size);
                 pb.enable_steady_tick(Duration::from_millis(120));
-                let app_progress_bar = multi_progress
-                    .unwrap()
-                    .add(pb);
+                let app_progress_bar = multi_progress.unwrap().add(pb);
                 let sty = ProgressStyle::with_template(
                     "{spinner} [{elapsed_precise}] [{wide_bar}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
                 )
