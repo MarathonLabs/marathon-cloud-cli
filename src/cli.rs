@@ -40,15 +40,17 @@ impl Cli {
                         test_application,
                         os_version,
                         system_image,
+                        common,
+                        api_args,
                     } => {
                         TriggerTestRunInteractor {}
                             .execute(
-                                &args.base_url,
-                                &args.api_key,
-                                args.wait,
-                                args.isolated,
-                                args.filter_file,
-                                &args.output,
+                                &api_args.base_url,
+                                &api_args.api_key,
+                                common.wait,
+                                common.isolated,
+                                common.filter_file,
+                                &common.output,
                                 application,
                                 test_application,
                                 os_version,
@@ -62,15 +64,17 @@ impl Cli {
                     RunCommands::iOS {
                         application,
                         test_application,
+                        common,
+                        api_args,
                     } => {
                         TriggerTestRunInteractor {}
                             .execute(
-                                &args.base_url,
-                                &args.api_key,
-                                args.wait,
-                                args.isolated,
-                                args.filter_file,
-                                &args.output,
+                                &api_args.base_url,
+                                &api_args.api_key,
+                                common.wait,
+                                common.isolated,
+                                common.filter_file,
+                                &common.output,
                                 Some(application),
                                 test_application,
                                 None,
@@ -87,8 +91,8 @@ impl Cli {
                 let interactor = DownloadArtifactsInteractor {};
                 interactor
                     .execute(
-                        &args.base_url,
-                        &args.api_key,
+                        &args.api_args.base_url,
+                        &args.api_args.api_key,
                         &args.id,
                         args.wait,
                         &args.output,
@@ -117,14 +121,17 @@ enum Commands {
     Completions { shell: clap_complete::Shell },
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, clap::Parser)]
 #[command(args_conflicts_with_subcommands = true)]
 struct RunArgs {
+    #[command(subcommand)]
+    command: Option<RunCommands>,
+}
+/// Options valid for any subcommand.
+#[derive(Debug, Clone, clap::Args)]
+struct CommonRunArgs {
     #[arg(short, long, help = "Output folder for test run results")]
     output: Option<PathBuf>,
-
-    #[arg(long, env("MARATHON_CLOUD_API_KEY"), help = "Marathon Cloud API key")]
-    api_key: String,
 
     #[arg(long, help = "Run each test in isolation, i.e. isolated batching.")]
     isolated: Option<bool>,
@@ -150,16 +157,6 @@ struct RunArgs {
 
     #[arg(long, help = "link to commit")]
     link: Option<String>,
-
-    #[arg(
-        long,
-        default_value = "https://cloud.marathonlabs.io/api/v1",
-        help = "Base url for Marathon Cloud API"
-    )]
-    base_url: String,
-
-    #[command(subcommand)]
-    command: Option<RunCommands>,
 }
 
 #[derive(Debug, Args)]
@@ -167,9 +164,6 @@ struct RunArgs {
 struct DownloadArgs {
     #[arg(short, long, help = "Output folder for test run results")]
     output: PathBuf,
-
-    #[arg(long, env("MARATHON_CLOUD_API_KEY"), help = "Marathon Cloud API key")]
-    api_key: String,
 
     #[arg(long, help = "Test run id")]
     id: String,
@@ -181,6 +175,16 @@ struct DownloadArgs {
     )]
     wait: bool,
 
+    #[command(flatten)]
+    api_args: ApiArgs,
+}
+
+#[derive(Debug, Args)]
+#[command(args_conflicts_with_subcommands = true)]
+struct ApiArgs {
+    #[arg(long, env("MARATHON_CLOUD_API_KEY"), help = "Marathon Cloud API key")]
+    api_key: String,
+
     #[arg(
         long,
         default_value = "https://cloud.marathonlabs.io/api/v1",
@@ -191,6 +195,7 @@ struct DownloadArgs {
 
 #[derive(Debug, Subcommand)]
 enum RunCommands {
+    #[clap(about = "Run tests for Android")]
     Android {
         #[arg(
             short,
@@ -211,9 +216,16 @@ enum RunCommands {
 
         #[arg(value_enum, long, help = "Runtime system image")]
         system_image: Option<AndroidSystemImage>,
+
+        #[command(flatten)]
+        common: CommonRunArgs,
+
+        #[command(flatten)]
+        api_args: ApiArgs,
     },
     #[allow(non_camel_case_types)]
     #[command(name = "ios")]
+    #[clap(about = "Run tests for iOS")]
     iOS {
         #[arg(
             short,
@@ -228,6 +240,12 @@ enum RunCommands {
             help = "test application filepath, example: /home/user/workspace/sampleUITests-Runner.zip"
         )]
         test_application: PathBuf,
+
+        #[command(flatten)]
+        common: CommonRunArgs,
+
+        #[command(flatten)]
+        api_args: ApiArgs,
     },
 }
 

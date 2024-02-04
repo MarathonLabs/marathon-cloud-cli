@@ -1,5 +1,5 @@
 use anyhow::Result;
-use indicatif::HumanDuration;
+use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use std::{path::PathBuf, time::Duration};
 
 use console::style;
@@ -106,9 +106,35 @@ impl TriggerTestRunInteractor {
                 "{} Waiting for test run to finish...",
                 style(format!("[2/{}]", steps)).bold().dim()
             );
+
+            let spinner = if progress {
+                let pb = ProgressBar::new_spinner();
+                pb.enable_steady_tick(Duration::from_millis(120));
+                pb.set_style(
+                    ProgressStyle::with_template("{spinner}")
+                        .unwrap()
+                        .tick_strings(&[
+                            "( ●    )",
+                            "(  ●   )",
+                            "(   ●  )",
+                            "(    ● )",
+                            "(     ●)",
+                            "(    ● )",
+                            "(   ●  )",
+                            "(  ●   )",
+                            "( ●    )",
+                            "(●     )",
+                        ]),
+                );
+                Some(pb)
+            } else {
+                None
+            };
             loop {
                 let stat = client.get_run(&id).await?;
                 if stat.completed.is_some() {
+                    if let Some(s) = spinner { s.finish_and_clear() }
+
                     match stat.state.as_ref() {
                         "passed" => println!("Marathon Cloud execution finished"),
                         "failure" => println!("Marathon Cloud execution finished with failures"),

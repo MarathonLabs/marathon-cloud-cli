@@ -483,4 +483,9 @@ jobs:
           cat .github/marathon-cloud.rb.liquid | liquid "$(< .github/marathon-cloud.json)" > homebrew-tap/Formula/marathon-cloud-rs.rb
           ls homebrew-tap/Formula
           cat homebrew-tap/Formula/marathon-cloud-rs.rb
-          (cd homebrew-tap && git diff)
+          cd homebrew-tap
+          git diff
+          git config --global user.name 'Anton Malinskiy'
+          git config --global user.email 'malinskiy@users.noreply.github.com'
+          git commit -am "Brew formula update for marathon version ${{ steps.tag.outputs.tag }}"
+          git push

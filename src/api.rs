@@ -1,6 +1,6 @@
 use std::{
     cmp::min,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, time::Duration,
 };
 
 use anyhow::Result;
@@ -141,17 +141,18 @@ impl RapiClient for RapiReqwestClient {
         let test_app_body;
         if progress {
             let sty = ProgressStyle::with_template(
-                "[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}",
+                "{spinner} [{elapsed_precise}] [{wide_bar}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
             )
             .unwrap()
-            .progress_chars("##-");
+            .progress_chars("#>-");
 
+            let pb = ProgressBar::new(test_app_total_size);
+            pb.enable_steady_tick(Duration::from_millis(120));
             test_app_progress_bar = multi_progress
                 .as_mut()
                 .unwrap()
-                .add(ProgressBar::new(test_app_total_size));
+                .add(pb);
             test_app_progress_bar.set_style(sty.clone());
-            test_app_progress_bar.set_message("Test application");
             let mut test_app_progress = 0u64;
             let test_app_stream = async_stream::stream! {
                 while let Some(chunk) = test_app_reader.next().await {
@@ -161,7 +162,7 @@ impl RapiClient for RapiReqwestClient {
                         test_app_progress = new;
                         test_app_progress_bar.set_position(new);
                         if test_app_progress >= test_app_total_size {
-                            test_app_progress_bar.finish_with_message("Test application uploaded");
+                            test_app_progress_bar.finish_and_clear();
                         }
                     }
                     yield chunk;
@@ -195,16 +196,17 @@ impl RapiClient for RapiReqwestClient {
             let app_body;
 
             if progress {
+                let pb = ProgressBar::new(app_total_size);
+                pb.enable_steady_tick(Duration::from_millis(120));
                 let app_progress_bar = multi_progress
                     .unwrap()
-                    .add(ProgressBar::new(app_total_size));
+                    .add(pb);
                 let sty = ProgressStyle::with_template(
-                    "[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}",
+                    "{spinner} [{elapsed_precise}] [{wide_bar}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
                 )
                 .unwrap()
-                .progress_chars("##-");
+                .progress_chars("#>-");
                 app_progress_bar.set_style(sty);
-                app_progress_bar.set_message("Application");
 
                 let mut app_progress = 0u64;
                 let app_stream = async_stream::stream! {
@@ -215,7 +217,7 @@ impl RapiClient for RapiReqwestClient {
                             app_progress = new;
                             app_progress_bar.set_position(new);
                             if app_progress >= app_total_size {
-                                app_progress_bar.finish_with_message("Application uploaded");
+                                app_progress_bar.finish_and_clear();
                             }
                         }
                         yield chunk;
