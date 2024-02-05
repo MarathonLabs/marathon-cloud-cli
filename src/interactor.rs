@@ -181,7 +181,7 @@ impl TriggerTestRunInteractor {
                         );
                     }
 
-                    return if stat.state == "failed" {
+                    return if stat.state == "failure" {
                         Ok(false)
                     } else {
                         Ok(true)
