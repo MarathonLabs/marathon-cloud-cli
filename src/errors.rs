@@ -1,15 +1,10 @@
-use std::path::PathBuf;
+use std::{io::Write, path::PathBuf};
 
+use console::Style;
 use reqwest::Error as ReqwestError;
 use thiserror::Error;
 use tokio::{io, task::JoinError};
 use url::ParseError;
-
-#[derive(Error, Debug)]
-pub enum ExecutionError {
-    #[error("Test run failed")]
-    TestRunFailed {},
-}
 
 #[derive(Error, Debug)]
 pub enum ApiError {
@@ -49,4 +44,9 @@ pub enum FilteringConfigurationError {
     InvalidFilterType { mtype: String },
     #[error("Invalid configuration for filter ${mtype}: ${message}")]
     InvalidFilterConfiguration { mtype: String, message: String },
+}
+
+pub fn default_error_handler(error: Box<dyn std::error::Error + Send + 'static>, output: &mut dyn Write) {
+    let red = Style::new().red();
+    writeln!(output, "{}", red.apply_to(error));
 }

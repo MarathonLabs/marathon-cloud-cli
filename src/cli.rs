@@ -3,6 +3,7 @@ use clap::CommandFactory;
 use clap::{Args, Parser, Subcommand};
 use std::{fmt::Display, path::PathBuf};
 
+use crate::errors::default_error_handler;
 use crate::interactor::{DownloadArtifactsInteractor, TriggerTestRunInteractor};
 
 #[derive(Parser)]
@@ -31,7 +32,7 @@ impl Cli {
             .init()
             .unwrap();
 
-        match cli.command {
+        let result = match cli.command {
             Some(Commands::Run(args)) => {
                 let run_cmd = args.command.unwrap();
                 match run_cmd {
@@ -58,8 +59,7 @@ impl Cli {
                                 "Android".to_owned(),
                                 true,
                             )
-                            .await?;
-                        Ok(())
+                            .await
                     }
                     RunCommands::iOS {
                         application,
@@ -82,14 +82,13 @@ impl Cli {
                                 "iOS".to_owned(),
                                 true,
                             )
-                            .await?;
-                        Ok(())
+                            .await
                     }
                 }
             }
             Some(Commands::Download(args)) => {
                 let interactor = DownloadArtifactsInteractor {};
-                interactor
+                let _ = interactor
                     .execute(
                         &args.api_args.base_url,
                         &args.api_args.api_key,
@@ -97,16 +96,26 @@ impl Cli {
                         args.wait,
                         &args.output,
                     )
-                    .await?;
-                Ok(())
+                    .await;
+                Ok(true)
             }
             Some(Commands::Completions { shell }) => {
                 let mut app = Self::command();
                 let bin_name = app.get_name().to_string();
                 clap_complete::generate(shell, &mut app, bin_name, &mut std::io::stdout());
-                Ok(())
+                Ok(true)
             }
-            None => Ok(()),
+            None => Ok(true),
+        };
+
+        match result {
+            Ok(true) => ::std::process::exit(0),
+            Ok(false) => ::std::process::exit(1),
+            Err(error) => {
+                let stderr = std::io::stderr();
+                default_error_handler(error.into(), &mut stderr.lock());
+                ::std::process::exit(1);
+            }
         }
     }
 }

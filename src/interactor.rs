@@ -9,7 +9,7 @@ use tokio::time::{sleep, Instant};
 use crate::{
     api::{RapiClient, RapiReqwestClient},
     artifacts::{download_artifacts, fetch_artifact_list},
-    filtering, errors::ExecutionError,
+    filtering,
 };
 
 pub struct DownloadArtifactsInteractor {}
@@ -69,7 +69,7 @@ impl TriggerTestRunInteractor {
         system_image: Option<String>,
         platform: String,
         progress: bool,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         let client = RapiReqwestClient::new(base_url, api_key);
         let steps = match (wait, output) {
             (true, Some(_)) => 5,
@@ -133,28 +133,31 @@ impl TriggerTestRunInteractor {
             loop {
                 let stat = client.get_run(&id).await?;
                 if stat.completed.is_some() {
-                    if let Some(s) = spinner { s.finish_and_clear() }
+                    if let Some(s) = spinner {
+                        s.finish_and_clear()
+                    }
 
                     match stat.state.as_ref() {
                         "passed" => println!("Marathon Cloud execution finished"),
                         "failure" => println!("Marathon Cloud execution finished with failures"),
                         _ => println!("Marathon cloud execution crashed"),
                     };
-                    println!("Report - {}/report/{}", base_url, id);
+                    println!("\tstate: {}", stat.state);
+                    println!("\treport: {}/report/{}", base_url, id);
                     println!(
-                        "Passed - {}",
+                        "\tpassed: {}",
                         stat.passed
                             .map(|x| x.to_string())
                             .unwrap_or("missing".to_owned())
                     );
                     println!(
-                        "Failed - {}",
+                        "\tfailed: {}",
                         stat.failed
                             .map(|x| x.to_string())
                             .unwrap_or("missing".to_owned())
                     );
                     println!(
-                        "Ignored - {}",
+                        "\tignored: {}",
                         stat.ignored
                             .map(|x| x.to_string())
                             .unwrap_or("missing".to_owned())
@@ -179,16 +182,16 @@ impl TriggerTestRunInteractor {
                     }
 
                     return if stat.state == "failed" {
-                       anyhow::bail!(ExecutionError::TestRunFailed{})
+                        Ok(false)
                     } else {
-                            Ok(())
+                        Ok(true)
                     };
                 }
                 sleep(Duration::new(5, 0)).await;
             }
         } else {
             println!("Test run {} started", id);
-            Ok(())
+            Ok(true)
         }
     }
 }
