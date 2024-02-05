@@ -34,3 +34,34 @@ Options:
   -h, --help        Print help
   -V, --version     Print version
 ```
+
+## Autocompletions
+If you're using installation from homebrew then you should have working autocompletions upon installation assuming
+you've done the [brew general setup](https://docs.brew.sh/Shell-Completion#configuring-completions-in-zsh).
+
+If you install the binary manually then you can easily generate autcompletions:
+
+### bash
+```
+# set up autocomplete in bash into the current shell, bash-completion package should be installed first.
+source <(marathon-cloud completions bash) 
+# add autocomplete permanently to your bash shell.
+echo "source <(marathon-cloud completions bash)" >> ~/.bashrc 
+```
+
+### zsh
+```
+# set up autocomplete in zsh into the current shell
+source <(marathon-cloud completions zsh) 
+# add autocomplete permanently to your zsh shell
+echo '[[ $commands[marathon-cloud] ]] && source <(marathon-cloud completions zsh)' >> ~/.zshrc 
+```
+
+### fish
+```
+# add marathon-cloud autocompletion permanently to your fish shell 
+echo 'marathon-cloud completions fish | source' >> ~/.config/fish/config.fish  
+```
+
+## License
+marathon-cloud cli codebase is licensed under [MIT](LICENSE).
