@@ -1,0 +1,2 @@
+com.malinskiy.adam.SimpleTest#test1
+com.malinskiy.adam.SimpleTest#test2
