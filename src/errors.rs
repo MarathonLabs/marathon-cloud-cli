@@ -46,7 +46,10 @@ pub enum FilteringConfigurationError {
     InvalidFilterConfiguration { mtype: String, message: String },
 }
 
-pub fn default_error_handler(error: Box<dyn std::error::Error + Send + 'static>, output: &mut dyn Write) {
+pub fn default_error_handler(
+    error: Box<dyn std::error::Error + Send + 'static>,
+    output: &mut dyn Write,
+) {
     let red = Style::new().red();
     writeln!(output, "{}", red.apply_to(error));
 }
