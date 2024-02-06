@@ -506,7 +506,7 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
       - uses: robinraju/release-downloader@v1.9
         with:
-          tag: "${{ steps.is-release-outputs.VERSION }}"
+          tag: "${{ steps.is-release.outputs.VERSION }}"
           fileName: "*"
       - name: Generate checksum
         uses: jmgilman/actions-generate-checksum@v1
