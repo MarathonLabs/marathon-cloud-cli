@@ -47,6 +47,7 @@ pub async fn fetch_artifact_list(
 
 pub async fn download_artifacts(
     client: &RapiReqwestClient,
+    run_id: &str,
     artifacts: Vec<Artifact>,
     path: &PathBuf,
     token: &str,
@@ -66,10 +67,11 @@ pub async fn download_artifacts(
             let client = client.clone();
             let token = token.to_owned();
             let base_path = path.clone();
+            let run_id = run_id.to_owned().clone();
             let progress_bar = progress_bar.clone();
             tokio::spawn(async move {
                 client
-                    .download_artifact(&token, artifact, base_path)
+                    .download_artifact(&token, artifact, base_path, &run_id)
                     .await
                     .unwrap();
 
