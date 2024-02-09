@@ -51,5 +51,5 @@ pub fn default_error_handler(
     output: &mut dyn Write,
 ) {
     let red = Style::new().red();
-    writeln!(output, "{}", red.apply_to(error));
+    let _ = writeln!(output, "{}", red.apply_to(error));
 }

@@ -50,6 +50,7 @@ impl Cli {
                                 &api_args.api_key,
                                 common.wait,
                                 common.isolated,
+                                common.ignore_failures,
                                 common.filter_file,
                                 &common.output,
                                 application,
@@ -73,6 +74,7 @@ impl Cli {
                                 &api_args.api_key,
                                 common.wait,
                                 common.isolated,
+                                common.ignore_failures,
                                 common.filter_file,
                                 &common.output,
                                 Some(application),
@@ -166,6 +168,12 @@ struct CommonRunArgs {
 
     #[arg(long, help = "link to commit")]
     link: Option<String>,
+
+    #[arg(
+        long,
+        help = "Ignore test failures. If tests fail and this option is true then cli will exit with code 0. By default, cli will exit with code 1 in case of failures and 0 for passing tests"
+    )]
+    ignore_failures: Option<bool>,
 }
 
 #[derive(Debug, Args)]

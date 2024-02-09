@@ -61,6 +61,7 @@ impl TriggerTestRunInteractor {
         api_key: &str,
         wait: bool,
         isolated: Option<bool>,
+        ignore_failures: Option<bool>,
         filter_file: Option<PathBuf>,
         output: &Option<PathBuf>,
         application: Option<PathBuf>,
@@ -181,7 +182,8 @@ impl TriggerTestRunInteractor {
                         );
                     }
 
-                    return if stat.state == "failure" {
+                    return if stat.state == "failure" && ignore_failures.is_some_and(|i| i)
+                    {
                         Ok(false)
                     } else {
                         Ok(true)
