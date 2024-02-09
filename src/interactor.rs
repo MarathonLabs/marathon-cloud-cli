@@ -41,7 +41,7 @@ impl DownloadArtifactsInteractor {
         let token = client.get_token().await?;
         let artifacts = fetch_artifact_list(&client, id, &token).await?;
         println!("{} Downloading files...", style("[3/4]").bold().dim());
-        download_artifacts(&client, artifacts, output, &token, true).await?;
+        download_artifacts(&client, id, artifacts, output, &token, true).await?;
         println!(
             "{} Patching local relative paths...",
             style("[4/4]").bold().dim()
@@ -175,7 +175,7 @@ impl TriggerTestRunInteractor {
                             "{} Downloading files...",
                             style(format!("[4/{}]", steps)).bold().dim()
                         );
-                        download_artifacts(&client, artifacts, output, &token, true).await?;
+                        download_artifacts(&client, &id, artifacts, output, &token, true).await?;
                         println!(
                             "{} Patching local relative paths...",
                             style(format!("[5/{}]", steps)).bold().dim()

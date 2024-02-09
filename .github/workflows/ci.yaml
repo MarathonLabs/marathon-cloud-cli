@@ -505,11 +505,13 @@ jobs:
           VERSION=$(echo $GITHUB_REF | cut -d / -f 3)
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
       - uses: robinraju/release-downloader@v1.9
+        if: steps.is-release.outputs.IS_RELEASE
         with:
           tag: "${{ steps.is-release.outputs.VERSION }}"
           fileName: "*"
       - name: Generate checksum
         uses: jmgilman/actions-generate-checksum@v1
+        if: steps.is-release.outputs.IS_RELEASE
         with:
           output: checksums.txt
           patterns: |
