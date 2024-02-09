@@ -181,12 +181,9 @@ impl TriggerTestRunInteractor {
                             style(format!("[5/{}]", steps)).bold().dim()
                         );
                     }
-
-                    return if stat.state == "failure" && ignore_failures.is_some_and(|i| i)
-                    {
-                        Ok(false)
-                    } else {
-                        Ok(true)
+                    return match (stat.state.as_str(), ignore_failures) {
+                        ("failure", Some(false) | None) => Ok(false),
+                        (_, _) => Ok(true),
                     };
                 }
                 sleep(Duration::new(5, 0)).await;
