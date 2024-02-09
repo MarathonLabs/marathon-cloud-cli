@@ -46,6 +46,7 @@ pub trait RapiClient {
         jwt_token: &str,
         artifact: Artifact,
         base_path: PathBuf,
+        run_id: &str,
     ) -> Result<()>;
 }
 
@@ -131,7 +132,7 @@ impl RapiClient for RapiReqwestClient {
             .ok_or(InputError::InvalidFileName {
                 path: test_app.clone(),
             })?;
-        let test_app_total_size = (&file).metadata().await?.len();
+        let test_app_total_size = file.metadata().await?.len();
         let mut test_app_reader = ReaderStream::new(file);
         let mut multi_progress: Option<MultiProgress> = if progress {
             Some(MultiProgress::new())
@@ -189,7 +190,7 @@ impl RapiClient for RapiReqwestClient {
                 .map(|val| val.to_string_lossy().to_string())
                 .ok_or(InputError::InvalidFileName { path: app.clone() })?;
 
-            let app_total_size = (&file).metadata().await?.len();
+            let app_total_size = file.metadata().await?.len();
             let mut app_reader = ReaderStream::new(file);
             let app_body;
 
@@ -311,13 +312,17 @@ impl RapiClient for RapiReqwestClient {
         jwt_token: &str,
         artifact: Artifact,
         base_path: PathBuf,
+        run_id: &str,
     ) -> Result<()> {
         let url = format!("{}/artifact", self.base_url);
         let params = [("key", artifact.id.to_owned())];
         let url = reqwest::Url::parse_with_params(&url, &params)
             .map_err(|error| ApiError::InvalidParameters { error })?;
 
-        let relative_path = artifact.id.strip_prefix('/').unwrap_or(&artifact.id);
+        let id = artifact.id.strip_prefix('/').unwrap_or(&artifact.id);
+        let prefix_with_id = format!("{}/", run_id);
+        let relative_path = artifact.id.strip_prefix(&prefix_with_id).unwrap_or(id);
+
         let relative_path = Path::new(&relative_path);
         let mut absolute_path = base_path.clone();
         absolute_path.push(relative_path);
@@ -388,7 +393,7 @@ pub struct GetTokenResponse {
     pub token: String,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct Artifact {
     #[serde(rename = "id")]
     pub id: String,
