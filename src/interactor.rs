@@ -78,6 +78,7 @@ impl TriggerTestRunInteractor {
             _ => 1,
         };
 
+        let token = client.get_token().await?;
         println!(
             "{} Submitting new run...",
             style(format!("[1/{}]", steps)).bold().dim()
@@ -169,7 +170,6 @@ impl TriggerTestRunInteractor {
                             "{} Fetching file list...",
                             style(format!("[3/{}]", steps)).bold().dim()
                         );
-                        let token = client.get_token().await?;
                         let artifacts = fetch_artifact_list(&client, &id, &token).await?;
                         println!(
                             "{} Downloading files...",

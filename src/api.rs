@@ -353,10 +353,10 @@ impl RapiClient for RapiReqwestClient {
 }
 
 fn api_error_adapter(error: reqwest::Error) -> ApiError {
-    if let Some(status) = error.status() {
-        match status {
+    if let Some(status_code) = error.status() {
+        match status_code {
             StatusCode::UNAUTHORIZED => ApiError::Unauthorized { error },
-            _ => ApiError::RequestFailed { error },
+            _ => ApiError::RequestFailedWithCode { status_code, error },
         }
     } else {
         ApiError::RequestFailed { error }
