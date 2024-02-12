@@ -459,12 +459,14 @@ jobs:
           VERSION=$(echo $GITHUB_REF | cut -d / -f 3)
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v4
+        if: steps.is-release.outputs.IS_RELEASE
         with:
           repository: 'Malinskiy/homebrew-tap'
           ref: 'master'
           path: 'homebrew-tap'
           token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
       - uses: ruby/setup-ruby@v1
+        if: steps.is-release.outputs.IS_RELEASE
         with:
           ruby-version: 3.3
       - name: Render new formulae

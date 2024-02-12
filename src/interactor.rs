@@ -61,6 +61,7 @@ impl TriggerTestRunInteractor {
         api_key: &str,
         wait: bool,
         isolated: Option<bool>,
+        ignore_test_failures: Option<bool>,
         filter_file: Option<PathBuf>,
         output: &Option<PathBuf>,
         application: Option<PathBuf>,
@@ -180,11 +181,9 @@ impl TriggerTestRunInteractor {
                             style(format!("[5/{}]", steps)).bold().dim()
                         );
                     }
-
-                    return if stat.state == "failure" {
-                        Ok(false)
-                    } else {
-                        Ok(true)
+                    return match (stat.state.as_str(), ignore_test_failures) {
+                        ("failure", Some(false) | None) => Ok(false),
+                        (_, _) => Ok(true),
                     };
                 }
                 sleep(Duration::new(5, 0)).await;
