@@ -21,6 +21,8 @@ pub enum ApiError {
         status_code: StatusCode,
         error: ReqwestError,
     },
+    #[error("Invalid authentication token. Did you supply correct API token?\nerror = {error}")]
+    InvalidAuthenticationToken { error: ReqwestError },
 }
 
 #[derive(Error, Debug)]

@@ -1,4 +1,5 @@
 use std::{
+    borrow::BorrowMut,
     cmp::min,
     path::{Path, PathBuf},
     time::Duration,
@@ -92,7 +93,8 @@ impl RapiClient for RapiReqwestClient {
             .client
             .get(url)
             .send()
-            .await
+            .await?
+            .error_for_status()
             .map_err(api_error_adapter)?
             .json::<GetTokenResponse>()
             .await
@@ -263,7 +265,8 @@ impl RapiClient for RapiReqwestClient {
             .post(url)
             .multipart(form)
             .send()
-            .await
+            .await?
+            .error_for_status()
             .map_err(api_error_adapter)?
             .json::<CreateRunResponse>()
             .await
@@ -282,7 +285,8 @@ impl RapiClient for RapiReqwestClient {
             .client
             .get(url)
             .send()
-            .await
+            .await?
+            .error_for_status()
             .map_err(api_error_adapter)?
             .json::<TestRun>()
             .await
@@ -298,7 +302,8 @@ impl RapiClient for RapiReqwestClient {
             .get(url)
             .header("Authorization", format!("Bearer {}", jwt_token))
             .send()
-            .await
+            .await?
+            .error_for_status()
             .map_err(api_error_adapter)?
             .json::<Vec<Artifact>>()
             .await
@@ -332,7 +337,8 @@ impl RapiClient for RapiReqwestClient {
             .get(url)
             .header("Authorization", format!("Bearer {}", jwt_token))
             .send()
-            .await
+            .await?
+            .error_for_status()
             .map_err(api_error_adapter)?
             .bytes_stream();
 
@@ -352,10 +358,13 @@ impl RapiClient for RapiReqwestClient {
     }
 }
 
-fn api_error_adapter(error: reqwest::Error) -> ApiError {
+fn api_error_adapter(mut error: reqwest::Error) -> ApiError {
     if let Some(status_code) = error.status() {
         match status_code {
-            StatusCode::UNAUTHORIZED => ApiError::Unauthorized { error },
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
+                error.url_mut().map(|url| url.set_query(None));
+                ApiError::InvalidAuthenticationToken { error }
+            }
             _ => ApiError::RequestFailedWithCode { status_code, error },
         }
     } else {
