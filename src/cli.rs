@@ -228,7 +228,7 @@ enum RunCommands {
         )]
         test_application: PathBuf,
 
-        #[arg(long, help = "OS version [10, 11, 12, 13]")]
+        #[arg(long, help = "OS version [10, 11, 12, 13, 14]")]
         os_version: Option<String>,
 
         #[arg(value_enum, long, help = "Runtime system image")]
