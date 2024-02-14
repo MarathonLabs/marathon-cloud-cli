@@ -47,21 +47,24 @@ impl Cli {
                         api_args,
                     } => {
                         match (&device, &system_image, &os_version) {
-                            (Some(Device::WEAR), Some(SystemImage::GoogleApis), Some(_) | None) => {
-                                return Err(ConfigurationError::UnsupportedRunConfiguration { message: "Android Wear only supports default system image and os versions 11 and 13".into() }.into());
-                            }
                             (
                                 Some(Device::WEAR),
+                                Some(SystemImage::Default) | None,
                                 Some(_) | None,
+                            )
+                            | (
+                                Some(Device::WEAR),
+                                Some(_),
                                 Some(android::OsVersion::Android10)
                                 | Some(android::OsVersion::Android12)
                                 | Some(android::OsVersion::Android14),
                             ) => {
-                                return Err(ConfigurationError::UnsupportedRunConfiguration { message: "Android Wear only supports default system image and os versions 11 and 13".into() }.into());
+                                return Err(ConfigurationError::UnsupportedRunConfiguration { message: "Android Wear only supports google-apis system image and os versions 11 and 13".into() }.into());
                             }
-                            (Some(Device::TV), Some(SystemImage::GoogleApis), Some(_) | None) => {
+                            (Some(Device::TV), Some(SystemImage::Default), Some(_) | None) => {
                                 return Err(ConfigurationError::UnsupportedRunConfiguration {
-                                    message: "Android TV only supports default system image".into(),
+                                    message: "Android TV only supports google-apis system image"
+                                        .into(),
                                 }
                                 .into());
                             }
@@ -72,6 +75,8 @@ impl Cli {
                             .execute(
                                 &api_args.base_url,
                                 &api_args.api_key,
+                                common.name,
+                                common.link,
                                 common.wait,
                                 common.isolated,
                                 common.ignore_test_failures,
@@ -97,6 +102,8 @@ impl Cli {
                             .execute(
                                 &api_args.base_url,
                                 &api_args.api_key,
+                                common.name,
+                                common.link,
                                 common.wait,
                                 common.isolated,
                                 common.ignore_test_failures,
@@ -188,11 +195,14 @@ struct CommonRunArgs {
 
     #[arg(
         long,
-        help = "name for run, for example it could be description of commit"
+        help = "Name for run, for example it could be description of commit"
     )]
     name: Option<String>,
 
-    #[arg(long, help = "link to commit")]
+    #[arg(
+        long,
+        help = "Optional link, for example it could be a link to source control commit or CI run"
+    )]
     link: Option<String>,
 
     #[arg(
