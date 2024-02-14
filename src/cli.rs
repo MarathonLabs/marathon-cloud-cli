@@ -3,7 +3,7 @@ use clap::CommandFactory;
 use clap::{Args, Parser, Subcommand};
 use std::{fmt::Display, path::PathBuf};
 
-use crate::android::{self, Device, SystemImage};
+use crate::android::{self, Device, Flavor, SystemImage};
 use crate::errors::{default_error_handler, ConfigurationError};
 use crate::interactor::{DownloadArtifactsInteractor, TriggerTestRunInteractor};
 
@@ -45,15 +45,18 @@ impl Cli {
                         device,
                         common,
                         api_args,
+                        flavor,
                     } => {
-                        match (&device, &system_image, &os_version) {
+                        match (&device, &flavor, &system_image, &os_version) {
                             (
                                 Some(Device::WEAR),
+                                _,
                                 Some(SystemImage::Default) | None,
                                 Some(_) | None,
                             )
                             | (
                                 Some(Device::WEAR),
+                                _,
                                 Some(_),
                                 Some(android::OsVersion::Android10)
                                 | Some(android::OsVersion::Android12)
@@ -61,9 +64,22 @@ impl Cli {
                             ) => {
                                 return Err(ConfigurationError::UnsupportedRunConfiguration { message: "Android Wear only supports google-apis system image and os versions 11 and 13".into() }.into());
                             }
-                            (Some(Device::TV), Some(SystemImage::Default), Some(_) | None) => {
+                            (Some(Device::TV), _, Some(SystemImage::Default), Some(_) | None) => {
                                 return Err(ConfigurationError::UnsupportedRunConfiguration {
                                     message: "Android TV only supports google-apis system image"
+                                        .into(),
+                                }
+                                .into());
+                            }
+                            (
+                                Some(Device::TV) | Some(Device::WEAR),
+                                Some(Flavor::JsJestAppium)
+                                | Some(Flavor::PythonRobotFrameworkAppium),
+                                _,
+                                _,
+                            ) => {
+                                return Err(ConfigurationError::UnsupportedRunConfiguration {
+                                    message: "js-jest-appium and python-robotframework-appium only support 'phone' devices"
                                         .into(),
                                 }
                                 .into());
@@ -87,6 +103,7 @@ impl Cli {
                                 os_version.map(|x| x.to_string()),
                                 system_image.map(|x| x.to_string()),
                                 device.map(|x| x.to_string()),
+                                flavor.map(|x| x.to_string()),
                                 "Android".to_owned(),
                                 true,
                             )
@@ -111,6 +128,7 @@ impl Cli {
                                 &common.output,
                                 Some(application),
                                 test_application,
+                                None,
                                 None,
                                 None,
                                 None,
@@ -272,6 +290,9 @@ enum RunCommands {
 
         #[arg(value_enum, long, help = "Device type")]
         device: Option<android::Device>,
+
+        #[arg(value_enum, long, help = "Test flavor")]
+        flavor: Option<android::Flavor>,
 
         #[command(flatten)]
         common: CommonRunArgs,

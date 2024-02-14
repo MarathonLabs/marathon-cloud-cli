@@ -115,6 +115,7 @@ impl RapiClient for RapiReqwestClient {
         isolated: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
+        flavor: Option<String>,
     ) -> Result<String> {
         let url = format!("{}/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
@@ -256,6 +257,10 @@ impl RapiClient for RapiReqwestClient {
 
         if let Some(isolated) = isolated {
             form = form.text("isolated", isolated.to_string())
+        }
+
+        if let Some(flavor) = flavor {
+            form = form.text("flavor", flavor)
         }
 
         if let Some(filtering_configuration) = filtering_configuration {

@@ -71,6 +71,7 @@ impl TriggerTestRunInteractor {
         os_version: Option<String>,
         system_image: Option<String>,
         device: Option<String>,
+        flavor: Option<String>,
         platform: String,
         progress: bool,
     ) -> Result<bool> {
@@ -104,6 +105,7 @@ impl TriggerTestRunInteractor {
                 isolated,
                 filtering_configuration,
                 progress,
+                flavor,
             )
             .await?;
 

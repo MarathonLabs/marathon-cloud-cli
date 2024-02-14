@@ -19,7 +19,9 @@ impl Display for Device {
 
 #[derive(Debug, clap::ValueEnum, Clone)]
 pub enum SystemImage {
+    #[clap(name = "default")]
     Default,
+    #[clap(name = "google_apis")]
     GoogleApis,
 }
 
@@ -54,6 +56,26 @@ impl Display for OsVersion {
             OsVersion::Android12 => f.write_str("12"),
             OsVersion::Android13 => f.write_str("13"),
             OsVersion::Android14 => f.write_str("14"),
+        }
+    }
+}
+
+#[derive(Debug, clap::ValueEnum, Clone)]
+pub enum Flavor {
+    #[clap(name = "native")]
+    Native,
+    #[clap(name = "js-jest-appium")]
+    JsJestAppium,
+    #[clap(name = "python-robotframework-appium")]
+    PythonRobotFrameworkAppium,
+}
+
+impl Display for Flavor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Flavor::Native => f.write_str("native"),
+            Flavor::JsJestAppium => f.write_str("js-jest-appium"),
+            Flavor::PythonRobotFrameworkAppium => f.write_str("python-robotframework-appium"),
         }
     }
 }
