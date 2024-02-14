@@ -38,6 +38,7 @@ pub trait RapiClient {
         isolated: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
+        flavor: Option<String>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
