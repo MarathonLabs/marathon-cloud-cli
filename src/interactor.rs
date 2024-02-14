@@ -68,6 +68,7 @@ impl TriggerTestRunInteractor {
         test_application: PathBuf,
         os_version: Option<String>,
         system_image: Option<String>,
+        device: Option<String>,
         platform: String,
         progress: bool,
     ) -> Result<bool> {
@@ -97,6 +98,7 @@ impl TriggerTestRunInteractor {
                 platform,
                 os_version,
                 system_image,
+                device,
                 isolated,
                 filtering_configuration,
                 progress,

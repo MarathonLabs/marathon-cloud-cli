@@ -3,7 +3,8 @@ use clap::CommandFactory;
 use clap::{Args, Parser, Subcommand};
 use std::{fmt::Display, path::PathBuf};
 
-use crate::errors::default_error_handler;
+use crate::android::{self, Device, SystemImage};
+use crate::errors::{default_error_handler, ConfigurationError};
 use crate::interactor::{DownloadArtifactsInteractor, TriggerTestRunInteractor};
 
 #[derive(Parser)]
@@ -41,9 +42,32 @@ impl Cli {
                         test_application,
                         os_version,
                         system_image,
+                        device,
                         common,
                         api_args,
                     } => {
+                        match (&device, &system_image, &os_version) {
+                            (Some(Device::WEAR), Some(SystemImage::GoogleApis), Some(_) | None) => {
+                                return Err(ConfigurationError::UnsupportedRunConfiguration { message: "Android Wear only supports default system image and os versions 11 and 13".into() }.into());
+                            }
+                            (
+                                Some(Device::WEAR),
+                                Some(_) | None,
+                                Some(android::OsVersion::Android10)
+                                | Some(android::OsVersion::Android12)
+                                | Some(android::OsVersion::Android14),
+                            ) => {
+                                return Err(ConfigurationError::UnsupportedRunConfiguration { message: "Android Wear only supports default system image and os versions 11 and 13".into() }.into());
+                            }
+                            (Some(Device::TV), Some(SystemImage::GoogleApis), Some(_) | None) => {
+                                return Err(ConfigurationError::UnsupportedRunConfiguration {
+                                    message: "Android TV only supports default system image".into(),
+                                }
+                                .into());
+                            }
+                            _ => {}
+                        }
+
                         TriggerTestRunInteractor {}
                             .execute(
                                 &api_args.base_url,
@@ -55,8 +79,9 @@ impl Cli {
                                 &common.output,
                                 application,
                                 test_application,
-                                os_version,
+                                os_version.map(|x| x.to_string()),
                                 system_image.map(|x| x.to_string()),
+                                device.map(|x| x.to_string()),
                                 "Android".to_owned(),
                                 true,
                             )
@@ -79,6 +104,7 @@ impl Cli {
                                 &common.output,
                                 Some(application),
                                 test_application,
+                                None,
                                 None,
                                 None,
                                 "iOS".to_owned(),
@@ -228,11 +254,14 @@ enum RunCommands {
         )]
         test_application: PathBuf,
 
-        #[arg(long, help = "OS version [10, 11, 12, 13, 14]")]
-        os_version: Option<String>,
+        #[arg(value_enum, long, help = "OS version")]
+        os_version: Option<android::OsVersion>,
 
         #[arg(value_enum, long, help = "Runtime system image")]
-        system_image: Option<AndroidSystemImage>,
+        system_image: Option<android::SystemImage>,
+
+        #[arg(value_enum, long, help = "Device type")]
+        device: Option<android::Device>,
 
         #[command(flatten)]
         common: CommonRunArgs,
@@ -278,21 +307,6 @@ impl Display for Platform {
         match self {
             Platform::Android => f.write_str("Android"),
             Platform::iOS => f.write_str("iOS"),
-        }
-    }
-}
-
-#[derive(Debug, clap::ValueEnum, Clone)]
-pub enum AndroidSystemImage {
-    Default,
-    GoogleApis,
-}
-
-impl Display for AndroidSystemImage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AndroidSystemImage::Default => f.write_str("default"),
-            AndroidSystemImage::GoogleApis => f.write_str("google_apis"),
         }
     }
 }

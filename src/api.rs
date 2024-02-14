@@ -1,5 +1,4 @@
 use std::{
-    borrow::BorrowMut,
     cmp::min,
     path::{Path, PathBuf},
     time::Duration,
@@ -35,6 +34,7 @@ pub trait RapiClient {
         platform: String,
         os_version: Option<String>,
         system_image: Option<String>,
+        device: Option<String>,
         isolated: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
@@ -111,6 +111,7 @@ impl RapiClient for RapiReqwestClient {
         platform: String,
         os_version: Option<String>,
         system_image: Option<String>,
+        device: Option<String>,
         isolated: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
@@ -247,6 +248,10 @@ impl RapiClient for RapiReqwestClient {
 
         if let Some(system_image) = system_image {
             form = form.text("system_image", system_image)
+        }
+
+        if let Some(device) = device {
+            form = form.text("device", device)
         }
 
         if let Some(isolated) = isolated {
