@@ -49,20 +49,20 @@ impl Cli {
                     } => {
                         match (&device, &flavor, &system_image, &os_version) {
                             (
-                                Some(Device::WEAR),
+                                Some(Device::WATCH),
                                 _,
                                 Some(SystemImage::Default) | None,
                                 Some(_) | None,
                             )
                             | (
-                                Some(Device::WEAR),
+                                Some(Device::WATCH),
                                 _,
                                 Some(_),
                                 Some(android::OsVersion::Android10)
                                 | Some(android::OsVersion::Android12)
                                 | Some(android::OsVersion::Android14),
                             ) => {
-                                return Err(ConfigurationError::UnsupportedRunConfiguration { message: "Android Wear only supports google-apis system image and os versions 11 and 13".into() }.into());
+                                return Err(ConfigurationError::UnsupportedRunConfiguration { message: "Android Watch only supports google-apis system image and os versions 11 and 13".into() }.into());
                             }
                             (Some(Device::TV), _, Some(SystemImage::Default), Some(_) | None) => {
                                 return Err(ConfigurationError::UnsupportedRunConfiguration {
@@ -72,7 +72,7 @@ impl Cli {
                                 .into());
                             }
                             (
-                                Some(Device::TV) | Some(Device::WEAR),
+                                Some(Device::TV) | Some(Device::WATCH),
                                 Some(Flavor::JsJestAppium)
                                 | Some(Flavor::PythonRobotFrameworkAppium),
                                 _,

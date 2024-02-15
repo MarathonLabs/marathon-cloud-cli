@@ -4,7 +4,7 @@ use std::fmt::Display;
 pub enum Device {
     PHONE,
     TV,
-    WEAR,
+    WATCH,
 }
 
 impl Display for Device {
@@ -12,7 +12,7 @@ impl Display for Device {
         match self {
             Device::PHONE => f.write_str("phone"),
             Device::TV => f.write_str("tv"),
-            Device::WEAR => f.write_str("wear"),
+            Device::WATCH => f.write_str("watch"),
         }
     }
 }
