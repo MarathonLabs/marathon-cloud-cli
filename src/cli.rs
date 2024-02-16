@@ -3,7 +3,8 @@ use clap::CommandFactory;
 use clap::{Args, Parser, Subcommand};
 use std::{fmt::Display, path::PathBuf};
 
-use crate::errors::default_error_handler;
+use crate::android::{self, Device, Flavor, SystemImage};
+use crate::errors::{default_error_handler, ConfigurationError};
 use crate::interactor::{DownloadArtifactsInteractor, TriggerTestRunInteractor};
 
 #[derive(Parser)]
@@ -41,13 +42,57 @@ impl Cli {
                         test_application,
                         os_version,
                         system_image,
+                        device,
                         common,
                         api_args,
+                        flavor,
                     } => {
+                        match (&device, &flavor, &system_image, &os_version) {
+                            (
+                                Some(Device::WATCH),
+                                _,
+                                Some(SystemImage::Default) | None,
+                                Some(_) | None,
+                            )
+                            | (
+                                Some(Device::WATCH),
+                                _,
+                                Some(_),
+                                Some(android::OsVersion::Android10)
+                                | Some(android::OsVersion::Android12)
+                                | Some(android::OsVersion::Android14),
+                            ) => {
+                                return Err(ConfigurationError::UnsupportedRunConfiguration { message: "Android Watch only supports google-apis system image and os versions 11 and 13".into() }.into());
+                            }
+                            (Some(Device::TV), _, Some(SystemImage::Default), Some(_) | None) => {
+                                return Err(ConfigurationError::UnsupportedRunConfiguration {
+                                    message: "Android TV only supports google-apis system image"
+                                        .into(),
+                                }
+                                .into());
+                            }
+                            (
+                                Some(Device::TV) | Some(Device::WATCH),
+                                Some(Flavor::JsJestAppium)
+                                | Some(Flavor::PythonRobotFrameworkAppium),
+                                _,
+                                _,
+                            ) => {
+                                return Err(ConfigurationError::UnsupportedRunConfiguration {
+                                    message: "js-jest-appium and python-robotframework-appium only support 'phone' devices"
+                                        .into(),
+                                }
+                                .into());
+                            }
+                            _ => {}
+                        }
+
                         TriggerTestRunInteractor {}
                             .execute(
                                 &api_args.base_url,
                                 &api_args.api_key,
+                                common.name,
+                                common.link,
                                 common.wait,
                                 common.isolated,
                                 common.ignore_test_failures,
@@ -55,8 +100,10 @@ impl Cli {
                                 &common.output,
                                 application,
                                 test_application,
-                                os_version,
+                                os_version.map(|x| x.to_string()),
                                 system_image.map(|x| x.to_string()),
+                                device.map(|x| x.to_string()),
+                                flavor.map(|x| x.to_string()),
                                 "Android".to_owned(),
                                 true,
                             )
@@ -72,6 +119,8 @@ impl Cli {
                             .execute(
                                 &api_args.base_url,
                                 &api_args.api_key,
+                                common.name,
+                                common.link,
                                 common.wait,
                                 common.isolated,
                                 common.ignore_test_failures,
@@ -79,6 +128,8 @@ impl Cli {
                                 &common.output,
                                 Some(application),
                                 test_application,
+                                None,
+                                None,
                                 None,
                                 None,
                                 "iOS".to_owned(),
@@ -162,11 +213,14 @@ struct CommonRunArgs {
 
     #[arg(
         long,
-        help = "name for run, for example it could be description of commit"
+        help = "Name for run, for example it could be description of commit"
     )]
     name: Option<String>,
 
-    #[arg(long, help = "link to commit")]
+    #[arg(
+        long,
+        help = "Optional link, for example it could be a link to source control commit or CI run"
+    )]
     link: Option<String>,
 
     #[arg(
@@ -228,11 +282,17 @@ enum RunCommands {
         )]
         test_application: PathBuf,
 
-        #[arg(long, help = "OS version [10, 11, 12, 13]")]
-        os_version: Option<String>,
+        #[arg(value_enum, long, help = "OS version")]
+        os_version: Option<android::OsVersion>,
 
         #[arg(value_enum, long, help = "Runtime system image")]
-        system_image: Option<AndroidSystemImage>,
+        system_image: Option<android::SystemImage>,
+
+        #[arg(value_enum, long, help = "Device type")]
+        device: Option<android::Device>,
+
+        #[arg(value_enum, long, help = "Test flavor")]
+        flavor: Option<android::Flavor>,
 
         #[command(flatten)]
         common: CommonRunArgs,
@@ -278,21 +338,6 @@ impl Display for Platform {
         match self {
             Platform::Android => f.write_str("Android"),
             Platform::iOS => f.write_str("iOS"),
-        }
-    }
-}
-
-#[derive(Debug, clap::ValueEnum, Clone)]
-pub enum AndroidSystemImage {
-    Default,
-    GoogleApis,
-}
-
-impl Display for AndroidSystemImage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AndroidSystemImage::Default => f.write_str("default"),
-            AndroidSystemImage::GoogleApis => f.write_str("google_apis"),
         }
     }
 }

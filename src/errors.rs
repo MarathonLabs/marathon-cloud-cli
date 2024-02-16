@@ -8,8 +8,6 @@ use url::ParseError;
 
 #[derive(Error, Debug)]
 pub enum ApiError {
-    #[error("Unauthorized client. Double check you've supplied correct api key or you have appropriate permissions\nerror = {error}")]
-    Unauthorized { error: ReqwestError },
     #[error("Invalid parameters for url")]
     InvalidParameters { error: ParseError },
     #[error("Failed to parse API response\nerror = {error}")]
@@ -41,6 +39,12 @@ pub enum InputError {
 
     #[error("Can't open file. Double check you've supplied correct path\npath = {path}")]
     OpenFileFailure { path: PathBuf, error: io::Error },
+}
+
+#[derive(Error, Debug)]
+pub enum ConfigurationError {
+    #[error("Unsupported run configuration: {message}")]
+    UnsupportedRunConfiguration { message: String },
 }
 
 #[derive(Error, Debug)]

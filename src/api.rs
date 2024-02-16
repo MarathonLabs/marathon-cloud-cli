@@ -1,5 +1,4 @@
 use std::{
-    borrow::BorrowMut,
     cmp::min,
     path::{Path, PathBuf},
     time::Duration,
@@ -35,9 +34,11 @@ pub trait RapiClient {
         platform: String,
         os_version: Option<String>,
         system_image: Option<String>,
+        device: Option<String>,
         isolated: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
+        flavor: Option<String>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -111,9 +112,11 @@ impl RapiClient for RapiReqwestClient {
         platform: String,
         os_version: Option<String>,
         system_image: Option<String>,
+        device: Option<String>,
         isolated: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
+        flavor: Option<String>,
     ) -> Result<String> {
         let url = format!("{}/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
@@ -249,8 +252,16 @@ impl RapiClient for RapiReqwestClient {
             form = form.text("system_image", system_image)
         }
 
+        if let Some(device) = device {
+            form = form.text("device", device)
+        }
+
         if let Some(isolated) = isolated {
             form = form.text("isolated", isolated.to_string())
+        }
+
+        if let Some(flavor) = flavor {
+            form = form.text("flavor", flavor)
         }
 
         if let Some(filtering_configuration) = filtering_configuration {
