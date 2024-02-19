@@ -46,6 +46,7 @@ impl Cli {
                         common,
                         api_args,
                         flavor,
+                        instrumentation_arg
                     } => {
                         match (&device, &flavor, &system_image, &os_version) {
                             (
@@ -106,6 +107,7 @@ impl Cli {
                                 flavor.map(|x| x.to_string()),
                                 "Android".to_owned(),
                                 true,
+                                instrumentation_arg
                             )
                             .await
                     }
@@ -114,6 +116,7 @@ impl Cli {
                         test_application,
                         common,
                         api_args,
+                        xctestrun_env,
                     } => {
                         TriggerTestRunInteractor {}
                             .execute(
@@ -134,6 +137,8 @@ impl Cli {
                                 None,
                                 "iOS".to_owned(),
                                 true,
+                                xctestrun_env
+
                             )
                             .await
                     }
@@ -299,6 +304,9 @@ enum RunCommands {
 
         #[command(flatten)]
         api_args: ApiArgs,
+
+        #[arg(value_enum, long, help = "Instrumentation arguments, example: FOO=BAR")]
+        instrumentation_arg: Option<Vec<String>>,
     },
     #[allow(non_camel_case_types)]
     #[command(name = "ios")]
@@ -323,6 +331,10 @@ enum RunCommands {
 
         #[command(flatten)]
         api_args: ApiArgs,
+
+        #[arg(value_enum, long, help = "xctestrun environment variables, example FOO=BAR")]
+        xctestrun_env: Option<Vec<String>>,
+
     },
 }
 
