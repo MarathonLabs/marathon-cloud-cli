@@ -305,7 +305,7 @@ enum RunCommands {
         #[command(flatten)]
         api_args: ApiArgs,
 
-        #[arg(value_enum, long, help = "Instrumentation arguments, example: FOO=BAR")]
+        #[arg(long, help = "Instrumentation arguments, example: FOO=BAR")]
         instrumentation_arg: Option<Vec<String>>,
     },
     #[allow(non_camel_case_types)]
@@ -332,7 +332,7 @@ enum RunCommands {
         #[command(flatten)]
         api_args: ApiArgs,
 
-        #[arg(value_enum, long, help = "xctestrun environment variables, example FOO=BAR")]
+        #[arg(long, help = "xctestrun environment variables, example FOO=BAR")]
         xctestrun_env: Option<Vec<String>>,
 
     },
