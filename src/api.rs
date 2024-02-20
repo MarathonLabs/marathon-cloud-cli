@@ -18,7 +18,7 @@ use tokio::{
 use tokio_util::io::ReaderStream;
 
 use crate::{
-    errors::{ApiError, InputError},
+    errors::{ApiError, EnvArgError, InputError},
     filtering::SparseMarathonfile,
 };
 
@@ -39,6 +39,7 @@ pub trait RapiClient {
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
         flavor: Option<String>,
+        env_args: Option<Vec<String>>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -117,6 +118,7 @@ impl RapiClient for RapiReqwestClient {
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
         flavor: Option<String>,
+        env_args: Option<Vec<String>>,
     ) -> Result<String> {
         let url = format!("{}/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
@@ -238,6 +240,30 @@ impl RapiClient for RapiReqwestClient {
 
         if let Some(name) = name {
             form = form.text("name", name)
+        }
+
+        if let Some(env_args) = env_args {
+            for env_arg in env_args {
+                let key_value: Vec<&str> = env_arg.splitn(2, '=').collect();
+                if key_value.len() == 2 {
+                    let key = key_value[0];
+                    let value = key_value
+                        .get(1)
+                        .map(|val| val.to_string())
+                        .unwrap_or_else(|| "".to_string());
+                    if value.is_empty() {
+                        return Err(EnvArgError::MissingValue {
+                            env_arg: env_arg.clone(),
+                        }
+                        .into());
+                    }
+                    form = form.text(format!("env_args[{}]", key), value.clone())
+                } else {
+                    Err(EnvArgError::InvalidKeyValue {
+                        env_arg: env_arg.clone(),
+                    })?
+                }
+            }
         }
 
         if let Some(link) = link {
