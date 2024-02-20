@@ -46,7 +46,7 @@ impl Cli {
                         common,
                         api_args,
                         flavor,
-                        instrumentation_arg
+                        instrumentation_arg,
                     } => {
                         match (&device, &flavor, &system_image, &os_version) {
                             (
@@ -107,7 +107,7 @@ impl Cli {
                                 flavor.map(|x| x.to_string()),
                                 "Android".to_owned(),
                                 true,
-                                instrumentation_arg
+                                instrumentation_arg,
                             )
                             .await
                     }
@@ -137,8 +137,7 @@ impl Cli {
                                 None,
                                 "iOS".to_owned(),
                                 true,
-                                xctestrun_env
-
+                                xctestrun_env,
                             )
                             .await
                     }
@@ -334,7 +333,6 @@ enum RunCommands {
 
         #[arg(long, help = "xctestrun environment variables, example FOO=BAR")]
         xctestrun_env: Option<Vec<String>>,
-
     },
 }
 

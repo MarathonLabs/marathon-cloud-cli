@@ -18,7 +18,7 @@ use tokio::{
 use tokio_util::io::ReaderStream;
 
 use crate::{
-    errors::{ApiError, InputError, EnvArgError},
+    errors::{ApiError, EnvArgError, InputError},
     filtering::SparseMarathonfile,
 };
 
@@ -252,13 +252,16 @@ impl RapiClient for RapiReqwestClient {
                         .map(|val| val.to_string())
                         .unwrap_or_else(|| "".to_string());
                     if value.is_empty() {
-                        Err(EnvArgError::MissingValue { env_arg: env_arg.clone() })?
+                        Err(EnvArgError::MissingValue {
+                            env_arg: env_arg.clone(),
+                        })?
                     }
                     form = form.text(format!("env_args[{}]", key), value.clone())
                 } else {
-                    Err(EnvArgError::InvalidKeyValue { env_arg: env_arg.clone() })?
+                    Err(EnvArgError::InvalidKeyValue {
+                        env_arg: env_arg.clone(),
+                    })?
                 }
-
             }
         }
 

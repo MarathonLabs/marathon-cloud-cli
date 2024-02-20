@@ -27,7 +27,7 @@ pub enum ApiError {
 pub enum EnvArgError {
     #[error("Invalid environment variable. Double check you've supplied correct value\nvalue = {env_arg}")]
     InvalidKeyValue { env_arg: String },
-    
+
     #[error("Invalid environment variable. Value can not be empty \nvalue = {env_arg}")]
     MissingValue { env_arg: String },
 }
