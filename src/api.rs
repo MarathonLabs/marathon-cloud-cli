@@ -252,9 +252,10 @@ impl RapiClient for RapiReqwestClient {
                         .map(|val| val.to_string())
                         .unwrap_or_else(|| "".to_string());
                     if value.is_empty() {
-                        Err(EnvArgError::MissingValue {
+                        return Err(EnvArgError::MissingValue {
                             env_arg: env_arg.clone(),
-                        })?
+                        }
+                        .into());
                     }
                     form = form.text(format!("env_args[{}]", key), value.clone())
                 } else {
