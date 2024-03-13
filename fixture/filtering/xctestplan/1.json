@@ -1,0 +1,81 @@
+{
+  "configurations": [
+    {
+      "id": "8769C931-E688-4F36-BEFF-7625BE7161A9",
+      "name": "Configuration 1",
+      "options": {
+        "addressSanitizer": {
+          "enabled": false
+        },
+        "guardMallocEnabled": false,
+        "mallocGuardEdgesEnabled": false,
+        "mallocScribbleEnabled": false,
+        "mallocStackLoggingOptions": null,
+        "threadSanitizerEnabled": false
+      }
+    }
+  ],
+  "defaultOptions": {
+    "addressSanitizer": {
+      "detectStackUseAfterReturn": true,
+      "enabled": true
+    },
+    "areLocalizationScreenshotsEnabled": true,
+    "codeCoverage": false,
+    "commandLineArgumentEntries": [
+      {
+        "argument": "-test"
+      }
+    ],
+    "diagnosticCollectionPolicy": "Never",
+    "environmentVariableEntries": [
+      {
+        "key": "A",
+        "value": "B"
+      }
+    ],
+    "guardMallocEnabled": true,
+    "language": "en-AU",
+    "locationScenario": {
+      "identifier": "Sydney, Australia",
+      "referenceType": "built-in"
+    },
+    "mainThreadCheckerEnabled": false,
+    "mallocGuardEdgesEnabled": true,
+    "mallocScribbleEnabled": true,
+    "mallocStackLoggingOptions": {
+      "loggingType": "allAllocations"
+    },
+    "nsZombieEnabled": true,
+    "preferredScreenCaptureFormat": "screenshot",
+    "region": "AU",
+    "targetForVariableExpansion": {
+      "containerPath": "container:sample-app.xcodeproj",
+      "identifier": "1271DCB421351C6D002B8D3E",
+      "name": "sample-appUITests"
+    },
+    "testExecutionOrdering": "random",
+    "testRepetitionMode": "retryOnFailure",
+    "testTimeoutsEnabled": true,
+    "threadSanitizerEnabled": true,
+    "uiTestingScreenshotsLifetime": "keepAlways",
+    "undefinedBehaviorSanitizerEnabled": true,
+    "userAttachmentLifetime": "keepAlways"
+  },
+  "testTargets": [
+    {
+      "parallelizable": true,
+      "skippedTests": [
+        "CrashingTests",
+        "MoreTests/testDismissModal()",
+        "SlowTests/testTextSlow3()"
+      ],
+      "target": {
+        "containerPath": "container:sample-app.xcodeproj",
+        "identifier": "1271DCB421351C6D002B8D3E",
+        "name": "sample-appUITests"
+      }
+    }
+  ],
+  "version": 1
+}

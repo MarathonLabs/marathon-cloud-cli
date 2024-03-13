@@ -5,6 +5,7 @@ use std::{fmt::Display, path::PathBuf};
 
 use crate::android::{self, Device, Flavor, SystemImage};
 use crate::errors::{default_error_handler, ConfigurationError};
+use crate::filtering;
 use crate::interactor::{DownloadArtifactsInteractor, TriggerTestRunInteractor};
 
 #[derive(Parser)]
@@ -88,6 +89,12 @@ impl Cli {
                             _ => {}
                         }
 
+                        let filter_file = common.filter_file.map(filtering::convert::convert);
+                        let filtering_configuration = match filter_file {
+                            Some(future) => Some(future.await?),
+                            None => None,
+                        };
+
                         TriggerTestRunInteractor {}
                             .execute(
                                 &api_args.base_url,
@@ -97,7 +104,7 @@ impl Cli {
                                 common.wait,
                                 common.isolated,
                                 common.ignore_test_failures,
-                                common.filter_file,
+                                filtering_configuration,
                                 &common.output,
                                 application,
                                 test_application,
@@ -117,29 +124,50 @@ impl Cli {
                         common,
                         api_args,
                         xctestrun_env,
+                        xctestplan_filter_file,
+                        xctestplan_target_name,
                     } => {
-                        TriggerTestRunInteractor {}
-                            .execute(
-                                &api_args.base_url,
-                                &api_args.api_key,
-                                common.name,
-                                common.link,
-                                common.wait,
-                                common.isolated,
-                                common.ignore_test_failures,
-                                common.filter_file,
-                                &common.output,
-                                Some(application),
-                                test_application,
-                                None,
-                                None,
-                                None,
-                                None,
-                                "iOS".to_owned(),
-                                true,
-                                xctestrun_env,
+                        let filtering_configuration = if xctestplan_filter_file.is_some() {
+                            Some(
+                                filtering::convert::convert_xctestplan(
+                                    xctestplan_filter_file.unwrap(),
+                                    xctestplan_target_name,
+                                )
+                                .await?,
                             )
-                            .await
+                        } else {
+                            let filter_file = common.filter_file.map(filtering::convert::convert);
+                            match filter_file {
+                                Some(future) => Some(future.await?),
+                                None => None,
+                            }
+                        };
+                        if let Some(x) = filtering_configuration {
+                            println!("{}", serde_yaml::to_string(&x)?);
+                        };
+                        Ok(true)
+                        // TriggerTestRunInteractor {}
+                        //     .execute(
+                        //         &api_args.base_url,
+                        //         &api_args.api_key,
+                        //         common.name,
+                        //         common.link,
+                        //         common.wait,
+                        //         common.isolated,
+                        //         common.ignore_test_failures,
+                        //         filtering_configuration,
+                        //         &common.output,
+                        //         Some(application),
+                        //         test_application,
+                        //         None,
+                        //         None,
+                        //         None,
+                        //         None,
+                        //         "iOS".to_owned(),
+                        //         true,
+                        //         xctestrun_env,
+                        //     )
+                        //     .await
                     }
                 }
             }
@@ -333,6 +361,11 @@ enum RunCommands {
 
         #[arg(long, help = "xctestrun environment variables, example FOO=BAR")]
         xctestrun_env: Option<Vec<String>>,
+
+        #[arg(long, help = "Test filters supplied as .xctestplan file")]
+        xctestplan_filter_file: Option<PathBuf>,
+        #[arg(long, help = "Target name to use for test filtering in .xctestplan")]
+        xctestplan_target_name: Option<String>,
     },
 }
 

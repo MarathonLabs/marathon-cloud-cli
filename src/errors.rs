@@ -48,6 +48,9 @@ pub enum InputError {
 
     #[error("Can't open file. Double check you've supplied correct path\npath = {path}")]
     OpenFileFailure { path: PathBuf, error: io::Error },
+
+    #[error("Invalid xctestplan file: no test targets specified. Double check you've supplied correct path")]
+    XctestplanMissingTargets,
 }
 
 #[derive(Error, Debug)]

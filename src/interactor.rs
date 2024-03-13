@@ -9,7 +9,7 @@ use tokio::time::{sleep, Instant};
 use crate::{
     api::{RapiClient, RapiReqwestClient},
     artifacts::{download_artifacts, fetch_artifact_list},
-    filtering,
+    filtering::model::SparseMarathonfile,
 };
 
 pub struct DownloadArtifactsInteractor {}
@@ -64,7 +64,7 @@ impl TriggerTestRunInteractor {
         wait: bool,
         isolated: Option<bool>,
         ignore_test_failures: Option<bool>,
-        filter_file: Option<PathBuf>,
+        filtering_configuration: Option<SparseMarathonfile>,
         output: &Option<PathBuf>,
         application: Option<PathBuf>,
         test_application: PathBuf,
@@ -88,11 +88,6 @@ impl TriggerTestRunInteractor {
             "{} Submitting new run...",
             style(format!("[1/{}]", steps)).bold().dim()
         );
-        let filter_file = filter_file.map(filtering::convert);
-        let filtering_configuration = match filter_file {
-            Some(future) => Some(future.await?),
-            None => None,
-        };
         let id = client
             .create_run(
                 application,
