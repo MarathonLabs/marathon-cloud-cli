@@ -142,32 +142,28 @@ impl Cli {
                                 None => None,
                             }
                         };
-                        if let Some(x) = filtering_configuration {
-                            println!("{}", serde_yaml::to_string(&x)?);
-                        };
-                        Ok(true)
-                        // TriggerTestRunInteractor {}
-                        //     .execute(
-                        //         &api_args.base_url,
-                        //         &api_args.api_key,
-                        //         common.name,
-                        //         common.link,
-                        //         common.wait,
-                        //         common.isolated,
-                        //         common.ignore_test_failures,
-                        //         filtering_configuration,
-                        //         &common.output,
-                        //         Some(application),
-                        //         test_application,
-                        //         None,
-                        //         None,
-                        //         None,
-                        //         None,
-                        //         "iOS".to_owned(),
-                        //         true,
-                        //         xctestrun_env,
-                        //     )
-                        //     .await
+                        TriggerTestRunInteractor {}
+                            .execute(
+                                &api_args.base_url,
+                                &api_args.api_key,
+                                common.name,
+                                common.link,
+                                common.wait,
+                                common.isolated,
+                                common.ignore_test_failures,
+                                filtering_configuration,
+                                &common.output,
+                                Some(application),
+                                test_application,
+                                None,
+                                None,
+                                None,
+                                None,
+                                "iOS".to_owned(),
+                                true,
+                                xctestrun_env,
+                            )
+                            .await
                     }
                 }
             }
