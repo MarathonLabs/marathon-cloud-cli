@@ -68,7 +68,9 @@
       "skippedTests": [
         "CrashingTests",
         "MoreTests/testDismissModal()",
-        "SlowTests/testTextSlow3()"
+        "SlowTests/testTextSlow1",
+        "SlowTests\/testTextSlow2()",
+        "SlowTests\/testTextSlow3"
       ],
       "target": {
         "containerPath": "container:sample-app.xcodeproj",

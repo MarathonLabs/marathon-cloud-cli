@@ -429,7 +429,7 @@ mod tests {
         let result = serde_json::to_string(&result)?;
         assert_eq!(
             result,
-            r#"{"filteringConfiguration":{"blocklist":[{"type":"composition","filters":[{"type":"simple-class-name","values":["CrashingTests"]},{"type":"simple-test-name","values":["MoreTests#testDismissModal","SlowTests#testTextSlow3"]}],"op":"UNION"}]}}"#
+            r#"{"filteringConfiguration":{"blocklist":[{"type":"composition","filters":[{"type":"simple-class-name","values":["CrashingTests"]},{"type":"simple-test-name","values":["MoreTests#testDismissModal","SlowTests#testTextSlow1","SlowTests#testTextSlow2","SlowTests#testTextSlow3"]}],"op":"UNION"}]}}"#
         );
         Ok(())
     }

@@ -34,7 +34,7 @@ pub struct Configuration {
 #[derive(Deserialize)]
 pub struct Options {
     #[serde[rename = "environmentVariableEntries"]]
-    pub environemnent_variables: Option<Vec<EnvironmentVariableEntry>>,
+    pub environmnent_variables: Option<Vec<EnvironmentVariableEntry>>,
     #[serde[rename = "targetForVariableExpansion"]]
     pub target_for_variable_expansion: Option<Target>,
     #[serde[rename = "addressSanitizer"]]
