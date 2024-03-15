@@ -19,7 +19,7 @@ use tokio_util::io::ReaderStream;
 
 use crate::{
     errors::{ApiError, EnvArgError, InputError},
-    filtering::SparseMarathonfile,
+    filtering::model::SparseMarathonfile,
 };
 
 #[async_trait]

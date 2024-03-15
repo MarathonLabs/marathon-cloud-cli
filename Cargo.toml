@@ -8,7 +8,7 @@ name = "marathon-cloud"
 repository = "https://github.com/MarathonLabs/marathon-cloud-cli"
 version = "0.0.1"
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.74"
 default-run = "marathon-cloud"
 
 [[bin]]
@@ -30,8 +30,13 @@ serde_with = "3.6.0"
 simple_logger = "4.3.3"
 tempfile = "3.9.0"
 # Reqwest pulls in dependency on openssl which we replace with rustls, hence disabling default features
-reqwest = { version = "0.11.23", default-features = false, features = ["json", "multipart", "stream", "rustls-tls"] }
-time = { version = "0.3", features = ["serde-well-known"]}
+reqwest = { version = "0.11.23", default-features = false, features = [
+  "json",
+  "multipart",
+  "stream",
+  "rustls-tls",
+] }
+time = { version = "0.3", features = ["serde-well-known"] }
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7"
 futures = "0.3"

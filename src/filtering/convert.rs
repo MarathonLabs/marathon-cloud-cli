@@ -5,10 +5,12 @@ use tokio::{
     io::AsyncReadExt,
 };
 
-use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
-
 use crate::errors::{FilteringConfigurationError, InputError};
+
+use super::{
+    model::{Filter, FilteringConfiguration, SparseMarathonfile},
+    xctestplan,
+};
 
 pub async fn convert(cnf: PathBuf) -> Result<SparseMarathonfile> {
     let content = fs::read_to_string(&cnf)
@@ -31,11 +33,119 @@ pub async fn convert(cnf: PathBuf) -> Result<SparseMarathonfile> {
     Ok(filtering_configuration)
 }
 
+pub async fn convert_xctestplan(
+    cnf: PathBuf,
+    target_name: Option<String>,
+) -> Result<SparseMarathonfile> {
+    let content = fs::read_to_string(&cnf)
+        .await
+        .map_err(|error| InputError::OpenFileFailure {
+            path: cnf.clone(),
+            error,
+        })?;
+
+    let xctestplan: xctestplan::SparseTestPlan = serde_json::from_str(&content)?;
+    let targets = xctestplan.test_targets;
+    let target = match target_name {
+        Some(target_name) => targets
+            .iter()
+            .find(|x| x.target.name == target_name)
+            .ok_or(InputError::XctestplanMissingTargets)?,
+        None => targets
+            .first()
+            .ok_or(InputError::XctestplanMissingTargets)?,
+    };
+
+    let allowlist = target
+        .selected_tests
+        .as_ref()
+        .map(|x| xctestplan_ids_to_filter(x));
+    let blocklist = target
+        .skipped_tests
+        .as_ref()
+        .map(|x| xctestplan_ids_to_filter(x));
+
+    let filtering_configuration = FilteringConfiguration {
+        allowlist: allowlist.map(|x| vec![x]),
+        blocklist: blocklist.map(|x| vec![x]),
+    };
+    let marathonfile = SparseMarathonfile {
+        filtering_configuration,
+    };
+
+    Ok(marathonfile)
+}
+
+//Identifiers contain a mix of class names and class name with method signature
+//Sometimes you can see separator \/ and sometimes / for the class and method
+//Also sometime ending () are present for method filtering
+fn xctestplan_ids_to_filter(ids: &[String]) -> Filter {
+    let mut class_names: Vec<String> = vec![];
+    let mut simple_test_names: Vec<String> = vec![];
+
+    ids.iter().for_each(|id| {
+        if id.contains("/") || id.contains("(") {
+            let marathon_id = id.replace("\\/", "#").replace("/", "#").replace("()", "");
+            simple_test_names.push(marathon_id);
+        } else {
+            class_names.push(id.clone());
+        }
+    });
+
+    if !class_names.is_empty() && !simple_test_names.is_empty() {
+        //Need to use composition since filtering is done via class names and also using methods
+        let class_name_filter = Filter {
+            mtype: "simple-class-name".into(),
+            values: Some(class_names),
+            op: None,
+            file: None,
+            regex: None,
+            filters: None,
+        };
+
+        let simple_qualified_test_name_filter = Filter {
+            mtype: "simple-test-name".into(),
+            values: Some(simple_test_names),
+            op: None,
+            file: None,
+            regex: None,
+            filters: None,
+        };
+        Filter {
+            mtype: "composition".into(),
+            values: None,
+            op: Some("UNION".into()),
+            filters: Some(vec![class_name_filter, simple_qualified_test_name_filter]),
+            regex: None,
+            file: None,
+        }
+    } else if !class_names.is_empty() {
+        Filter {
+            mtype: "simple-class-name".into(),
+            values: Some(class_names),
+            op: None,
+            file: None,
+            regex: None,
+            filters: None,
+        }
+    } else {
+        Filter {
+            mtype: "simple-test-name".into(),
+            values: Some(simple_test_names),
+            op: None,
+            file: None,
+            regex: None,
+            filters: None,
+        }
+    }
+}
+
 pub async fn validate(cnf: &mut FilteringConfiguration, workdir: &Path) -> Result<()> {
     let supported_types = vec![
         "fully-qualified-class-name",
         "fully-qualified-test-name",
         "simple-class-name",
+        "simple-test-name",
         "package",
         "method",
         "annotation",
@@ -162,48 +272,12 @@ async fn validate_filter(
     }
 }
 
-#[skip_serializing_none]
-#[derive(Deserialize, Serialize)]
-pub struct SparseMarathonfile {
-    #[serde(rename = "filteringConfiguration")]
-    pub filtering_configuration: FilteringConfiguration,
-}
-
-#[skip_serializing_none]
-#[derive(Deserialize, Serialize)]
-pub struct FilteringConfiguration {
-    #[serde(rename = "allowlist")]
-    pub allowlist: Option<Vec<Filter>>,
-    #[serde(rename = "blocklist")]
-    pub blocklist: Option<Vec<Filter>>,
-}
-
-// Very simplstic and flattened representation of https://github.com/MarathonLabs/marathon/blob/0.9.1/configuration/src/main/kotlin/com/malinskiy/marathon/config/FilteringConfiguration.kt
-#[skip_serializing_none]
-#[derive(Deserialize, Serialize)]
-pub struct Filter {
-    #[serde(rename = "type")]
-    pub mtype: String,
-
-    #[serde[rename = "regex"]]
-    pub regex: Option<String>,
-    #[serde[rename = "values"]]
-    pub values: Option<Vec<String>>,
-    #[serde[rename = "file"]]
-    pub file: Option<PathBuf>,
-
-    #[serde[rename = "filters"]]
-    pub filters: Option<Vec<Filter>>,
-    #[serde[rename = "op"]]
-    pub op: Option<String>,
-}
-
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
     use std::path::Path;
 
-    use crate::filtering::convert;
+    use crate::filtering::convert::{convert, convert_xctestplan};
 
     #[tokio::test]
     async fn test_valid() -> Result<()> {
@@ -340,6 +414,23 @@ mod tests {
             .join("correctTypeTwoFields.yaml");
         let result = convert(fixture).await;
         assert!(result.is_err());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_xctestplan_1() -> Result<()> {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let fixture = Path::new(&manifest_dir)
+            .join("fixture")
+            .join("filtering")
+            .join("xctestplan")
+            .join("1.json");
+        let result = convert_xctestplan(fixture, None).await?;
+        let result = serde_json::to_string(&result)?;
+        assert_eq!(
+            result,
+            r#"{"filteringConfiguration":{"blocklist":[{"type":"composition","filters":[{"type":"simple-class-name","values":["CrashingTests"]},{"type":"simple-test-name","values":["MoreTests#testDismissModal","SlowTests#testTextSlow1","SlowTests#testTextSlow2","SlowTests#testTextSlow3"]}],"op":"UNION"}]}}"#
+        );
         Ok(())
     }
 }
