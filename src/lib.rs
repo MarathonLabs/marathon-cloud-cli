@@ -1,4 +1,5 @@
 mod android;
+mod ios;
 mod api;
 mod artifacts;
 pub mod cli;

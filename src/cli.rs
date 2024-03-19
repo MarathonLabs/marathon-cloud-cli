@@ -4,6 +4,7 @@ use clap::{Args, Parser, Subcommand};
 use std::{fmt::Display, path::PathBuf};
 
 use crate::android::{self, Device, Flavor, SystemImage};
+use crate::ios::{self, XcodeVersion, OsVersion, IosDevice};
 use crate::errors::{default_error_handler, ConfigurationError};
 use crate::filtering;
 use crate::interactor::{DownloadArtifactsInteractor, TriggerTestRunInteractor};
@@ -111,6 +112,7 @@ impl Cli {
                                 os_version.map(|x| x.to_string()),
                                 system_image.map(|x| x.to_string()),
                                 device.map(|x| x.to_string()),
+                                None,
                                 flavor.map(|x| x.to_string()),
                                 "Android".to_owned(),
                                 true,
@@ -121,12 +123,32 @@ impl Cli {
                     RunCommands::iOS {
                         application,
                         test_application,
+                        os_version,
+                        device,
+                        xcode_version,
                         common,
                         api_args,
                         xctestrun_env,
                         xctestplan_filter_file,
                         xctestplan_target_name,
                     } => {
+                        match (&device, &xcode_version, &os_version) {
+                            (Some(IosDevice::IPhone14), Some(XcodeVersion::Xcode14_3_1), Some(OsVersion::Ios16_4))
+                            | (Some(IosDevice::IPhone15), Some(XcodeVersion::Xcode15_2), Some(OsVersion::Ios17_2))
+                            | (None, None, None) => {}
+                            _ => {
+                                return Err(ConfigurationError::UnsupportedRunConfiguration {
+                                    message: "
+Please set --xcode-version, --os-version and --device together.
+Only the following iOS settings combinations are supported now:
+    --xcode_version 14.3.1 --os-version 16.4 --device iPhone14
+    --xcode_version 15.2 --os-version 17.2 --device iPhone15
+The default setup: Xcode=14.3.1, iOS=16.4, device=iPhone14".into(),
+                                }
+                                .into());
+                            }
+                        }
+
                         let filtering_configuration = if xctestplan_filter_file.is_some() {
                             Some(
                                 filtering::convert::convert_xctestplan(
@@ -155,9 +177,10 @@ impl Cli {
                                 &common.output,
                                 Some(application),
                                 test_application,
+                                os_version.map(|x| x.to_string()),
                                 None,
-                                None,
-                                None,
+                                device.map(|x| x.to_string()),
+                                xcode_version.map(|x| x.to_string()),
                                 None,
                                 "iOS".to_owned(),
                                 true,
@@ -349,6 +372,15 @@ enum RunCommands {
         )]
         test_application: PathBuf,
 
+        #[arg(value_enum, long, help = "OS version")]
+        os_version: Option<ios::OsVersion>,
+
+        #[arg(value_enum, long, help = "Device type")]
+        device: Option<ios::IosDevice>,
+
+        #[arg(value_enum, long, help = "Xcode version")]
+        xcode_version: Option<ios::XcodeVersion>,
+
         #[command(flatten)]
         common: CommonRunArgs,
 
@@ -360,6 +392,7 @@ enum RunCommands {
 
         #[arg(long, help = "Test filters supplied as .xctestplan file")]
         xctestplan_filter_file: Option<PathBuf>,
+
         #[arg(long, help = "Target name to use for test filtering in .xctestplan")]
         xctestplan_target_name: Option<String>,
     },
