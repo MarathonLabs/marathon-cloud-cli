@@ -4,10 +4,10 @@ use clap::{Args, Parser, Subcommand};
 use std::{fmt::Display, path::PathBuf};
 
 use crate::android::{self, Device, Flavor, SystemImage};
-use crate::ios::{self, XcodeVersion, OsVersion, IosDevice};
 use crate::errors::{default_error_handler, ConfigurationError};
 use crate::filtering;
 use crate::interactor::{DownloadArtifactsInteractor, TriggerTestRunInteractor};
+use crate::ios::{self, IosDevice, OsVersion, XcodeVersion};
 
 #[derive(Parser)]
 #[command(
@@ -133,8 +133,16 @@ impl Cli {
                         xctestplan_target_name,
                     } => {
                         match (&device, &xcode_version, &os_version) {
-                            (Some(IosDevice::IPhone14), Some(XcodeVersion::Xcode14_3_1), Some(OsVersion::Ios16_4))
-                            | (Some(IosDevice::IPhone15), Some(XcodeVersion::Xcode15_2), Some(OsVersion::Ios17_2))
+                            (
+                                Some(IosDevice::IPhone14),
+                                Some(XcodeVersion::Xcode14_3_1),
+                                Some(OsVersion::Ios16_4),
+                            )
+                            | (
+                                Some(IosDevice::IPhone15),
+                                Some(XcodeVersion::Xcode15_2),
+                                Some(OsVersion::Ios17_2),
+                            )
                             | (None, None, None) => {}
                             _ => {
                                 return Err(ConfigurationError::UnsupportedRunConfiguration {
@@ -143,7 +151,8 @@ Please set --xcode-version, --os-version and --device together.
 Only the following iOS settings combinations are supported now:
     --xcode_version 14.3.1 --os-version 16.4 --device iPhone14
     --xcode_version 15.2 --os-version 17.2 --device iPhone15
-The default setup: --xcode_version 14.3.1 --os-version 16.4 --device iPhone14".into(),
+The default setup: --xcode_version 14.3.1 --os-version 16.4 --device iPhone14"
+                                        .into(),
                                 }
                                 .into());
                             }
