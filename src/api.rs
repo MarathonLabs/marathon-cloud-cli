@@ -35,7 +35,7 @@ pub trait RapiClient {
         os_version: Option<String>,
         system_image: Option<String>,
         device: Option<String>,
-        xcode: Option<String>,
+        xcode_version: Option<String>,
         isolated: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,

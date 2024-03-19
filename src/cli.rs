@@ -143,7 +143,7 @@ Please set --xcode-version, --os-version and --device together.
 Only the following iOS settings combinations are supported now:
     --xcode_version 14.3.1 --os-version 16.4 --device iPhone14
     --xcode_version 15.2 --os-version 17.2 --device iPhone15
-The default setup: Xcode=14.3.1, iOS=16.4, device=iPhone14".into(),
+The default setup: --xcode_version 14.3.1 --os-version 16.4 --device iPhone14".into(),
                                 }
                                 .into());
                             }
@@ -372,7 +372,7 @@ enum RunCommands {
         )]
         test_application: PathBuf,
 
-        #[arg(value_enum, long, help = "OS version")]
+        #[arg(value_enum, long, help = "iOS runtime version")]
         os_version: Option<ios::OsVersion>,
 
         #[arg(value_enum, long, help = "Device type")]
