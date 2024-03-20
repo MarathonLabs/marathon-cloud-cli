@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-#[derive(Debug, clap::ValueEnum, Clone)]
+#[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
 pub enum IosDevice {
     #[clap(name = "iPhone-14")]
     IPhone14,
@@ -17,7 +17,7 @@ impl Display for IosDevice {
     }
 }
 
-#[derive(Debug, clap::ValueEnum, Clone)]
+#[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
 pub enum OsVersion {
     #[clap(name = "16.4")]
     Ios16_4,
@@ -34,7 +34,7 @@ impl Display for OsVersion {
     }
 }
 
-#[derive(Debug, clap::ValueEnum, Clone)]
+#[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
 pub enum XcodeVersion {
     #[clap(name = "14.3.1")]
     Xcode14_3_1,

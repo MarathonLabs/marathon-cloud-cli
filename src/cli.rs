@@ -132,26 +132,62 @@ impl Cli {
                         xctestplan_filter_file,
                         xctestplan_target_name,
                     } => {
-                        match (&device, &xcode_version, &os_version) {
+                        // Define supported configurations
+                        let supported_configs = vec![
                             (
                                 Some(IosDevice::IPhone14),
                                 Some(XcodeVersion::Xcode14_3_1),
                                 Some(OsVersion::Ios16_4),
-                            )
-                            | (
+                            ),
+                            (
                                 Some(IosDevice::IPhone15),
                                 Some(XcodeVersion::Xcode15_2),
                                 Some(OsVersion::Ios17_2),
-                            )
-                            | (None, None, None) => {}
+                            ),
+                        ];
+
+                        // Infer missing parameters
+                        let (mut device, mut xcode_version, mut os_version) =
+                            (device.clone(), xcode_version.clone(), os_version.clone());
+                        for (d, x, o) in &supported_configs {
+                            if let Some(dev) = &device {
+                                if d.as_ref() == Some(dev) {
+                                    xcode_version = xcode_version.or(x.clone());
+                                    os_version = os_version.or(o.clone());
+                                    break;
+                                }
+                            }
+                            if let Some(xcode) = &xcode_version {
+                                if x.as_ref() == Some(xcode) {
+                                    device = device.or(d.clone());
+                                    os_version = os_version.or(o.clone());
+                                    break;
+                                }
+                            }
+                            if let Some(os) = &os_version {
+                                if o.as_ref() == Some(os) {
+                                    device = device.or(d.clone());
+                                    xcode_version = xcode_version.or(x.clone());
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Existing match statement with inferred values
+                        match (&device, &xcode_version, &os_version) {
+                            _ if supported_configs.contains(&(
+                                device.clone(),
+                                xcode_version.clone(),
+                                os_version.clone(),
+                            )) => {}
                             _ => {
                                 return Err(ConfigurationError::UnsupportedRunConfiguration {
                                     message: "
-Please set --xcode-version, --os-version and --device together.
-Only the following iOS settings combinations are supported now:
+Please set --xcode-version, --os-version, and --device correctly.
+Supported iOS settings combinations are:
     --xcode_version 14.3.1 --os-version 16.4 --device iPhone14
     --xcode_version 15.2 --os-version 17.2 --device iPhone15
-The default setup: --xcode_version 14.3.1 --os-version 16.4 --device iPhone14"
+If you provide any single or two of these parameters, the others will be inferred based on supported combinations."
                                         .into(),
                                 }
                                 .into());
