@@ -188,6 +188,7 @@ impl Cli {
 
                         // Existing match statement with inferred values
                         match (&device, &xcode_version, &os_version) {
+                            (None, None, None) => {}
                             _ if supported_configs.contains(&(
                                 device.clone(),
                                 xcode_version.clone(),
@@ -198,8 +199,8 @@ impl Cli {
                                     message: "
 Please set --xcode-version, --os-version, and --device correctly.
 Supported iOS settings combinations are:
-    --xcode_version 14.3.1 --os-version 16.4 --device iPhone14
-    --xcode_version 15.2 --os-version 17.2 --device iPhone15
+    --xcode_version 14.3.1 --os-version 16.4 --device iPhone-14 [Default]
+    --xcode_version 15.2 --os-version 17.2 --device iPhone-15
 If you provide any single or two of these parameters, the others will be inferred based on supported combinations."
                                         .into(),
                                 }
