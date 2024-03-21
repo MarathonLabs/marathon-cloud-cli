@@ -35,6 +35,7 @@ pub trait RapiClient {
         os_version: Option<String>,
         system_image: Option<String>,
         device: Option<String>,
+        xcode_version: Option<String>,
         isolated: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
@@ -114,6 +115,7 @@ impl RapiClient for RapiReqwestClient {
         os_version: Option<String>,
         system_image: Option<String>,
         device: Option<String>,
+        xcode_version: Option<String>,
         isolated: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
@@ -280,6 +282,10 @@ impl RapiClient for RapiReqwestClient {
 
         if let Some(device) = device {
             form = form.text("device", device)
+        }
+
+        if let Some(xcode_version) = xcode_version {
+            form = form.text("xcode_version", xcode_version.to_string())
         }
 
         if let Some(isolated) = isolated {
