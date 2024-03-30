@@ -41,6 +41,7 @@ pub trait RapiClient {
         progress: bool,
         flavor: Option<String>,
         env_args: Option<Vec<String>>,
+        test_env_args: Option<Vec<String>>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -121,6 +122,7 @@ impl RapiClient for RapiReqwestClient {
         progress: bool,
         flavor: Option<String>,
         env_args: Option<Vec<String>>,
+        test_env_args: Option<Vec<String>>,
     ) -> Result<String> {
         let url = format!("{}/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
@@ -245,27 +247,11 @@ impl RapiClient for RapiReqwestClient {
         }
 
         if let Some(env_args) = env_args {
-            for env_arg in env_args {
-                let key_value: Vec<&str> = env_arg.splitn(2, '=').collect();
-                if key_value.len() == 2 {
-                    let key = key_value[0];
-                    let value = key_value
-                        .get(1)
-                        .map(|val| val.to_string())
-                        .unwrap_or_else(|| "".to_string());
-                    if value.is_empty() {
-                        return Err(EnvArgError::MissingValue {
-                            env_arg: env_arg.clone(),
-                        }
-                        .into());
-                    }
-                    form = form.text(format!("env_args[{}]", key), value.clone())
-                } else {
-                    Err(EnvArgError::InvalidKeyValue {
-                        env_arg: env_arg.clone(),
-                    })?
-                }
-            }
+            form = process_args(form, env_args, "env_args")?;
+        }
+
+        if let Some(test_env_args) = test_env_args {
+            form = process_args(form, test_env_args, "test_env_args")?;
         }
 
         if let Some(link) = link {
@@ -399,6 +385,35 @@ impl RapiClient for RapiReqwestClient {
 
         Ok(())
     }
+}
+
+fn process_args(
+    mut form: reqwest::multipart::Form,
+    args: Vec<String>,
+    key_prefix: &str,
+) -> Result<reqwest::multipart::Form, EnvArgError> {
+    for arg in args {
+        let key_value: Vec<&str> = arg.splitn(2, '=').collect();
+        if key_value.len() == 2 {
+            let key = key_value[0];
+            let value = key_value
+                .get(1)
+                .map(|val| val.to_string())
+                .unwrap_or_else(|| "".to_string());
+            if value.is_empty() {
+                return Err(EnvArgError::MissingValue {
+                    env_arg: arg.clone(),
+                });
+            }
+            let key_formatted = format!("{}[{}]", key_prefix, key);
+            form = form.text(key_formatted, value);
+        } else {
+            return Err(EnvArgError::InvalidKeyValue {
+                env_arg: arg.clone(),
+            });
+        }
+    }
+    Ok(form)
 }
 
 fn api_error_adapter(mut error: reqwest::Error) -> ApiError {

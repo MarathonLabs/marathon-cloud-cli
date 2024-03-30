@@ -76,6 +76,7 @@ impl TriggerTestRunInteractor {
         platform: String,
         progress: bool,
         env_args: Option<Vec<String>>,
+        test_env_args: Option<Vec<String>>,
     ) -> Result<bool> {
         let client = RapiReqwestClient::new(base_url, api_key);
         let steps = match (wait, output) {
@@ -105,6 +106,7 @@ impl TriggerTestRunInteractor {
                 progress,
                 flavor,
                 env_args,
+                test_env_args,
             )
             .await?;
 
