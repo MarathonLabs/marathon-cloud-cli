@@ -167,6 +167,7 @@ impl Cli {
                                 "Android".to_owned(),
                                 true,
                                 instrumentation_arg,
+                                None,
                             )
                             .await
                     }
@@ -179,6 +180,7 @@ impl Cli {
                         common,
                         api_args,
                         xctestrun_env,
+                        xctestrun_test_env,
                         xctestplan_filter_file,
                         xctestplan_target_name,
                     } => {
@@ -244,6 +246,7 @@ If you provide any single or two of these parameters, the others will be inferre
                                 "iOS".to_owned(),
                                 true,
                                 xctestrun_env,
+                                xctestrun_test_env,
                             )
                             .await
                     }
@@ -446,8 +449,11 @@ enum RunCommands {
         #[command(flatten)]
         api_args: ApiArgs,
 
-        #[arg(long, help = "xctestrun environment variables, example FOO=BAR")]
+        #[arg(long, help = "xctestrun EnvironmentVariables, example FOO=BAR")]
         xctestrun_env: Option<Vec<String>>,
+
+        #[arg(long, help = "xctestrun TestingEnvironmentVariables, example FOO=BAR")]
+        xctestrun_test_env: Option<Vec<String>>,
 
         #[arg(long, help = "Test filters supplied as .xctestplan file")]
         xctestplan_filter_file: Option<PathBuf>,
