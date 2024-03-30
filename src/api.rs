@@ -388,7 +388,7 @@ impl RapiClient for RapiReqwestClient {
 }
 
 fn process_args(
-    mut form: reqwest::multipart::Form, 
+    mut form: reqwest::multipart::Form,
     args: Vec<String>,
     key_prefix: &str,
 ) -> Result<reqwest::multipart::Form, EnvArgError> {
