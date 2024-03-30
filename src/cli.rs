@@ -449,10 +449,10 @@ enum RunCommands {
         #[command(flatten)]
         api_args: ApiArgs,
 
-        #[arg(long, help = "xctestrun EnvironmentVariables, example FOO=BAR")]
+        #[arg(long, help = "xctestrun environment variable (EnvironmentVariables item), example FOO=BAR")]
         xctestrun_env: Option<Vec<String>>,
 
-        #[arg(long, help = "xctestrun TestingEnvironmentVariables, example FOO=BAR")]
+        #[arg(long, help = "xctestrun testing environment variable (TestingEnvironmentVariables item), example FOO=BAR")]
         xctestrun_test_env: Option<Vec<String>>,
 
         #[arg(long, help = "Test filters supplied as .xctestplan file")]
