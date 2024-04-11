@@ -4,6 +4,7 @@ use tokio::{
     fs::{self, File},
     io::AsyncReadExt,
 };
+use shellexpand;
 
 use crate::errors::{FilteringConfigurationError, InputError};
 
@@ -13,16 +14,17 @@ use super::{
 };
 
 pub async fn convert(cnf: PathBuf) -> Result<SparseMarathonfile> {
-    let content = fs::read_to_string(&cnf)
+    let expanded_path = shellexpand::tilde(cnf.to_str().unwrap()).into_owned();
+    let content = fs::read_to_string(&expanded_path)
         .await
         .map_err(|error| InputError::OpenFileFailure {
-            path: cnf.clone(),
+            path: PathBuf::from(&expanded_path),
             error,
         })?;
 
     let mut filtering_configuration: SparseMarathonfile = serde_yaml::from_str(&content)?;
 
-    let absolute_path = fs::canonicalize(&cnf).await?;
+    let absolute_path = fs::canonicalize(&expanded_path).await?;
     let workdir = absolute_path.parent().unwrap_or(Path::new(""));
     validate(
         &mut filtering_configuration.filtering_configuration,
@@ -37,10 +39,11 @@ pub async fn convert_xctestplan(
     cnf: PathBuf,
     target_name: Option<String>,
 ) -> Result<SparseMarathonfile> {
-    let content = fs::read_to_string(&cnf)
+    let expanded_path = shellexpand::tilde(cnf.to_str().unwrap()).into_owned();
+    let content = fs::read_to_string(&expanded_path)
         .await
         .map_err(|error| InputError::OpenFileFailure {
-            path: cnf.clone(),
+            path: PathBuf::from(&expanded_path),
             error,
         })?;
 
@@ -296,6 +299,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_valid_with_tilde_in_path() -> Result<()> {
+        let mut manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let home_dir = std::env::var("HOME").unwrap();
+        manifest_dir = manifest_dir.replace(&home_dir, "~");
+        let fixture = Path::new(&manifest_dir)
+            .join("fixture")
+            .join("filtering")
+            .join("valid.yaml");
+        let result = convert(fixture).await?;
+        let result = serde_json::to_string(&result)?;
+        assert_eq!(
+            result,
+            r#"{"filteringConfiguration":{"allowlist":[{"type":"fully-qualified-test-name","regex":".*Test"}]}}"#
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_valid_complex() -> Result<()> {
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let fixture = Path::new(&manifest_dir)
@@ -425,6 +446,25 @@ mod tests {
             .join("filtering")
             .join("xctestplan")
             .join("1.json");
+        let result = convert_xctestplan(fixture, None).await?;
+        let result = serde_json::to_string(&result)?;
+        assert_eq!(
+            result,
+            r#"{"filteringConfiguration":{"blocklist":[{"type":"composition","filters":[{"type":"simple-class-name","values":["CrashingTests"]},{"type":"simple-test-name","values":["MoreTests#testDismissModal","SlowTests#testTextSlow1","SlowTests#testTextSlow2","SlowTests#testTextSlow3"]}],"op":"UNION"}]}}"#
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_xctestplan_with_tilde_in_path() -> Result<()> {
+        let mut manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let home_dir = std::env::var("HOME").unwrap();
+        manifest_dir = manifest_dir.replace(&home_dir, "~");
+        let fixture = Path::new(&manifest_dir)
+            .join("fixture")
+            .join("filtering")
+            .join("xctestplan")
+            .join("test plan with spaces.xctestplan");
         let result = convert_xctestplan(fixture, None).await?;
         let result = serde_json::to_string(&result)?;
         assert_eq!(
