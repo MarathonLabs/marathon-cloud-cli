@@ -51,6 +51,9 @@ pub enum InputError {
 
     #[error("Invalid xctestplan file: no test targets specified. Double check you've supplied correct path")]
     XctestplanMissingTargets,
+
+    #[error("Invalid input file. All file paths should be valid UTF8\npath = {path}")]
+    NonUTF8Path { path: PathBuf },
 }
 
 #[derive(Error, Debug)]

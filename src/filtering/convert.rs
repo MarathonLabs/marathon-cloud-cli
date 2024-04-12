@@ -1,10 +1,10 @@
 use anyhow::Result;
+use shellexpand;
 use std::path::{Path, PathBuf};
 use tokio::{
     fs::{self, File},
     io::AsyncReadExt,
 };
-use shellexpand;
 
 use crate::errors::{FilteringConfigurationError, InputError};
 
@@ -14,13 +14,17 @@ use super::{
 };
 
 pub async fn convert(cnf: PathBuf) -> Result<SparseMarathonfile> {
-    let expanded_path = shellexpand::tilde(cnf.to_str().unwrap()).into_owned();
-    let content = fs::read_to_string(&expanded_path)
-        .await
-        .map_err(|error| InputError::OpenFileFailure {
-            path: PathBuf::from(&expanded_path),
-            error,
-        })?;
+    let path = cnf.to_str().ok_or(InputError::NonUTF8Path {
+        path: cnf.to_owned(),
+    })?;
+    let expanded_path = shellexpand::tilde(&path).into_owned();
+    let content =
+        fs::read_to_string(&expanded_path)
+            .await
+            .map_err(|error| InputError::OpenFileFailure {
+                path: PathBuf::from(&expanded_path),
+                error,
+            })?;
 
     let mut filtering_configuration: SparseMarathonfile = serde_yaml::from_str(&content)?;
 
@@ -39,13 +43,17 @@ pub async fn convert_xctestplan(
     cnf: PathBuf,
     target_name: Option<String>,
 ) -> Result<SparseMarathonfile> {
-    let expanded_path = shellexpand::tilde(cnf.to_str().unwrap()).into_owned();
-    let content = fs::read_to_string(&expanded_path)
-        .await
-        .map_err(|error| InputError::OpenFileFailure {
-            path: PathBuf::from(&expanded_path),
-            error,
-        })?;
+    let path = cnf.to_str().ok_or(InputError::NonUTF8Path {
+        path: cnf.to_owned(),
+    })?;
+    let expanded_path = shellexpand::tilde(&path).into_owned();
+    let content =
+        fs::read_to_string(&expanded_path)
+            .await
+            .map_err(|error| InputError::OpenFileFailure {
+                path: PathBuf::from(&expanded_path),
+                error,
+            })?;
 
     let xctestplan: xctestplan::SparseTestPlan = serde_json::from_str(&content)?;
     let targets = xctestplan.test_targets;
@@ -278,7 +286,7 @@ async fn validate_filter(
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use std::path::Path;
+    use std::path::{self, Path};
 
     use crate::filtering::convert::{convert, convert_xctestplan};
 
@@ -302,7 +310,8 @@ mod tests {
     async fn test_valid_with_tilde_in_path() -> Result<()> {
         let mut manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let home_dir = std::env::var("HOME").unwrap();
-        manifest_dir = manifest_dir.replace(&home_dir, "~");
+        let suffix = "~".to_owned() + path::MAIN_SEPARATOR_STR;
+        manifest_dir = manifest_dir.replace(&home_dir, &suffix);
         let fixture = Path::new(&manifest_dir)
             .join("fixture")
             .join("filtering")
@@ -459,7 +468,8 @@ mod tests {
     async fn test_xctestplan_with_tilde_in_path() -> Result<()> {
         let mut manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let home_dir = std::env::var("HOME").unwrap();
-        manifest_dir = manifest_dir.replace(&home_dir, "~");
+        let suffix = "~".to_owned() + path::MAIN_SEPARATOR_STR;
+        manifest_dir = manifest_dir.replace(&home_dir, &suffix);
         let fixture = Path::new(&manifest_dir)
             .join("fixture")
             .join("filtering")
