@@ -6,6 +6,10 @@ pub enum IosDevice {
     IPhone14,
     #[clap(name = "iPhone-15")]
     IPhone15,
+    #[clap(name = "iPhone-15-Pro")]
+    IPhone15Pro,
+    #[clap(name = "iPhone-15-Pro-Max")]
+    IPhone15ProMax,
 }
 
 impl Display for IosDevice {
@@ -13,6 +17,12 @@ impl Display for IosDevice {
         match self {
             IosDevice::IPhone14 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-14"),
             IosDevice::IPhone15 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-15"),
+            IosDevice::IPhone15Pro => {
+                f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-15-Pro")
+            }
+            IosDevice::IPhone15ProMax => {
+                f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-15-Pro-Max")
+            }
         }
     }
 }

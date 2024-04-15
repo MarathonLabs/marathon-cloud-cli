@@ -40,6 +40,16 @@ impl Cli {
                 Some(XcodeVersion::Xcode15_2),
                 Some(OsVersion::Ios17_2),
             ),
+            (
+                Some(IosDevice::IPhone15Pro),
+                Some(XcodeVersion::Xcode15_2),
+                Some(OsVersion::Ios17_2),
+            ),
+            (
+                Some(IosDevice::IPhone15ProMax),
+                Some(XcodeVersion::Xcode15_2),
+                Some(OsVersion::Ios17_2),
+            ),
         ]
     }
 
@@ -201,8 +211,8 @@ impl Cli {
                                     message: "
 Please set --xcode-version, --os-version, and --device correctly.
 Supported iOS settings combinations are:
-    --xcode_version 14.3.1 --os-version 16.4 --device iPhone-14 [Default]
-    --xcode_version 15.2 --os-version 17.2 --device iPhone-15
+    --xcode_version 14.3.1 --os-version 16.4 --device iPhone-14 => Default
+    --xcode_version 15.2 --os-version 17.2 --device [iPhone-15, iPhone-15-Pro, iPhone-15-Pro-Max]
 If you provide any single or two of these parameters, the others will be inferred based on supported combinations."
                                         .into(),
                                 }
