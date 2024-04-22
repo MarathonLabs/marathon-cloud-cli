@@ -1,4 +1,12 @@
+use std::ffi::OsStr;
 use std::fmt::Display;
+use std::fs::File;
+
+use anyhow::Result;
+use walkdir::WalkDir;
+
+use crate::compression;
+use crate::errors::InputError;
 
 #[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
 pub enum IosDevice {
@@ -58,5 +66,49 @@ impl Display for XcodeVersion {
             XcodeVersion::Xcode14_3_1 => f.write_str("14.3.1"),
             XcodeVersion::Xcode15_2 => f.write_str("15.2"),
         }
+    }
+}
+
+pub(crate) fn ensure_format(path: std::path::PathBuf) -> Result<std::path::PathBuf> {
+    let supported_extensions_file = vec!["zip", "ipa"];
+    let supported_extensions_dir = vec!["app", "xctest"];
+    if path.is_file()
+        && path
+            .extension()
+            .and_then(OsStr::to_str)
+            .is_some_and(|ext| supported_extensions_file.contains(&ext))
+    {
+        Ok(path)
+    } else if path.is_dir()
+        && path
+            .extension()
+            .and_then(OsStr::to_str)
+            .is_some_and(|ext| supported_extensions_dir.contains(&ext))
+    {
+        let dst = &path.with_extension("zip");
+        let dst_file = File::create(dst)?;
+
+        let walkdir = WalkDir::new(&path);
+        let it = walkdir.into_iter();
+        let prefix = &path
+            .parent()
+            .unwrap_or(&path)
+            .to_str()
+            .ok_or(InputError::NonUTF8Path { path: path.clone() })?;
+
+        compression::zip_dir(
+            &mut it.filter_map(|e| e.ok()),
+            prefix,
+            dst_file,
+            zip::CompressionMethod::DEFLATE,
+        )?;
+        Ok(dst.to_owned())
+    } else {
+        Err(InputError::UnsupportedArtifact {
+            path,
+            supported_files: "[ipa,zip]".into(),
+            supported_folders: "[app,xctest]".into(),
+        }
+        .into())
     }
 }
