@@ -31,7 +31,6 @@ simple_logger = "4.3.3"
 shellexpand = "3.1.0"
 tempfile = "3.9.0"
 # Reqwest pulls in dependency on openssl which we replace with rustls, hence disabling default features
-rustls = "0.23.5"
 reqwest = { version = "0.12.4", default-features = false, features = [
   "json",
   "multipart",
