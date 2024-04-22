@@ -1,8 +1,8 @@
 use std::ffi::OsStr;
 use std::fmt::Display;
-use std::fs::File;
 
 use anyhow::Result;
+use tokio::fs::File;
 use walkdir::WalkDir;
 
 use crate::compression;
@@ -69,7 +69,7 @@ impl Display for XcodeVersion {
     }
 }
 
-pub(crate) fn ensure_format(path: std::path::PathBuf) -> Result<std::path::PathBuf> {
+pub(crate) async fn ensure_format(path: std::path::PathBuf) -> Result<std::path::PathBuf> {
     let supported_extensions_file = vec!["zip", "ipa"];
     let supported_extensions_dir = vec!["app", "xctest"];
     if path.is_file()
@@ -86,7 +86,7 @@ pub(crate) fn ensure_format(path: std::path::PathBuf) -> Result<std::path::PathB
             .is_some_and(|ext| supported_extensions_dir.contains(&ext))
     {
         let dst = &path.with_extension("zip");
-        let dst_file = File::create(dst)?;
+        let dst_file = File::create(dst).await?;
 
         let walkdir = WalkDir::new(&path);
         let it = walkdir.into_iter();
@@ -96,12 +96,7 @@ pub(crate) fn ensure_format(path: std::path::PathBuf) -> Result<std::path::PathB
             .to_str()
             .ok_or(InputError::NonUTF8Path { path: path.clone() })?;
 
-        compression::zip_dir(
-            &mut it.filter_map(|e| e.ok()),
-            prefix,
-            dst_file,
-            zip::CompressionMethod::DEFLATE,
-        )?;
+        compression::zip_dir(&mut it.filter_map(|e| e.ok()), prefix, dst_file).await?;
         Ok(dst.to_owned())
     } else {
         Err(InputError::UnsupportedArtifact {

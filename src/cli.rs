@@ -235,32 +235,33 @@ If you provide any single or two of these parameters, the others will be inferre
                                 None => None,
                             }
                         };
-                        let application = ios::ensure_format(application)?;
-                        let test_application = ios::ensure_format(test_application)?;
-                        TriggerTestRunInteractor {}
-                            .execute(
-                                &api_args.base_url,
-                                &api_args.api_key,
-                                common.name,
-                                common.link,
-                                common.wait,
-                                common.isolated,
-                                common.ignore_test_failures,
-                                filtering_configuration,
-                                &common.output,
-                                Some(application),
-                                test_application,
-                                os_version.map(|x| x.to_string()),
-                                None,
-                                device.map(|x| x.to_string()),
-                                xcode_version.map(|x| x.to_string()),
-                                None,
-                                "iOS".to_owned(),
-                                true,
-                                xctestrun_env,
-                                xctestrun_test_env,
-                            )
-                            .await
+                        let application = ios::ensure_format(application).await?;
+                        let test_application = ios::ensure_format(test_application).await?;
+                        Ok(true)
+                        // TriggerTestRunInteractor {}
+                        //     .execute(
+                        //         &api_args.base_url,
+                        //         &api_args.api_key,
+                        //         common.name,
+                        //         common.link,
+                        //         common.wait,
+                        //         common.isolated,
+                        //         common.ignore_test_failures,
+                        //         filtering_configuration,
+                        //         &common.output,
+                        //         Some(application),
+                        //         test_application,
+                        //         os_version.map(|x| x.to_string()),
+                        //         None,
+                        //         device.map(|x| x.to_string()),
+                        //         xcode_version.map(|x| x.to_string()),
+                        //         None,
+                        //         "iOS".to_owned(),
+                        //         true,
+                        //         xctestrun_env,
+                        //         xctestrun_test_env,
+                        //     )
+                        //     .await
                     }
                 }
             }
