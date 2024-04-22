@@ -54,6 +54,13 @@ pub enum InputError {
 
     #[error("Invalid input file. All file paths should be valid UTF8\npath = {path}")]
     NonUTF8Path { path: PathBuf },
+
+    #[error("Unsupported artifact format. Should be either {supported_files} file or {supported_folders} folder\npath = {path}")]
+    UnsupportedArtifact {
+        path: PathBuf,
+        supported_files: String,
+        supported_folders: String,
+    },
 }
 
 #[derive(Error, Debug)]

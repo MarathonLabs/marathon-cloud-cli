@@ -235,6 +235,8 @@ If you provide any single or two of these parameters, the others will be inferre
                                 None => None,
                             }
                         };
+                        let application = ios::ensure_format(application).await?;
+                        let test_application = ios::ensure_format(test_application).await?;
                         TriggerTestRunInteractor {}
                             .execute(
                                 &api_args.base_url,
