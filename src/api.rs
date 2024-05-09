@@ -37,6 +37,7 @@ pub trait RapiClient {
         device: Option<String>,
         xcode_version: Option<String>,
         isolated: Option<bool>,
+        collect_code_coverage: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
         flavor: Option<String>,
@@ -118,6 +119,7 @@ impl RapiClient for RapiReqwestClient {
         device: Option<String>,
         xcode_version: Option<String>,
         isolated: Option<bool>,
+        code_coverage: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
         flavor: Option<String>,
@@ -276,6 +278,10 @@ impl RapiClient for RapiReqwestClient {
 
         if let Some(isolated) = isolated {
             form = form.text("isolated", isolated.to_string())
+        }
+
+        if let Some(code_coverage) = code_coverage {
+            form = form.text("code_coverage", code_coverage.to_string())
         }
 
         if let Some(flavor) = flavor {
