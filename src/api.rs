@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::{multipart::Part, Body, Client, StatusCode};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use tokio::{
     fs::{create_dir_all, File},
@@ -54,6 +54,8 @@ pub trait RapiClient {
         base_path: PathBuf,
         run_id: &str,
     ) -> Result<()>;
+
+    async fn get_devices_android(&self, jwt_token: &str) -> Result<Vec<AndroidDevice>>;
 }
 
 #[derive(Clone)]
@@ -94,13 +96,9 @@ impl RapiClient for RapiReqwestClient {
         let params = [("api_key", self.api_key.clone())];
         let url = reqwest::Url::parse_with_params(&url, &params)
             .map_err(|error| ApiError::InvalidParameters { error })?;
-        let response = self
-            .client
-            .get(url)
-            .send()
+        let response = self.client.get(url).send().await?;
+        let response = api_error_adapter(response)
             .await?
-            .error_for_status()
-            .map_err(api_error_adapter)?
             .json::<GetTokenResponse>()
             .await
             .map_err(|error| ApiError::DeserializationFailure { error })?;
@@ -295,14 +293,9 @@ impl RapiClient for RapiReqwestClient {
             );
         }
 
-        let response = self
-            .client
-            .post(url)
-            .multipart(form)
-            .send()
+        let response = self.client.post(url).multipart(form).send().await?;
+        let response = api_error_adapter(response)
             .await?
-            .error_for_status()
-            .map_err(api_error_adapter)?
             .json::<CreateRunResponse>()
             .await
             .map_err(|error| ApiError::DeserializationFailure { error })?;
@@ -316,13 +309,9 @@ impl RapiClient for RapiReqwestClient {
         let url = reqwest::Url::parse_with_params(&url, &params)
             .map_err(|error| ApiError::InvalidParameters { error })?;
 
-        let response = self
-            .client
-            .get(url)
-            .send()
+        let response = self.client.get(url).send().await?;
+        let response = api_error_adapter(response)
             .await?
-            .error_for_status()
-            .map_err(api_error_adapter)?
             .json::<TestRun>()
             .await
             .map_err(|error| ApiError::DeserializationFailure { error })?;
@@ -337,9 +326,9 @@ impl RapiClient for RapiReqwestClient {
             .get(url)
             .header("Authorization", format!("Bearer {}", jwt_token))
             .send()
+            .await?;
+        let response = api_error_adapter(response)
             .await?
-            .error_for_status()
-            .map_err(api_error_adapter)?
             .json::<Vec<Artifact>>()
             .await
             .map_err(|error| ApiError::DeserializationFailure { error })?;
@@ -367,15 +356,14 @@ impl RapiClient for RapiReqwestClient {
         let mut absolute_path = base_path.clone();
         absolute_path.push(relative_path);
 
-        let mut src = self
+        let src = self
             .client
             .get(url)
             .header("Authorization", format!("Bearer {}", jwt_token))
             .send()
-            .await?
-            .error_for_status()
-            .map_err(api_error_adapter)?
-            .bytes_stream();
+            .await?;
+
+        let mut src = api_error_adapter(src).await?.bytes_stream();
 
         let dst_dir = absolute_path.parent();
         if let Some(dst_dir) = dst_dir {
@@ -390,6 +378,24 @@ impl RapiClient for RapiReqwestClient {
         }
 
         Ok(())
+    }
+
+    async fn get_devices_android(&self, jwt_token: &str) -> Result<Vec<AndroidDevice>> {
+        let url = format!("{}/devices/android", self.base_url);
+
+        let response = self
+            .client
+            .get(url)
+            .header("Authorization", format!("Bearer {}", jwt_token))
+            .send()
+            .await?;
+        let response = api_error_adapter(response)
+            .await?
+            .json::<Vec<AndroidDevice>>()
+            .await
+            .map_err(|error| ApiError::DeserializationFailure { error })?;
+
+        Ok(response)
     }
 }
 
@@ -422,17 +428,29 @@ fn process_args(
     Ok(form)
 }
 
-fn api_error_adapter(mut error: reqwest::Error) -> ApiError {
-    if let Some(status_code) = error.status() {
-        match status_code {
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                error.url_mut().map(|url| url.set_query(None));
-                ApiError::InvalidAuthenticationToken { error }
+async fn api_error_adapter(response: reqwest::Response) -> Result<reqwest::Response> {
+    match response.error_for_status_ref() {
+        Ok(_) => Ok(response),
+        Err(error) => {
+            //Strip sensitive information
+            let error = error.without_url();
+            let body = response.text().await?;
+            if let Some(status_code) = error.status() {
+                match status_code {
+                    StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
+                        Err(ApiError::InvalidAuthenticationToken { error }.into())
+                    }
+                    _ => Err(ApiError::RequestFailedWithCode {
+                        status_code,
+                        error,
+                        body,
+                    }
+                    .into()),
+                }
+            } else {
+                Err(ApiError::RequestFailed { error }.into())
             }
-            _ => ApiError::RequestFailedWithCode { status_code, error },
         }
-    } else {
-        ApiError::RequestFailed { error }
     }
 }
 
@@ -474,4 +492,20 @@ pub struct Artifact {
     pub name: String,
     #[serde(rename = "is_file")]
     pub is_file: bool,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct AndroidDevice {
+    #[serde(rename = "name")]
+    pub name: String,
+    #[serde(rename = "id")]
+    pub id: String,
+    #[serde(rename = "manufacturer")]
+    pub manufacturer: String,
+    #[serde(rename = "width")]
+    pub width: u32,
+    #[serde(rename = "height")]
+    pub height: u32,
+    #[serde(rename = "dpi")]
+    pub dpi: u32,
 }

@@ -1,23 +1,6 @@
 use std::fmt::Display;
 
 #[derive(Debug, clap::ValueEnum, Clone)]
-pub enum Device {
-    PHONE,
-    TV,
-    WATCH,
-}
-
-impl Display for Device {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Device::PHONE => f.write_str("phone"),
-            Device::TV => f.write_str("tv"),
-            Device::WATCH => f.write_str("watch"),
-        }
-    }
-}
-
-#[derive(Debug, clap::ValueEnum, Clone)]
 pub enum SystemImage {
     #[clap(name = "default")]
     Default,

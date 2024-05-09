@@ -14,10 +14,11 @@ pub enum ApiError {
     DeserializationFailure { error: reqwest::Error },
     #[error("API request failed\nerror = {error}")]
     RequestFailed { error: ReqwestError },
-    #[error("API request failed\nstatus_code = {status_code}, error = {error}")]
+    #[error("API request failed\nstatus_code = {status_code}, error = {error}, body = {body}")]
     RequestFailedWithCode {
         status_code: StatusCode,
         error: ReqwestError,
+        body: String,
     },
     #[error("Invalid authentication token. Did you supply correct API token?\nerror = {error}")]
     InvalidAuthenticationToken { error: ReqwestError },
