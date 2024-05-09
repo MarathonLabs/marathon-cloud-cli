@@ -165,6 +165,7 @@ impl Cli {
                                 common.wait,
                                 common.isolated,
                                 common.ignore_test_failures,
+                                common.code_coverage,
                                 filtering_configuration,
                                 &common.output,
                                 application,
@@ -246,6 +247,7 @@ If you provide any single or two of these parameters, the others will be inferre
                                 common.wait,
                                 common.isolated,
                                 common.ignore_test_failures,
+                                common.code_coverage,
                                 filtering_configuration,
                                 &common.output,
                                 Some(application),
@@ -353,6 +355,12 @@ struct CommonRunArgs {
         help = "When tests fail and this option is true then cli will exit with code 0. By default, cli will exit with code 1 in case of test failures and 0 for passing tests"
     )]
     ignore_test_failures: Option<bool>,
+
+    #[arg(
+        long,
+        help = "Collect code coverage if true. Requires setup external to Marathon Cloud, e.g. build flags, jacoco jar added to classpath, etc"
+    )]
+    code_coverage: Option<bool>,
 }
 
 #[derive(Debug, Args)]
