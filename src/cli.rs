@@ -358,7 +358,7 @@ struct CommonRunArgs {
 
     #[arg(
         long,
-        help = "Collect code coverage if true. Requires proper build setup external to Marathon Cloud, e.g. proper build flags, jacoco jar added to classpath, etc"
+        help = "Collect code coverage if true. Requires setup external to Marathon Cloud, e.g. build flags, jacoco jar added to classpath, etc"
     )]
     code_coverage: Option<bool>,
 }
