@@ -3,11 +3,14 @@ use clap::CommandFactory;
 use clap::{Args, Parser, Subcommand};
 use std::{fmt::Display, path::PathBuf};
 
-use crate::android::{self, Device, Flavor, SystemImage};
 use crate::errors::{default_error_handler, ConfigurationError};
 use crate::filtering;
 use crate::interactor::{DownloadArtifactsInteractor, TriggerTestRunInteractor};
 use crate::ios::{self, IosDevice, OsVersion, XcodeVersion};
+use crate::{
+    android::{self, Flavor, SystemImage},
+    interactor::GetDeviceCatalogInteractor,
+};
 
 #[derive(Parser)]
 #[command(
@@ -97,7 +100,7 @@ impl Cli {
 
         let result = match cli.command {
             Some(Commands::Run(args)) => {
-                let run_cmd = args.command.unwrap();
+                let run_cmd = args.command;
                 match run_cmd {
                     RunCommands::Android {
                         application,
@@ -110,15 +113,15 @@ impl Cli {
                         flavor,
                         instrumentation_arg,
                     } => {
-                        match (&device, &flavor, &system_image, &os_version) {
+                        match (device.as_deref(), &flavor, &system_image, &os_version) {
                             (
-                                Some(Device::WATCH),
+                                Some("watch"),
                                 _,
                                 Some(SystemImage::Default) | None,
                                 Some(_) | None,
                             )
                             | (
-                                Some(Device::WATCH),
+                                Some("watch"),
                                 _,
                                 Some(_),
                                 Some(android::OsVersion::Android10)
@@ -127,7 +130,7 @@ impl Cli {
                             ) => {
                                 return Err(ConfigurationError::UnsupportedRunConfiguration { message: "Android Watch only supports google-apis system image and os versions 11 and 13".into() }.into());
                             }
-                            (Some(Device::TV), _, Some(SystemImage::Default), Some(_) | None) => {
+                            (Some("tv"), _, Some(SystemImage::Default), Some(_) | None) => {
                                 return Err(ConfigurationError::UnsupportedRunConfiguration {
                                     message: "Android TV only supports google-apis system image"
                                         .into(),
@@ -135,7 +138,7 @@ impl Cli {
                                 .into());
                             }
                             (
-                                Some(Device::TV) | Some(Device::WATCH),
+                                Some("tv") | Some("watch"),
                                 Some(Flavor::JsJestAppium)
                                 | Some(Flavor::PythonRobotFrameworkAppium),
                                 _,
@@ -172,7 +175,7 @@ impl Cli {
                                 test_application,
                                 os_version.map(|x| x.to_string()),
                                 system_image.map(|x| x.to_string()),
-                                device.map(|x| x.to_string()),
+                                device,
                                 None,
                                 flavor.map(|x| x.to_string()),
                                 "Android".to_owned(),
@@ -279,6 +282,18 @@ If you provide any single or two of these parameters, the others will be inferre
                     .await;
                 Ok(true)
             }
+            Some(Commands::Devices(args)) => {
+                let run_cmd = args.command;
+                let interactor = GetDeviceCatalogInteractor {};
+                match run_cmd {
+                    DevicesCommands::Android { api_args } => {
+                        let _ = interactor
+                            .execute(&api_args.base_url, &api_args.api_key, &Platform::Android)
+                            .await;
+                    }
+                }
+                Ok(true)
+            }
             Some(Commands::Completions { shell }) => {
                 let mut app = Self::command();
                 let bin_name = app.get_name().to_string();
@@ -304,6 +319,8 @@ If you provide any single or two of these parameters, the others will be inferre
 enum Commands {
     #[clap(about = "Submit a test run")]
     Run(RunArgs),
+    #[clap(about = "Get supported devices")]
+    Devices(DevicesArgs),
     #[clap(about = "Download artifacts from a previous test run")]
     Download(DownloadArgs),
     #[clap(about = "Output shell completion code for the specified shell (bash, zsh, fish)")]
@@ -314,7 +331,7 @@ enum Commands {
 #[command(args_conflicts_with_subcommands = true)]
 struct RunArgs {
     #[command(subcommand)]
-    command: Option<RunCommands>,
+    command: RunCommands,
 }
 /// Options valid for any subcommand.
 #[derive(Debug, Clone, clap::Args)]
@@ -383,6 +400,22 @@ struct DownloadArgs {
     api_args: ApiArgs,
 }
 
+#[derive(Debug, clap::Parser)]
+#[command(args_conflicts_with_subcommands = true)]
+struct DevicesArgs {
+    #[command(subcommand)]
+    command: DevicesCommands,
+}
+
+#[derive(Debug, Subcommand)]
+enum DevicesCommands {
+    #[clap(about = "Print supported Android devices")]
+    Android {
+        #[command(flatten)]
+        api_args: ApiArgs,
+    },
+}
+
 #[derive(Debug, Args)]
 #[command(args_conflicts_with_subcommands = true)]
 struct ApiArgs {
@@ -421,8 +454,12 @@ enum RunCommands {
         #[arg(value_enum, long, help = "Runtime system image")]
         system_image: Option<android::SystemImage>,
 
-        #[arg(value_enum, long, help = "Device type")]
-        device: Option<android::Device>,
+        #[arg(
+            value_enum,
+            long,
+            help = "Device type id. Use `marathon-cloud devices android` to get a list of supported devices"
+        )]
+        device: Option<String>,
 
         #[arg(value_enum, long, help = "Test flavor")]
         flavor: Option<android::Flavor>,

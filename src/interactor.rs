@@ -9,6 +9,7 @@ use tokio::time::{sleep, Instant};
 use crate::{
     api::{RapiClient, RapiReqwestClient},
     artifacts::{download_artifacts, fetch_artifact_list},
+    cli::Platform,
     filtering::model::SparseMarathonfile,
 };
 
@@ -64,7 +65,7 @@ impl TriggerTestRunInteractor {
         wait: bool,
         isolated: Option<bool>,
         ignore_test_failures: Option<bool>,
-        collect_code_coverage: Option<bool>,
+        code_coverage: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         output: &Option<PathBuf>,
         application: Option<PathBuf>,
@@ -103,7 +104,7 @@ impl TriggerTestRunInteractor {
                 device,
                 xcode_version,
                 isolated,
-                collect_code_coverage,
+                code_coverage,
                 filtering_configuration,
                 progress,
                 flavor,
@@ -201,5 +202,30 @@ impl TriggerTestRunInteractor {
             println!("Test run {} started", id);
             Ok(true)
         }
+    }
+}
+
+pub struct GetDeviceCatalogInteractor {}
+
+impl GetDeviceCatalogInteractor {
+    pub(crate) async fn execute(
+        &self,
+        base_url: &str,
+        api_key: &str,
+        platform: &Platform,
+    ) -> Result<()> {
+        println!("Fetching device catalog...");
+        let client = RapiReqwestClient::new(base_url, api_key);
+
+        let token = client.get_token().await?;
+        let out = match platform {
+            Platform::Android => {
+                let devices = client.get_devices_android(&token).await?;
+                serde_yaml::to_string(&devices)?
+            }
+            Platform::iOS => todo!(),
+        };
+        println!("{}", out);
+        Ok(())
     }
 }
