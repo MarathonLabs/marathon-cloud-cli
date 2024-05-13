@@ -1,6 +1,7 @@
 use anyhow::Result;
 use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use std::{path::PathBuf, time::Duration};
+use url::{Position, Url};
 
 use console::style;
 use log::debug;
@@ -155,7 +156,10 @@ impl TriggerTestRunInteractor {
                         _ => println!("Marathon cloud execution crashed"),
                     };
                     println!("\tstate: {}", stat.state);
-                    println!("\treport: {}/report/{}", base_url, id);
+
+                    let base_report_url = Url::parse(base_url)?;
+                    let base_report_url = &base_report_url[..Position::AfterPort];
+                    println!("\treport: {}/report/{}", base_report_url, id);
                     println!(
                         "\tpassed: {}",
                         stat.passed
