@@ -113,6 +113,7 @@ impl Cli {
                         flavor,
                         instrumentation_arg,
                         retry_args,
+                        analytics_args,
                     } => {
                         match (device.as_deref(), &flavor, &system_image, &os_version) {
                             (
@@ -173,6 +174,7 @@ impl Cli {
                                 retry_args.retry_quota_test_uncompleted,
                                 retry_args.retry_quota_test_preventive,
                                 retry_args.retry_quota_test_reactive,
+                                analytics_args.analytics_read_only,
                                 filtering_configuration,
                                 &common.output,
                                 application,
@@ -202,6 +204,7 @@ impl Cli {
                         xctestplan_filter_file,
                         xctestplan_target_name,
                         retry_args,
+                        analytics_args,
                     } => {
                         let supported_configs = Self::get_supported_configs();
                         let (device, xcode_version, os_version) =
@@ -259,6 +262,7 @@ If you provide any single or two of these parameters, the others will be inferre
                                 retry_args.retry_quota_test_uncompleted,
                                 retry_args.retry_quota_test_preventive,
                                 retry_args.retry_quota_test_reactive,
+                                analytics_args.analytics_read_only,
                                 filtering_configuration,
                                 &common.output,
                                 Some(application),
@@ -449,6 +453,16 @@ struct RetryArgs {
     retry_quota_test_reactive: Option<u32>,
 }
 
+#[derive(Debug, Args)]
+#[command(args_conflicts_with_subcommands = true)]
+struct AnalyticsArgs {
+    #[arg(
+        long,
+        help = "If true then test run will not affect any statistical measurements"
+    )]
+    analytics_read_only: Option<bool>,
+}
+
 #[derive(Debug, Subcommand)]
 enum RunCommands {
     #[clap(about = "Run tests for Android")]
@@ -492,6 +506,9 @@ enum RunCommands {
         #[command(flatten)]
         retry_args: RetryArgs,
 
+        #[command(flatten)]
+        analytics_args: AnalyticsArgs,
+
         #[arg(long, help = "Instrumentation arguments, example: FOO=BAR")]
         instrumentation_arg: Option<Vec<String>>,
     },
@@ -530,6 +547,9 @@ enum RunCommands {
 
         #[command(flatten)]
         retry_args: RetryArgs,
+
+        #[command(flatten)]
+        analytics_args: AnalyticsArgs,
 
         #[arg(
             long,
