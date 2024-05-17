@@ -38,6 +38,9 @@ pub trait RapiClient {
         xcode_version: Option<String>,
         isolated: Option<bool>,
         collect_code_coverage: Option<bool>,
+        retry_quota_test_uncompleted: Option<u32>,
+        retry_quota_test_preventive: Option<u32>,
+        retry_quota_test_reactive: Option<u32>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
         flavor: Option<String>,
@@ -118,6 +121,9 @@ impl RapiClient for RapiReqwestClient {
         xcode_version: Option<String>,
         isolated: Option<bool>,
         code_coverage: Option<bool>,
+        retry_quota_test_uncompleted: Option<u32>,
+        retry_quota_test_preventive: Option<u32>,
+        retry_quota_test_reactive: Option<u32>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
         flavor: Option<String>,
@@ -280,6 +286,27 @@ impl RapiClient for RapiReqwestClient {
 
         if let Some(code_coverage) = code_coverage {
             form = form.text("code_coverage", code_coverage.to_string())
+        }
+
+        if let Some(retry_quota_test_uncompleted) = retry_quota_test_uncompleted {
+            form = form.text(
+                "retry_quota_test_uncompleted",
+                retry_quota_test_uncompleted.to_string(),
+            )
+        }
+
+        if let Some(retry_quota_test_preventive) = retry_quota_test_preventive {
+            form = form.text(
+                "retry_quota_test_preventive",
+                retry_quota_test_preventive.to_string(),
+            )
+        }
+
+        if let Some(retry_quota_test_reactive) = retry_quota_test_reactive {
+            form = form.text(
+                "retry_quota_test_reactive",
+                retry_quota_test_reactive.to_string(),
+            )
         }
 
         if let Some(flavor) = flavor {
