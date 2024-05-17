@@ -112,6 +112,7 @@ impl Cli {
                         api_args,
                         flavor,
                         instrumentation_arg,
+                        retry_args,
                     } => {
                         match (device.as_deref(), &flavor, &system_image, &os_version) {
                             (
@@ -169,6 +170,9 @@ impl Cli {
                                 common.isolated,
                                 common.ignore_test_failures,
                                 common.code_coverage,
+                                retry_args.retry_quota_test_uncompleted,
+                                retry_args.retry_quota_test_preventive,
+                                retry_args.retry_quota_test_reactive,
                                 filtering_configuration,
                                 &common.output,
                                 application,
@@ -197,6 +201,7 @@ impl Cli {
                         xctestrun_test_env,
                         xctestplan_filter_file,
                         xctestplan_target_name,
+                        retry_args,
                     } => {
                         let supported_configs = Self::get_supported_configs();
                         let (device, xcode_version, os_version) =
@@ -251,6 +256,9 @@ If you provide any single or two of these parameters, the others will be inferre
                                 common.isolated,
                                 common.ignore_test_failures,
                                 common.code_coverage,
+                                retry_args.retry_quota_test_uncompleted,
+                                retry_args.retry_quota_test_preventive,
+                                retry_args.retry_quota_test_reactive,
                                 filtering_configuration,
                                 &common.output,
                                 Some(application),
@@ -430,6 +438,17 @@ struct ApiArgs {
     base_url: String,
 }
 
+#[derive(Debug, Args)]
+#[command(args_conflicts_with_subcommands = true)]
+struct RetryArgs {
+    #[arg(long, help = "Number of allowed uncompleted executions per test")]
+    retry_quota_test_uncompleted: Option<u32>,
+    #[arg(long, help = "Number of allowed preventive retries per test")]
+    retry_quota_test_preventive: Option<u32>,
+    #[arg(long, help = "Number of allowed reactive retries per test")]
+    retry_quota_test_reactive: Option<u32>,
+}
+
 #[derive(Debug, Subcommand)]
 enum RunCommands {
     #[clap(about = "Run tests for Android")]
@@ -470,6 +489,9 @@ enum RunCommands {
         #[command(flatten)]
         api_args: ApiArgs,
 
+        #[command(flatten)]
+        retry_args: RetryArgs,
+
         #[arg(long, help = "Instrumentation arguments, example: FOO=BAR")]
         instrumentation_arg: Option<Vec<String>>,
     },
@@ -505,6 +527,9 @@ enum RunCommands {
 
         #[command(flatten)]
         api_args: ApiArgs,
+
+        #[command(flatten)]
+        retry_args: RetryArgs,
 
         #[arg(
             long,
