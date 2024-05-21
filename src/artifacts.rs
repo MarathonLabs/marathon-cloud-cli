@@ -70,13 +70,29 @@ pub async fn download_artifacts(
             let run_id = run_id.to_owned().clone();
             let progress_bar = progress_bar.clone();
             tokio::spawn(async move {
-                client
-                    .download_artifact(&token, artifact, base_path, &run_id)
-                    .await
-                    .unwrap();
-
-                if let Some(progress_bar) = progress_bar {
-                    progress_bar.inc(1);
+                for _try in 1..=3 {
+                    let download_result = &client
+                        .download_artifact(&token, artifact.clone(), base_path.clone(), &run_id)
+                        .await;
+                    match download_result {
+                        Ok(_) => {
+                            if let Some(progress_bar) = progress_bar {
+                                progress_bar.inc(1);
+                            }
+                            return;
+                        }
+                        Err(error) => {
+                            if _try < 4 {
+                                debug!("Error fetching {}, retrying", artifact.id);
+                                continue;
+                            } else {
+                                panic!(
+                                    "Error fetching {}. All {} retries failed. {}",
+                                    artifact.id, 3, error
+                                );
+                            }
+                        }
+                    }
                 }
             })
         })
