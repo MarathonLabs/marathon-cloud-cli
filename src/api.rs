@@ -41,6 +41,7 @@ pub trait RapiClient {
         retry_quota_test_uncompleted: Option<u32>,
         retry_quota_test_preventive: Option<u32>,
         retry_quota_test_reactive: Option<u32>,
+        analytics_read_only: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
         flavor: Option<String>,
@@ -124,6 +125,7 @@ impl RapiClient for RapiReqwestClient {
         retry_quota_test_uncompleted: Option<u32>,
         retry_quota_test_preventive: Option<u32>,
         retry_quota_test_reactive: Option<u32>,
+        analytics_read_only: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         progress: bool,
         flavor: Option<String>,
@@ -307,6 +309,10 @@ impl RapiClient for RapiReqwestClient {
                 "retry_quota_test_reactive",
                 retry_quota_test_reactive.to_string(),
             )
+        }
+
+        if let Some(analytics_read_only) = analytics_read_only {
+            form = form.text("analytics_read_only", analytics_read_only.to_string())
         }
 
         if let Some(flavor) = flavor {
