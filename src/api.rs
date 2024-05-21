@@ -88,7 +88,11 @@ impl Default for RapiReqwestClient {
         Self {
             base_url: String::from("https:://cloud.marathonlabs.io/api/v1"),
             api_key: "".into(),
-            client: Client::default(),
+            client: Client::builder()
+                .pool_idle_timeout(Some(Duration::from_secs(20)))
+                .pool_max_idle_per_host(16)
+                .build()
+                .unwrap(),
         }
     }
 }
