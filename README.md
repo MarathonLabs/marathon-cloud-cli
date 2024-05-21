@@ -29,6 +29,7 @@ Usage: marathon-cloud [OPTIONS] [COMMAND]
 
 Commands:
   run          Submit a test run
+  devices      Get supported devices
   download     Download artifacts from a previous test run
   completions  Output shell completion code for the specified shell (bash, zsh, fish)
   help         Print this message or the help of the given subcommand(s)
