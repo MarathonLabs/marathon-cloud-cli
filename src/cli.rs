@@ -161,6 +161,8 @@ impl Cli {
                             None => None,
                         };
 
+                        let retry_args = prepare_retry_args(retry_args);
+
                         TriggerTestRunInteractor {}
                             .execute(
                                 &api_args.base_url,
@@ -249,6 +251,8 @@ If you provide any single or two of these parameters, the others will be inferre
                         };
                         let application = ios::ensure_format(application).await?;
                         let test_application = ios::ensure_format(test_application).await?;
+
+                        let retry_args = prepare_retry_args(retry_args);
                         TriggerTestRunInteractor {}
                             .execute(
                                 &api_args.base_url,
@@ -324,6 +328,15 @@ If you provide any single or two of these parameters, the others will be inferre
                 ::std::process::exit(1);
             }
         }
+    }
+}
+
+//Hanles the no_retries flag and fills all retries as 0
+fn prepare_retry_args(retry_args: RetryArgs) -> RetryArgs {
+    if retry_args.no_retries {
+        RetryArgs::new(Some(0), Some(0), Some(0))
+    } else {
+        retry_args
     }
 }
 
@@ -445,12 +458,42 @@ struct ApiArgs {
 #[derive(Debug, Args)]
 #[command(args_conflicts_with_subcommands = true)]
 struct RetryArgs {
-    #[arg(long, help = "Number of allowed uncompleted executions per test")]
+    #[arg(
+        long,
+        conflicts_with = "no_retries",
+        help = "Number of allowed uncompleted executions per test"
+    )]
     retry_quota_test_uncompleted: Option<u32>,
-    #[arg(long, help = "Number of allowed preventive retries per test")]
+    #[arg(
+        long,
+        conflicts_with = "no_retries",
+        help = "Number of allowed preventive retries per test"
+    )]
     retry_quota_test_preventive: Option<u32>,
-    #[arg(long, help = "Number of allowed reactive retries per test")]
+    #[arg(
+        long,
+        conflicts_with = "no_retries",
+        help = "Number of allowed reactive retries per test"
+    )]
     retry_quota_test_reactive: Option<u32>,
+
+    #[arg(long, default_value_t = false, help = "Disable all retries")]
+    no_retries: bool,
+}
+
+impl RetryArgs {
+    fn new(
+        retry_quota_test_uncompleted: Option<u32>,
+        retry_quota_test_preventive: Option<u32>,
+        retry_quota_test_reactive: Option<u32>,
+    ) -> Self {
+        Self {
+            retry_quota_test_uncompleted,
+            retry_quota_test_preventive,
+            retry_quota_test_reactive,
+            no_retries: false,
+        }
+    }
 }
 
 #[derive(Debug, Args)]
