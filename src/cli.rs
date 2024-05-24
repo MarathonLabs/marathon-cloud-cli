@@ -294,6 +294,7 @@ If you provide any single or two of these parameters, the others will be inferre
                         &args.id,
                         args.wait,
                         &args.output,
+                        args.glob,
                     )
                     .await;
                 Ok(true)
@@ -420,6 +421,12 @@ struct DownloadArgs {
         help = "Wait for test run to finish if true, exits immediately if false"
     )]
     wait: bool,
+
+    #[arg(
+        long,
+        help = "Only files matching this glob will be downloaded, i.e. 'tests/**' will download only the JUnit xml files"
+    )]
+    glob: Option<String>,
 
     #[command(flatten)]
     api_args: ApiArgs,
