@@ -1,4 +1,5 @@
 use anyhow::Result;
+use globset::Glob;
 use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 use std::{path::PathBuf, time::Duration};
 use url::{Position, Url};
@@ -8,7 +9,7 @@ use log::debug;
 use tokio::time::{sleep, Instant};
 
 use crate::{
-    api::{RapiClient, RapiReqwestClient},
+    api::{Artifact, RapiClient, RapiReqwestClient},
     artifacts::{download_artifacts, fetch_artifact_list},
     cli::Platform,
     filtering::model::SparseMarathonfile,
@@ -24,6 +25,7 @@ impl DownloadArtifactsInteractor {
         id: &str,
         wait: bool,
         output: &PathBuf,
+        glob: Option<String>,
     ) -> Result<()> {
         let started = Instant::now();
         println!("{} Checking test run state...", style("[1/4]").bold().dim());
@@ -42,6 +44,8 @@ impl DownloadArtifactsInteractor {
         println!("{} Fetching file list...", style("[2/4]").bold().dim());
         let token = client.get_token().await?;
         let artifacts = fetch_artifact_list(&client, id, &token).await?;
+        let test_run_id_prefix = format!("{}/", id);
+        let artifacts = filter_artifact_list(artifacts, glob, &test_run_id_prefix)?;
         println!("{} Downloading files...", style("[3/4]").bold().dim());
         download_artifacts(&client, id, artifacts, output, &token, true).await?;
         println!(
@@ -51,6 +55,30 @@ impl DownloadArtifactsInteractor {
 
         println!("Done in {}", HumanDuration(started.elapsed()));
         Ok(())
+    }
+}
+
+fn filter_artifact_list(
+    artifacts: Vec<Artifact>,
+    glob: Option<String>,
+    prefix: &str,
+) -> Result<Vec<crate::api::Artifact>> {
+    match glob {
+        Some(glob) => {
+            let matcher = Glob::new(&glob)?.compile_matcher();
+            Ok(artifacts
+                .into_iter()
+                .filter(|x| -> bool {
+                    let predicate_result =
+                        matcher.is_match(x.id.strip_prefix(prefix).unwrap_or(&x.id));
+                    if !predicate_result {
+                        debug!("Filtered out download of {}", &x.id);
+                    }
+                    predicate_result
+                })
+                .collect())
+        }
+        None => Ok(artifacts),
     }
 }
 
