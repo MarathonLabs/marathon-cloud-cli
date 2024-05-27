@@ -11,8 +11,9 @@ use tokio::time::{sleep, Instant};
 use crate::{
     api::{Artifact, RapiClient, RapiReqwestClient},
     artifacts::{download_artifacts, fetch_artifact_list},
-    cli::Platform,
+    cli::{Format, Platform},
     filtering::model::SparseMarathonfile,
+    progress::{TestRunFinished, TestRunStarted},
 };
 
 pub struct DownloadArtifactsInteractor {}
@@ -26,9 +27,13 @@ impl DownloadArtifactsInteractor {
         wait: bool,
         output: &PathBuf,
         glob: Option<String>,
+        progress_format: crate::cli::Format,
     ) -> Result<()> {
         let started = Instant::now();
-        println!("{} Checking test run state...", style("[1/4]").bold().dim());
+        progress_format.progress(&format!(
+            "{} Checking test run state...",
+            style("[1/4]").bold().dim()
+        ));
         let client = RapiReqwestClient::new(base_url, api_key);
         let stat = client.get_run(id).await?;
         if stat.completed.is_none() && wait {
@@ -41,19 +46,26 @@ impl DownloadArtifactsInteractor {
         } else {
             debug!("Test run {} finished", &id);
         }
-        println!("{} Fetching file list...", style("[2/4]").bold().dim());
+
+        progress_format.progress(&format!(
+            "{} Fetching file list...",
+            style("[2/4]").bold().dim()
+        ));
         let token = client.get_token().await?;
         let artifacts = fetch_artifact_list(&client, id, &token).await?;
         let test_run_id_prefix = format!("{}/", id);
         let artifacts = filter_artifact_list(artifacts, glob, &test_run_id_prefix)?;
-        println!("{} Downloading files...", style("[3/4]").bold().dim());
-        download_artifacts(&client, id, artifacts, output, &token, true).await?;
-        println!(
+        progress_format.progress(&format!(
+            "{} Downloading files...",
+            style("[3/4]").bold().dim()
+        ));
+        download_artifacts(&client, id, artifacts, output, &token, progress_format).await?;
+        progress_format.progress(&format!(
             "{} Patching local relative paths...",
             style("[4/4]").bold().dim()
-        );
+        ));
 
-        println!("Done in {}", HumanDuration(started.elapsed()));
+        progress_format.progress(&format!("Done in {}", HumanDuration(started.elapsed())));
         Ok(())
     }
 }
@@ -109,7 +121,7 @@ impl TriggerTestRunInteractor {
         xcode_version: Option<String>,
         flavor: Option<String>,
         platform: String,
-        progress: bool,
+        progress_format: Format,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
     ) -> Result<bool> {
@@ -121,10 +133,10 @@ impl TriggerTestRunInteractor {
         };
 
         let token = client.get_token().await?;
-        println!(
+        progress_format.progress(&format!(
             "{} Submitting new run...",
             style(format!("[1/{}]", steps)).bold().dim()
-        );
+        ));
         let id = client
             .create_run(
                 application,
@@ -143,7 +155,7 @@ impl TriggerTestRunInteractor {
                 retry_quota_test_reactive,
                 analytics_read_only,
                 filtering_configuration,
-                progress,
+                progress_format,
                 flavor,
                 env_args,
                 test_env_args,
@@ -151,12 +163,12 @@ impl TriggerTestRunInteractor {
             .await?;
 
         if wait {
-            println!(
+            progress_format.progress(&format!(
                 "{} Waiting for test run to finish...",
                 style(format!("[2/{}]", steps)).bold().dim()
-            );
+            ));
 
-            let spinner = if progress {
+            let spinner = if progress_format.supports_progress_bars() {
                 let pb = ProgressBar::new_spinner();
                 pb.enable_steady_tick(Duration::from_millis(120));
                 pb.set_style(
@@ -186,50 +198,47 @@ impl TriggerTestRunInteractor {
                         s.finish_and_clear()
                     }
 
-                    match stat.state.as_ref() {
-                        "passed" => println!("Marathon Cloud execution finished"),
-                        "failure" => println!("Marathon Cloud execution finished with failures"),
-                        _ => println!("Marathon cloud execution crashed"),
-                    };
-                    println!("\tstate: {}", stat.state);
-
                     let base_report_url = Url::parse(base_url)?;
                     let base_report_url = &base_report_url[..Position::AfterPort];
-                    println!("\treport: {}/report/{}", base_report_url, id);
-                    println!(
-                        "\tpassed: {}",
-                        stat.passed
-                            .map(|x| x.to_string())
-                            .unwrap_or("missing".to_owned())
-                    );
-                    println!(
-                        "\tfailed: {}",
-                        stat.failed
-                            .map(|x| x.to_string())
-                            .unwrap_or("missing".to_owned())
-                    );
-                    println!(
-                        "\tignored: {}",
-                        stat.ignored
-                            .map(|x| x.to_string())
-                            .unwrap_or("missing".to_owned())
-                    );
+
+                    let state = stat.state.clone();
+                    let report = format!("{}/report/{}", base_report_url, id);
+                    let passed = stat.passed;
+                    let failed = stat.failed;
+                    let ignored = stat.ignored;
+
+                    progress_format.format(TestRunFinished {
+                        id: id.clone(),
+                        state,
+                        report,
+                        passed,
+                        failed,
+                        ignored,
+                    })?;
 
                     if let Some(output) = output {
-                        println!(
+                        progress_format.progress(&format!(
                             "{} Fetching file list...",
                             style(format!("[3/{}]", steps)).bold().dim()
-                        );
+                        ));
                         let artifacts = fetch_artifact_list(&client, &id, &token).await?;
-                        println!(
+                        progress_format.progress(&format!(
                             "{} Downloading files...",
                             style(format!("[4/{}]", steps)).bold().dim()
-                        );
-                        download_artifacts(&client, &id, artifacts, output, &token, true).await?;
-                        println!(
+                        ));
+                        download_artifacts(
+                            &client,
+                            &id,
+                            artifacts,
+                            output,
+                            &token,
+                            progress_format,
+                        )
+                        .await?;
+                        progress_format.progress(&format!(
                             "{} Patching local relative paths...",
                             style(format!("[5/{}]", steps)).bold().dim()
-                        );
+                        ));
                     }
                     return match (stat.state.as_str(), ignore_test_failures) {
                         ("failure", Some(false) | None) => Ok(false),
@@ -239,7 +248,7 @@ impl TriggerTestRunInteractor {
                 sleep(Duration::new(5, 0)).await;
             }
         } else {
-            println!("Test run {} started", id);
+            progress_format.format(TestRunStarted { id })?;
             Ok(true)
         }
     }
@@ -253,19 +262,22 @@ impl GetDeviceCatalogInteractor {
         base_url: &str,
         api_key: &str,
         platform: &Platform,
+        progress_format: crate::cli::Format,
     ) -> Result<()> {
-        println!("Fetching device catalog...");
+        progress_format.progress("Fetching device catalog...");
         let client = RapiReqwestClient::new(base_url, api_key);
 
         let token = client.get_token().await?;
-        let out = match platform {
-            Platform::Android => {
-                let devices = client.get_devices_android(&token).await?;
-                serde_yaml::to_string(&devices)?
-            }
+        let devices = match platform {
+            Platform::Android => client.get_devices_android(&token).await?,
             Platform::iOS => todo!(),
         };
-        println!("{}", out);
+        match progress_format {
+            Format::Standard | Format::Plain | Format::Yaml => {
+                println!("{}", serde_yaml::to_string(&devices)?)
+            }
+            Format::Json => println!("{}", serde_json::to_string(&devices)?),
+        }
         Ok(())
     }
 }

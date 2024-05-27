@@ -18,6 +18,7 @@ use tokio::{
 use tokio_util::io::ReaderStream;
 
 use crate::{
+    cli::Format,
     errors::{ApiError, EnvArgError, InputError},
     filtering::model::SparseMarathonfile,
 };
@@ -43,7 +44,7 @@ pub trait RapiClient {
         retry_quota_test_reactive: Option<u32>,
         analytics_read_only: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
-        progress: bool,
+        progress: Format,
         flavor: Option<String>,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
@@ -131,7 +132,7 @@ impl RapiClient for RapiReqwestClient {
         retry_quota_test_reactive: Option<u32>,
         analytics_read_only: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
-        progress: bool,
+        format: Format,
         flavor: Option<String>,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
@@ -157,14 +158,15 @@ impl RapiClient for RapiReqwestClient {
             })?;
         let test_app_total_size = file.metadata().await?.len();
         let mut test_app_reader = ReaderStream::new(file);
-        let mut multi_progress: Option<MultiProgress> = if progress {
-            Some(MultiProgress::new())
-        } else {
-            None
-        };
+        let mut multi_progress: Option<MultiProgress> =
+            if format == Format::Standard || format == Format::Plain {
+                Some(MultiProgress::new())
+            } else {
+                None
+            };
         let test_app_progress_bar;
         let test_app_body;
-        if progress {
+        if format.supports_progress_bars() {
             let sty = ProgressStyle::with_template(
                 "{spinner} [{elapsed_precise}] [{wide_bar}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
             )
@@ -217,7 +219,7 @@ impl RapiClient for RapiReqwestClient {
             let mut app_reader = ReaderStream::new(file);
             let app_body;
 
-            if progress {
+            if format.supports_progress_bars() {
                 let pb = ProgressBar::new(app_total_size);
                 pb.enable_steady_tick(Duration::from_millis(120));
                 let app_progress_bar = multi_progress.unwrap().add(pb);

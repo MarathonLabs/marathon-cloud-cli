@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::CommandFactory;
 use clap::{Args, Parser, Subcommand};
+use serde::Serialize;
 use std::{fmt::Display, path::PathBuf};
 
 use crate::errors::{default_error_handler, ConfigurationError};
@@ -187,7 +188,7 @@ impl Cli {
                                 None,
                                 flavor.map(|x| x.to_string()),
                                 "Android".to_owned(),
-                                true,
+                                common.format_args.format,
                                 instrumentation_arg,
                                 None,
                             )
@@ -277,7 +278,7 @@ If you provide any single or two of these parameters, the others will be inferre
                                 xcode_version.map(|x| x.to_string()),
                                 None,
                                 "iOS".to_owned(),
-                                true,
+                                common.format_args.format,
                                 xctestrun_env,
                                 xctestrun_test_env,
                             )
@@ -295,6 +296,7 @@ If you provide any single or two of these parameters, the others will be inferre
                         args.wait,
                         &args.output,
                         args.glob,
+                        args.format_args.format,
                     )
                     .await;
                 Ok(true)
@@ -303,9 +305,17 @@ If you provide any single or two of these parameters, the others will be inferre
                 let run_cmd = args.command;
                 let interactor = GetDeviceCatalogInteractor {};
                 match run_cmd {
-                    DevicesCommands::Android { api_args } => {
+                    DevicesCommands::Android {
+                        api_args,
+                        format_args,
+                    } => {
                         let _ = interactor
-                            .execute(&api_args.base_url, &api_args.api_key, &Platform::Android)
+                            .execute(
+                                &api_args.base_url,
+                                &api_args.api_key,
+                                &Platform::Android,
+                                format_args.format,
+                            )
                             .await;
                     }
                 }
@@ -404,6 +414,9 @@ struct CommonRunArgs {
         help = "Collect code coverage if true. Requires setup external to Marathon Cloud, e.g. build flags, jacoco jar added to classpath, etc"
     )]
     code_coverage: Option<bool>,
+
+    #[command(flatten)]
+    format_args: FormatArgs,
 }
 
 #[derive(Debug, Args)]
@@ -430,6 +443,9 @@ struct DownloadArgs {
 
     #[command(flatten)]
     api_args: ApiArgs,
+
+    #[command(flatten)]
+    format_args: FormatArgs,
 }
 
 #[derive(Debug, clap::Parser)]
@@ -445,6 +461,8 @@ enum DevicesCommands {
     Android {
         #[command(flatten)]
         api_args: ApiArgs,
+        #[command(flatten)]
+        format_args: FormatArgs,
     },
 }
 
@@ -511,6 +529,58 @@ struct AnalyticsArgs {
         help = "If true then test run will not affect any statistical measurements"
     )]
     analytics_read_only: Option<bool>,
+}
+
+#[derive(Debug, Args, Clone)]
+#[command(args_conflicts_with_subcommands = true)]
+struct FormatArgs {
+    #[arg(long, default_value_t = Format::Standard, help = "Format of the output. Plain disables animations. For machine-readable output use either json or yaml")]
+    format: Format,
+}
+
+#[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq, Copy)]
+pub enum Format {
+    Standard,
+    Plain,
+    Json,
+    Yaml,
+}
+
+impl Format {
+    pub fn supports_progress_bars(&self) -> bool {
+        matches!(self, Format::Standard)
+    }
+
+    pub fn human_readable(&self) -> bool {
+        matches!(self, Format::Standard | Format::Plain)
+    }
+
+    pub(crate) fn progress(&self, message: &str) {
+        if self.human_readable() {
+            println!("{}", message);
+        }
+    }
+
+    pub(crate) fn format<T: Display + Sized + Serialize>(&self, message: T) -> Result<()> {
+        match self {
+            Format::Standard | Format::Plain => println!("{}", message),
+            Format::Json => println!("{}", serde_json::to_string(&message)?),
+            Format::Yaml => println!("{}", serde_yaml::to_string(&message)?),
+        }
+
+        Ok(())
+    }
+}
+
+impl Display for Format {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Format::Standard => f.write_str("standard"),
+            Format::Plain => f.write_str("plain"),
+            Format::Json => f.write_str("json"),
+            Format::Yaml => f.write_str("yaml"),
+        }
+    }
 }
 
 #[derive(Debug, Subcommand)]
