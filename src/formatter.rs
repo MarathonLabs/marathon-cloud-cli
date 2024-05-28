@@ -1,7 +1,7 @@
 use console::style;
 
 pub trait Formatter {
-    fn stage(&self, message: &str);
+    fn stage(&mut self, message: &str);
     fn message(&self, message: &str);
 }
 
@@ -20,12 +20,13 @@ impl StandardFormatter {
 }
 
 impl Formatter for StandardFormatter {
-    fn stage(&self, message: &str) {
+    fn stage(&mut self, message: &str) {
         let stage_prefix = style(format!("[{}/{}]", self.index, self.stage_count))
             .bold()
             .dim();
         let message = format!("{} {}", stage_prefix, message);
         println!("{}", &message);
+        self.index += 1;
     }
 
     fn message(&self, message: &str) {

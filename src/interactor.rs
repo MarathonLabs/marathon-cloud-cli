@@ -34,7 +34,7 @@ impl DownloadArtifactsInteractor {
         no_progress_bars: bool,
     ) -> Result<()> {
         let started = Instant::now();
-        let formatter = StandardFormatter::new(4);
+        let mut formatter = StandardFormatter::new(4);
         formatter.stage("Checking test run state...");
 
         let client = RapiReqwestClient::new(base_url, api_key);
@@ -128,7 +128,7 @@ impl TriggerTestRunInteractor {
             (true, None) => 2,
             _ => 1,
         };
-        let formatter = StandardFormatter::new(steps);
+        let mut formatter = StandardFormatter::new(steps);
 
         let token = client.get_token().await?;
 
@@ -160,15 +160,15 @@ impl TriggerTestRunInteractor {
 
         if wait {
             formatter.stage("Waiting for test run to finish...");
-
             let spinner = if !no_progress_bars {
                 let pb = ProgressBar::new_spinner();
                 pb.enable_steady_tick(Duration::from_millis(80));
                 pb.set_style(
-                    ProgressStyle::with_template("{spinner:.blue}")
+                    ProgressStyle::with_template("{spinner:.blue} {msg}")
                         .unwrap()
                         .tick_strings(&["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]),
                 );
+                pb.set_message("Test execution in progress...");
                 Some(pb)
             } else {
                 None
@@ -204,7 +204,7 @@ impl TriggerTestRunInteractor {
                             ResultFileFormat::Json => serde_json::to_string(&event)?,
                             ResultFileFormat::Yaml => serde_yaml::to_string(&event)?,
                         };
-                        file.write(data.as_bytes()).await?;
+                        file.write_all(data.as_bytes()).await?;
                     }
 
                     if let Some(output) = output {
@@ -238,7 +238,7 @@ impl TriggerTestRunInteractor {
                     ResultFileFormat::Json => serde_json::to_string(&event)?,
                     ResultFileFormat::Yaml => serde_yaml::to_string(&event)?,
                 };
-                file.write(data.as_bytes()).await?;
+                file.write_all(data.as_bytes()).await?;
             }
 
             Ok(true)

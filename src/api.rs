@@ -172,7 +172,7 @@ impl RapiClient for RapiReqwestClient {
             .progress_chars("#>-");
 
             let pb = ProgressBar::new(test_app_total_size);
-            pb.enable_steady_tick(Duration::from_millis(120));
+            pb.enable_steady_tick(Duration::from_millis(80));
             test_app_progress_bar = multi_progress.as_mut().unwrap().add(pb);
             test_app_progress_bar.set_style(sty.clone());
             let mut test_app_progress = 0u64;
@@ -219,7 +219,7 @@ impl RapiClient for RapiReqwestClient {
 
             if !no_progress_bar {
                 let pb = ProgressBar::new(app_total_size);
-                pb.enable_steady_tick(Duration::from_millis(120));
+                pb.enable_steady_tick(Duration::from_millis(80));
                 let app_progress_bar = multi_progress.unwrap().add(pb);
                 let sty = ProgressStyle::with_template(
                     "{spinner:.blue} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
