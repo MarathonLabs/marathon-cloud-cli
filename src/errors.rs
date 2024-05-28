@@ -80,10 +80,17 @@ pub enum FilteringConfigurationError {
     InvalidFilterConfiguration { mtype: String, message: String },
 }
 
+//Dumps the error to output recursively by looking at the source()
 pub fn default_error_handler(
     error: Box<dyn std::error::Error + Send + 'static>,
     output: &mut dyn Write,
 ) {
     let red = Style::new().red();
-    _ = writeln!(output, "{}", red.apply_to(error));
+    _ = writeln!(output, "error: {}", red.apply_to(&error));
+
+    let mut error: &dyn std::error::Error = error.as_ref();
+    while let Some(source) = error.source() {
+        _ = writeln!(output, "caused by: {}", red.apply_to(source));
+        error = source;
+    }
 }
