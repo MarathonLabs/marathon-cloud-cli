@@ -5,11 +5,8 @@ use anyhow::Result;
 use indicatif::ProgressBar;
 use log::debug;
 
+use crate::api::{Artifact, RapiClient, RapiReqwestClient};
 use crate::errors::ArtifactError;
-use crate::{
-    api::{Artifact, RapiClient, RapiReqwestClient},
-    cli::Format,
-};
 
 pub async fn fetch_artifact_list(
     client: &RapiReqwestClient,
@@ -54,14 +51,14 @@ pub async fn download_artifacts(
     artifacts: Vec<Artifact>,
     path: &PathBuf,
     token: &str,
-    progress: Format,
+    no_progress_bar: bool,
 ) -> Result<()> {
     debug!("Downloading {} artifacts:", artifacts.len());
 
     artifacts.iter().for_each(|f| debug!("{}", f.id));
 
     let mut progress_bar: Option<ProgressBar> = None;
-    if progress.supports_progress_bars() {
+    if !no_progress_bar {
         progress_bar = Some(ProgressBar::new(artifacts.len() as u64))
     }
 

@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::CommandFactory;
 use clap::{Args, Parser, Subcommand};
-use serde::Serialize;
 use std::{fmt::Display, path::PathBuf};
 
 use crate::errors::{default_error_handler, ConfigurationError};
@@ -188,7 +187,9 @@ impl Cli {
                                 None,
                                 flavor.map(|x| x.to_string()),
                                 "Android".to_owned(),
-                                common.format_args.format,
+                                common.progress_args.no_progress_bars,
+                                common.result_file_args.result_file,
+                                common.result_file_args.result_file_format,
                                 instrumentation_arg,
                                 None,
                             )
@@ -278,7 +279,9 @@ If you provide any single or two of these parameters, the others will be inferre
                                 xcode_version.map(|x| x.to_string()),
                                 None,
                                 "iOS".to_owned(),
-                                common.format_args.format,
+                                common.progress_args.no_progress_bars,
+                                common.result_file_args.result_file,
+                                common.result_file_args.result_file_format,
                                 xctestrun_env,
                                 xctestrun_test_env,
                             )
@@ -296,7 +299,7 @@ If you provide any single or two of these parameters, the others will be inferre
                         args.wait,
                         &args.output,
                         args.glob,
-                        args.format_args.format,
+                        args.progress_args.no_progress_bars,
                     )
                     .await;
                 Ok(true)
@@ -307,14 +310,14 @@ If you provide any single or two of these parameters, the others will be inferre
                 match run_cmd {
                     DevicesCommands::Android {
                         api_args,
-                        format_args,
+                        progress_args,
                     } => {
                         let _ = interactor
                             .execute(
                                 &api_args.base_url,
                                 &api_args.api_key,
                                 &Platform::Android,
-                                format_args.format,
+                                progress_args.no_progress_bars,
                             )
                             .await;
                     }
@@ -416,7 +419,10 @@ struct CommonRunArgs {
     code_coverage: Option<bool>,
 
     #[command(flatten)]
-    format_args: FormatArgs,
+    progress_args: ProgressArgs,
+
+    #[command(flatten)]
+    result_file_args: ResultFileArgs,
 }
 
 #[derive(Debug, Args)]
@@ -445,7 +451,10 @@ struct DownloadArgs {
     api_args: ApiArgs,
 
     #[command(flatten)]
-    format_args: FormatArgs,
+    progress_args: ProgressArgs,
+
+    #[command(flatten)]
+    result_file_args: ResultFileArgs,
 }
 
 #[derive(Debug, clap::Parser)]
@@ -462,7 +471,7 @@ enum DevicesCommands {
         #[command(flatten)]
         api_args: ApiArgs,
         #[command(flatten)]
-        format_args: FormatArgs,
+        progress_args: ProgressArgs,
     },
 }
 
@@ -533,54 +542,29 @@ struct AnalyticsArgs {
 
 #[derive(Debug, Args, Clone)]
 #[command(args_conflicts_with_subcommands = true)]
-struct FormatArgs {
-    #[arg(long, default_value_t = Format::Standard, help = "Format of the output. Plain disables animations. For machine-readable output use either json or yaml")]
-    format: Format,
+struct ProgressArgs {
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Disable animationed progress bars"
+    )]
+    no_progress_bars: bool,
 }
 
-#[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq, Copy)]
-pub enum Format {
-    Standard,
-    Plain,
+#[derive(Debug, Args, Clone)]
+#[command(args_conflicts_with_subcommands = true)]
+struct ResultFileArgs {
+    #[arg(long, help = "Result file in machine-readable format")]
+    result_file: Option<PathBuf>,
+
+    #[arg(value_enum, default_value_t = ResultFileFormat::Json, long, help = "Format for result file")]
+    result_file_format: ResultFileFormat,
+}
+
+#[derive(Debug, clap::ValueEnum, Clone)]
+pub enum ResultFileFormat {
     Json,
     Yaml,
-}
-
-impl Format {
-    pub fn supports_progress_bars(&self) -> bool {
-        matches!(self, Format::Standard)
-    }
-
-    pub fn human_readable(&self) -> bool {
-        matches!(self, Format::Standard | Format::Plain)
-    }
-
-    pub(crate) fn progress(&self, message: &str) {
-        if self.human_readable() {
-            println!("{}", message);
-        }
-    }
-
-    pub(crate) fn format<T: Display + Sized + Serialize>(&self, message: T) -> Result<()> {
-        match self {
-            Format::Standard | Format::Plain => println!("{}", message),
-            Format::Json => println!("{}", serde_json::to_string(&message)?),
-            Format::Yaml => println!("{}", serde_yaml::to_string(&message)?),
-        }
-
-        Ok(())
-    }
-}
-
-impl Display for Format {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Format::Standard => f.write_str("standard"),
-            Format::Plain => f.write_str("plain"),
-            Format::Json => f.write_str("json"),
-            Format::Yaml => f.write_str("yaml"),
-        }
-    }
 }
 
 #[derive(Debug, Subcommand)]

@@ -18,7 +18,6 @@ use tokio::{
 use tokio_util::io::ReaderStream;
 
 use crate::{
-    cli::Format,
     errors::{ApiError, EnvArgError, InputError},
     filtering::model::SparseMarathonfile,
 };
@@ -44,7 +43,7 @@ pub trait RapiClient {
         retry_quota_test_reactive: Option<u32>,
         analytics_read_only: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
-        progress: Format,
+        no_progress_bar: bool,
         flavor: Option<String>,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
@@ -132,7 +131,7 @@ impl RapiClient for RapiReqwestClient {
         retry_quota_test_reactive: Option<u32>,
         analytics_read_only: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
-        format: Format,
+        no_progress_bar: bool,
         flavor: Option<String>,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
@@ -158,17 +157,16 @@ impl RapiClient for RapiReqwestClient {
             })?;
         let test_app_total_size = file.metadata().await?.len();
         let mut test_app_reader = ReaderStream::new(file);
-        let mut multi_progress: Option<MultiProgress> =
-            if format == Format::Standard || format == Format::Plain {
-                Some(MultiProgress::new())
-            } else {
-                None
-            };
+        let mut multi_progress: Option<MultiProgress> = if !no_progress_bar {
+            Some(MultiProgress::new())
+        } else {
+            None
+        };
         let test_app_progress_bar;
         let test_app_body;
-        if format.supports_progress_bars() {
+        if !no_progress_bar {
             let sty = ProgressStyle::with_template(
-                "{spinner} [{elapsed_precise}] [{wide_bar}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
+                "{spinner:.blue} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
             )
             .unwrap()
             .progress_chars("#>-");
@@ -219,12 +217,12 @@ impl RapiClient for RapiReqwestClient {
             let mut app_reader = ReaderStream::new(file);
             let app_body;
 
-            if format.supports_progress_bars() {
+            if !no_progress_bar {
                 let pb = ProgressBar::new(app_total_size);
                 pb.enable_steady_tick(Duration::from_millis(120));
                 let app_progress_bar = multi_progress.unwrap().add(pb);
                 let sty = ProgressStyle::with_template(
-                    "{spinner} [{elapsed_precise}] [{wide_bar}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
+                    "{spinner:.blue} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
                 )
                 .unwrap()
                 .progress_chars("#>-");
