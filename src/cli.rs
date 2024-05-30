@@ -190,6 +190,7 @@ impl Cli {
                                 true,
                                 instrumentation_arg,
                                 None,
+                                common.output_glob,
                             )
                             .await
                     }
@@ -280,6 +281,7 @@ If you provide any single or two of these parameters, the others will be inferre
                                 true,
                                 xctestrun_env,
                                 xctestrun_test_env,
+                                common.output_glob,
                             )
                             .await
                     }
@@ -364,6 +366,12 @@ struct RunArgs {
 struct CommonRunArgs {
     #[arg(short, long, help = "Output folder for test run results")]
     output: Option<PathBuf>,
+
+    #[arg(
+        long,
+        help = "Only files matching this glob will be downloaded in the output folder, i.e. 'tests/**' will download only the JUnit xml files"
+    )]
+    output_glob: Option<String>,
 
     #[arg(long, help = "Run each test in isolation, i.e. isolated batching.")]
     isolated: Option<bool>,
