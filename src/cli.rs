@@ -541,11 +541,7 @@ struct AnalyticsArgs {
 #[derive(Debug, Args, Clone)]
 #[command(args_conflicts_with_subcommands = true)]
 struct ProgressArgs {
-    #[arg(
-        long,
-        default_value_t = false,
-        help = "Disable animationed progress bars"
-    )]
+    #[arg(long, default_value_t = false, help = "Disable animated progress bars")]
     no_progress_bars: bool,
 }
 
@@ -554,7 +550,7 @@ struct ProgressArgs {
 struct ResultFileArgs {
     #[arg(
         long,
-        help = "Result file path in machine-readable format. You can specify format via extension [yaml/yml,json]. Defaults to json if no extension is found"
+        help = "Result file path in machine-readable format. You can specify format via extension [yaml,json]"
     )]
     result_file: Option<PathBuf>,
 }
