@@ -1,7 +1,11 @@
 use anyhow::Result;
 use globset::Glob;
 use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
-use std::{path::PathBuf, time::Duration};
+use serde::Serialize;
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
 use url::{Position, Url};
 
 use log::debug;
@@ -14,7 +18,8 @@ use tokio::{
 use crate::{
     api::{Artifact, RapiClient, RapiReqwestClient},
     artifacts::{download_artifacts, fetch_artifact_list},
-    cli::{Platform, ResultFileFormat},
+    cli::Platform,
+    errors::InputError,
     filtering::model::SparseMarathonfile,
     formatter::{Formatter, StandardFormatter},
     progress::{TestRunFinished, TestRunStarted},
@@ -118,7 +123,6 @@ impl TriggerTestRunInteractor {
         platform: String,
         no_progress_bars: bool,
         result_file: Option<PathBuf>,
-        result_file_format: ResultFileFormat,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
     ) -> Result<bool> {
@@ -199,11 +203,8 @@ impl TriggerTestRunInteractor {
                     };
                     formatter.message(&format!("{}", event));
                     if let Some(result_file) = result_file {
-                        let mut file = File::create(result_file).await?;
-                        let data = match result_file_format {
-                            ResultFileFormat::Json => serde_json::to_string(&event)?,
-                            ResultFileFormat::Yaml => serde_yaml::to_string(&event)?,
-                        };
+                        let mut file = File::create(&result_file).await?;
+                        let data = serialize_event(&result_file, &event)?;
                         file.write_all(data.as_bytes()).await?;
                     }
 
@@ -233,16 +234,30 @@ impl TriggerTestRunInteractor {
             let event = TestRunStarted { id };
             formatter.message(&format!("{}", event));
             if let Some(result_file) = result_file {
-                let mut file = File::create(result_file).await?;
-                let data = match result_file_format {
-                    ResultFileFormat::Json => serde_json::to_string(&event)?,
-                    ResultFileFormat::Yaml => serde_yaml::to_string(&event)?,
-                };
+                let mut file = File::create(&result_file).await?;
+                let data = serialize_event(&result_file, &event)?;
                 file.write_all(data.as_bytes()).await?;
             }
 
             Ok(true)
         }
+    }
+}
+
+fn serialize_event<T: Serialize>(path: &Path, event: T) -> Result<String> {
+    match path.extension().map(|f| f.to_str()) {
+        //If no extension then treat as json
+        Some(Some("json")) | Some(None) => Ok(serde_json::to_string(&event)?),
+        Some(Some("yaml")) | Some(Some("yml")) => Ok(serde_yaml::to_string(&event)?),
+        Some(Some(x)) => Err(InputError::InvalidFileExtension {
+            extension: x.to_owned(),
+            supported: "json,yaml,yml".to_owned(),
+        }
+        .into()),
+        None => Err(InputError::NonUTF8Path {
+            path: path.to_owned(),
+        }
+        .into()),
     }
 }
 

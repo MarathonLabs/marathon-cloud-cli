@@ -62,6 +62,14 @@ pub enum InputError {
         supported_files: String,
         supported_folders: String,
     },
+
+    #[error(
+        "Invalid file extension. Supports [{supported}]. Double check you've supplied correct path\n"
+    )]
+    InvalidFileExtension {
+        extension: String,
+        supported: String,
+    },
 }
 
 #[derive(Error, Debug)]

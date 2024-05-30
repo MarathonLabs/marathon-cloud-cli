@@ -189,7 +189,6 @@ impl Cli {
                                 "Android".to_owned(),
                                 common.progress_args.no_progress_bars,
                                 common.result_file_args.result_file,
-                                common.result_file_args.result_file_format,
                                 instrumentation_arg,
                                 None,
                             )
@@ -281,7 +280,6 @@ If you provide any single or two of these parameters, the others will be inferre
                                 "iOS".to_owned(),
                                 common.progress_args.no_progress_bars,
                                 common.result_file_args.result_file,
-                                common.result_file_args.result_file_format,
                                 xctestrun_env,
                                 xctestrun_test_env,
                             )
@@ -554,17 +552,11 @@ struct ProgressArgs {
 #[derive(Debug, Args, Clone)]
 #[command(args_conflicts_with_subcommands = true)]
 struct ResultFileArgs {
-    #[arg(long, help = "Result file in machine-readable format")]
+    #[arg(
+        long,
+        help = "Result file path in machine-readable format. You can specify format via extension [yaml/yml,json]. Defaults to json if no extension is found"
+    )]
     result_file: Option<PathBuf>,
-
-    #[arg(value_enum, default_value_t = ResultFileFormat::Json, long, help = "Format for result file")]
-    result_file_format: ResultFileFormat,
-}
-
-#[derive(Debug, clap::ValueEnum, Clone)]
-pub enum ResultFileFormat {
-    Json,
-    Yaml,
 }
 
 #[derive(Debug, Subcommand)]
