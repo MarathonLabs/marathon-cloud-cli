@@ -550,7 +550,7 @@ struct ProgressArgs {
 struct ResultFileArgs {
     #[arg(
         long,
-        help = "Result file path in machine-readable format. You can specify format via extension [yaml,json]"
+        help = "Result file path in a machine-readable format. You can specify the format via extension [yaml,json]"
     )]
     result_file: Option<PathBuf>,
 }
