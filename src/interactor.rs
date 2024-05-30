@@ -192,6 +192,10 @@ impl TriggerTestRunInteractor {
                     let passed = stat.passed;
                     let failed = stat.failed;
                     let ignored = stat.ignored;
+                    let billable_time = stat
+                        .total_run_time_seconds
+                        .map(|t| Duration::from_secs_f64(t))
+                        .unwrap_or(Duration::from_secs(0));
 
                     let event = TestRunFinished {
                         id: id.clone(),
@@ -200,6 +204,7 @@ impl TriggerTestRunInteractor {
                         passed,
                         failed,
                         ignored,
+                        billable_time,
                     };
                     formatter.message(&format!("{}", event));
                     if let Some(result_file) = result_file {

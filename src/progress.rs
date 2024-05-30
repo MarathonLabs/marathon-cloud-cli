@@ -1,6 +1,8 @@
-use std::fmt::Display;
+use serde_with::DurationSecondsWithFrac;
+use std::{fmt::Display, time::Duration};
 
 use serde::Serialize;
+use serde_with::serde_as;
 
 #[derive(Serialize)]
 pub struct TestRunStarted {
@@ -13,6 +15,7 @@ impl Display for TestRunStarted {
     }
 }
 
+#[serde_as]
 #[derive(Serialize)]
 pub struct TestRunFinished {
     pub id: String,
@@ -21,6 +24,8 @@ pub struct TestRunFinished {
     pub passed: Option<u32>,
     pub failed: Option<u32>,
     pub ignored: Option<u32>,
+    #[serde_as(as = "DurationSecondsWithFrac<f64>")]
+    pub billable_time: Duration,
 }
 
 impl Display for TestRunFinished {
@@ -50,6 +55,17 @@ impl Display for TestRunFinished {
             self.ignored
                 .map(|x| x.to_string())
                 .unwrap_or("missing".to_owned()),
+        ))?;
+
+        let s = self.billable_time.as_secs();
+        let ms = self.billable_time.subsec_millis();
+        let (h, s) = (s / 3600, s % 3600);
+        let (m, s) = (s / 60, s % 60);
+        let formatted_billable_time = format!("{:02}:{:02}:{:02}.{:03}", h, m, s, ms);
+
+        f.write_fmt(format_args!(
+            "\tbillable time: {}\n",
+            formatted_billable_time
         ))?;
         Ok(())
     }

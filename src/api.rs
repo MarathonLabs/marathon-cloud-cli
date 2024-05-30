@@ -513,6 +513,8 @@ pub struct TestRun {
     pub ignored: Option<u32>,
     #[serde(rename = "completed", with = "time::serde::iso8601::option")]
     pub completed: Option<OffsetDateTime>,
+    #[serde(rename = "total_run_time")]
+    pub total_run_time_seconds: Option<f64>,
 }
 
 #[derive(Deserialize)]
