@@ -1,3 +1,4 @@
+use crate::cli::model::Platform;
 use anyhow::Result;
 use globset::Glob;
 use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
@@ -18,7 +19,6 @@ use tokio::{
 use crate::{
     api::{Artifact, RapiClient, RapiReqwestClient},
     artifacts::{download_artifacts, fetch_artifact_list},
-    cli::Platform,
     errors::InputError,
     filtering::model::SparseMarathonfile,
     formatter::{Formatter, StandardFormatter},
