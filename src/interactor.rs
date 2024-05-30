@@ -112,6 +112,7 @@ impl TriggerTestRunInteractor {
         progress: bool,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
+        output_glob: Option<String>,
     ) -> Result<bool> {
         let client = RapiReqwestClient::new(base_url, api_key);
         let steps = match (wait, output) {
@@ -221,6 +222,9 @@ impl TriggerTestRunInteractor {
                             style(format!("[3/{}]", steps)).bold().dim()
                         );
                         let artifacts = fetch_artifact_list(&client, &id, &token).await?;
+                        let test_run_id_prefix = format!("{}/", &id);
+                        let artifacts =
+                            filter_artifact_list(artifacts, output_glob, &test_run_id_prefix)?;
                         println!(
                             "{} Downloading files...",
                             style(format!("[4/{}]", steps)).bold().dim()
