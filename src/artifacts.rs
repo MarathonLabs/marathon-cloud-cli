@@ -51,14 +51,14 @@ pub async fn download_artifacts(
     artifacts: Vec<Artifact>,
     path: &PathBuf,
     token: &str,
-    progress: bool,
+    no_progress_bar: bool,
 ) -> Result<()> {
     debug!("Downloading {} artifacts:", artifacts.len());
 
     artifacts.iter().for_each(|f| debug!("{}", f.id));
 
     let mut progress_bar: Option<ProgressBar> = None;
-    if progress {
+    if !no_progress_bar {
         progress_bar = Some(ProgressBar::new(artifacts.len() as u64))
     }
 

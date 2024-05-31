@@ -1,18 +1,28 @@
+use crate::cli::model::Platform;
 use anyhow::Result;
 use globset::Glob;
 use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
-use std::{path::PathBuf, time::Duration};
+use serde::Serialize;
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
 use url::{Position, Url};
 
-use console::style;
 use log::debug;
-use tokio::time::{sleep, Instant};
+use tokio::{
+    fs::File,
+    io::AsyncWriteExt,
+    time::{sleep, Instant},
+};
 
 use crate::{
     api::{Artifact, RapiClient, RapiReqwestClient},
     artifacts::{download_artifacts, fetch_artifact_list},
-    cli::Platform,
+    errors::InputError,
     filtering::model::SparseMarathonfile,
+    formatter::{Formatter, StandardFormatter},
+    progress::{TestRunFinished, TestRunStarted},
 };
 
 pub struct DownloadArtifactsInteractor {}
@@ -26,9 +36,12 @@ impl DownloadArtifactsInteractor {
         wait: bool,
         output: &PathBuf,
         glob: Option<String>,
+        no_progress_bars: bool,
     ) -> Result<()> {
         let started = Instant::now();
-        println!("{} Checking test run state...", style("[1/4]").bold().dim());
+        let mut formatter = StandardFormatter::new(4);
+        formatter.stage("Checking test run state...");
+
         let client = RapiReqwestClient::new(base_url, api_key);
         let stat = client.get_run(id).await?;
         if stat.completed.is_none() && wait {
@@ -41,19 +54,18 @@ impl DownloadArtifactsInteractor {
         } else {
             debug!("Test run {} finished", &id);
         }
-        println!("{} Fetching file list...", style("[2/4]").bold().dim());
+
+        formatter.stage("Fetching file list...");
         let token = client.get_token().await?;
         let artifacts = fetch_artifact_list(&client, id, &token).await?;
         let test_run_id_prefix = format!("{}/", id);
         let artifacts = filter_artifact_list(artifacts, glob, &test_run_id_prefix)?;
-        println!("{} Downloading files...", style("[3/4]").bold().dim());
-        download_artifacts(&client, id, artifacts, output, &token, true).await?;
-        println!(
-            "{} Patching local relative paths...",
-            style("[4/4]").bold().dim()
-        );
 
-        println!("Done in {}", HumanDuration(started.elapsed()));
+        formatter.stage("Downloading files...");
+        download_artifacts(&client, id, artifacts, output, &token, no_progress_bars).await?;
+        formatter.stage("Patching local relative paths...");
+
+        formatter.message(&format!("Done in {}", HumanDuration(started.elapsed())));
         Ok(())
     }
 }
@@ -109,7 +121,8 @@ impl TriggerTestRunInteractor {
         xcode_version: Option<String>,
         flavor: Option<String>,
         platform: String,
-        progress: bool,
+        no_progress_bars: bool,
+        result_file: Option<PathBuf>,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
     ) -> Result<bool> {
@@ -119,12 +132,11 @@ impl TriggerTestRunInteractor {
             (true, None) => 2,
             _ => 1,
         };
+        let mut formatter = StandardFormatter::new(steps);
 
         let token = client.get_token().await?;
-        println!(
-            "{} Submitting new run...",
-            style(format!("[1/{}]", steps)).bold().dim()
-        );
+
+        formatter.stage("Submitting new run...");
         let id = client
             .create_run(
                 application,
@@ -143,7 +155,7 @@ impl TriggerTestRunInteractor {
                 retry_quota_test_reactive,
                 analytics_read_only,
                 filtering_configuration,
-                progress,
+                no_progress_bars,
                 flavor,
                 env_args,
                 test_env_args,
@@ -151,30 +163,16 @@ impl TriggerTestRunInteractor {
             .await?;
 
         if wait {
-            println!(
-                "{} Waiting for test run to finish...",
-                style(format!("[2/{}]", steps)).bold().dim()
-            );
-
-            let spinner = if progress {
+            formatter.stage("Waiting for test run to finish...");
+            let spinner = if !no_progress_bars {
                 let pb = ProgressBar::new_spinner();
-                pb.enable_steady_tick(Duration::from_millis(120));
+                pb.enable_steady_tick(Duration::from_millis(80));
                 pb.set_style(
-                    ProgressStyle::with_template("{spinner}")
+                    ProgressStyle::with_template("{spinner:.blue} {msg}")
                         .unwrap()
-                        .tick_strings(&[
-                            "( ●    )",
-                            "(  ●   )",
-                            "(   ●  )",
-                            "(    ● )",
-                            "(     ●)",
-                            "(    ● )",
-                            "(   ●  )",
-                            "(  ●   )",
-                            "( ●    )",
-                            "(●     )",
-                        ]),
+                        .tick_strings(&["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]),
                 );
+                pb.set_message("Test execution in progress...");
                 Some(pb)
             } else {
                 None
@@ -186,50 +184,49 @@ impl TriggerTestRunInteractor {
                         s.finish_and_clear()
                     }
 
-                    match stat.state.as_ref() {
-                        "passed" => println!("Marathon Cloud execution finished"),
-                        "failure" => println!("Marathon Cloud execution finished with failures"),
-                        _ => println!("Marathon cloud execution crashed"),
-                    };
-                    println!("\tstate: {}", stat.state);
-
                     let base_report_url = Url::parse(base_url)?;
                     let base_report_url = &base_report_url[..Position::AfterPort];
-                    println!("\treport: {}/report/{}", base_report_url, id);
-                    println!(
-                        "\tpassed: {}",
-                        stat.passed
-                            .map(|x| x.to_string())
-                            .unwrap_or("missing".to_owned())
-                    );
-                    println!(
-                        "\tfailed: {}",
-                        stat.failed
-                            .map(|x| x.to_string())
-                            .unwrap_or("missing".to_owned())
-                    );
-                    println!(
-                        "\tignored: {}",
-                        stat.ignored
-                            .map(|x| x.to_string())
-                            .unwrap_or("missing".to_owned())
-                    );
+
+                    let state = stat.state.clone();
+                    let report = format!("{}/report/{}", base_report_url, id);
+                    let passed = stat.passed;
+                    let failed = stat.failed;
+                    let ignored = stat.ignored;
+                    let billable_time = stat
+                        .total_run_time_seconds
+                        .map(|t| Duration::from_secs_f64(t))
+                        .unwrap_or(Duration::from_secs(0));
+
+                    let event = TestRunFinished {
+                        id: id.clone(),
+                        state,
+                        report,
+                        passed,
+                        failed,
+                        ignored,
+                        billable_time,
+                    };
+                    formatter.message(&format!("{}", event));
+                    if let Some(result_file) = result_file {
+                        let mut file = File::create(&result_file).await?;
+                        let data = serialize_event(&result_file, &event)?;
+                        file.write_all(data.as_bytes()).await?;
+                    }
 
                     if let Some(output) = output {
-                        println!(
-                            "{} Fetching file list...",
-                            style(format!("[3/{}]", steps)).bold().dim()
-                        );
+                        formatter.stage("Fetching file list...");
                         let artifacts = fetch_artifact_list(&client, &id, &token).await?;
-                        println!(
-                            "{} Downloading files...",
-                            style(format!("[4/{}]", steps)).bold().dim()
-                        );
-                        download_artifacts(&client, &id, artifacts, output, &token, true).await?;
-                        println!(
-                            "{} Patching local relative paths...",
-                            style(format!("[5/{}]", steps)).bold().dim()
-                        );
+                        formatter.stage("Downloading files...");
+                        download_artifacts(
+                            &client,
+                            &id,
+                            artifacts,
+                            output,
+                            &token,
+                            no_progress_bars,
+                        )
+                        .await?;
+                        formatter.stage("Patching local relative paths...");
                     }
                     return match (stat.state.as_str(), ignore_test_failures) {
                         ("failure", Some(false) | None) => Ok(false),
@@ -239,9 +236,33 @@ impl TriggerTestRunInteractor {
                 sleep(Duration::new(5, 0)).await;
             }
         } else {
-            println!("Test run {} started", id);
+            let event = TestRunStarted { id };
+            formatter.message(&format!("{}", event));
+            if let Some(result_file) = result_file {
+                let mut file = File::create(&result_file).await?;
+                let data = serialize_event(&result_file, &event)?;
+                file.write_all(data.as_bytes()).await?;
+            }
+
             Ok(true)
         }
+    }
+}
+
+fn serialize_event<T: Serialize>(path: &Path, event: T) -> Result<String> {
+    match path.extension().map(|f| f.to_str()) {
+        //If no extension then treat as json
+        Some(Some("json")) | Some(None) => Ok(serde_json::to_string(&event)?),
+        Some(Some("yaml")) | Some(Some("yml")) => Ok(serde_yaml::to_string(&event)?),
+        Some(Some(x)) => Err(InputError::InvalidFileExtension {
+            extension: x.to_owned(),
+            supported: "json,yaml,yml".to_owned(),
+        }
+        .into()),
+        None => Err(InputError::NonUTF8Path {
+            path: path.to_owned(),
+        }
+        .into()),
     }
 }
 
@@ -253,19 +274,34 @@ impl GetDeviceCatalogInteractor {
         base_url: &str,
         api_key: &str,
         platform: &Platform,
+        no_progress_bar: bool,
     ) -> Result<()> {
-        println!("Fetching device catalog...");
+        let formatter = StandardFormatter::new(1);
+
+        let mut progress_bar: Option<ProgressBar> = None;
+        if !no_progress_bar {
+            let pb = ProgressBar::new_spinner();
+            pb.enable_steady_tick(Duration::from_millis(80));
+            pb.set_style(
+                ProgressStyle::with_template("{spinner:.blue} {msg}")?
+                    .tick_strings(&["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]),
+            );
+            pb.set_message("Fetching device catalog...");
+            progress_bar = Some(pb);
+        } else {
+            formatter.message("Fetching device catalog...");
+        }
         let client = RapiReqwestClient::new(base_url, api_key);
 
         let token = client.get_token().await?;
-        let out = match platform {
-            Platform::Android => {
-                let devices = client.get_devices_android(&token).await?;
-                serde_yaml::to_string(&devices)?
-            }
+        let devices = match platform {
+            Platform::Android => client.get_devices_android(&token).await?,
             Platform::iOS => todo!(),
         };
-        println!("{}", out);
+        if let Some(progress_bar) = progress_bar {
+            progress_bar.finish_and_clear();
+        }
+        println!("{}", serde_yaml::to_string(&devices)?);
         Ok(())
     }
 }

@@ -43,7 +43,7 @@ pub trait RapiClient {
         retry_quota_test_reactive: Option<u32>,
         analytics_read_only: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
-        progress: bool,
+        no_progress_bar: bool,
         flavor: Option<String>,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
@@ -131,7 +131,7 @@ impl RapiClient for RapiReqwestClient {
         retry_quota_test_reactive: Option<u32>,
         analytics_read_only: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
-        progress: bool,
+        no_progress_bar: bool,
         flavor: Option<String>,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
@@ -157,22 +157,22 @@ impl RapiClient for RapiReqwestClient {
             })?;
         let test_app_total_size = file.metadata().await?.len();
         let mut test_app_reader = ReaderStream::new(file);
-        let mut multi_progress: Option<MultiProgress> = if progress {
+        let mut multi_progress: Option<MultiProgress> = if !no_progress_bar {
             Some(MultiProgress::new())
         } else {
             None
         };
         let test_app_progress_bar;
         let test_app_body;
-        if progress {
+        if !no_progress_bar {
             let sty = ProgressStyle::with_template(
-                "{spinner} [{elapsed_precise}] [{wide_bar}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
+                "{spinner:.blue} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
             )
             .unwrap()
             .progress_chars("#>-");
 
             let pb = ProgressBar::new(test_app_total_size);
-            pb.enable_steady_tick(Duration::from_millis(120));
+            pb.enable_steady_tick(Duration::from_millis(80));
             test_app_progress_bar = multi_progress.as_mut().unwrap().add(pb);
             test_app_progress_bar.set_style(sty.clone());
             let mut test_app_progress = 0u64;
@@ -217,12 +217,12 @@ impl RapiClient for RapiReqwestClient {
             let mut app_reader = ReaderStream::new(file);
             let app_body;
 
-            if progress {
+            if !no_progress_bar {
                 let pb = ProgressBar::new(app_total_size);
-                pb.enable_steady_tick(Duration::from_millis(120));
+                pb.enable_steady_tick(Duration::from_millis(80));
                 let app_progress_bar = multi_progress.unwrap().add(pb);
                 let sty = ProgressStyle::with_template(
-                    "{spinner} [{elapsed_precise}] [{wide_bar}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
+                    "{spinner:.blue} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
                 )
                 .unwrap()
                 .progress_chars("#>-");
@@ -513,6 +513,8 @@ pub struct TestRun {
     pub ignored: Option<u32>,
     #[serde(rename = "completed", with = "time::serde::iso8601::option")]
     pub completed: Option<OffsetDateTime>,
+    #[serde(rename = "total_run_time")]
+    pub total_run_time_seconds: Option<f64>,
 }
 
 #[derive(Deserialize)]
