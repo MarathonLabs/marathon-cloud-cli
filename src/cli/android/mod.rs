@@ -130,13 +130,19 @@ pub(crate) async fn run(
     let retry_args = cli::validate::retry_args(retry_args);
     cli::validate::result_file_args(&common.result_file_args)?;
 
+    let present_wait: bool = match common.wait {
+        None => true,
+        Some(true) => true,
+        Some(false) => false,
+    };
+
     TriggerTestRunInteractor {}
         .execute(
             &api_args.base_url,
             &api_args.api_key,
             common.name,
             common.link,
-            common.wait,
+            present_wait,
             common.isolated,
             common.ignore_test_failures,
             common.code_coverage,

@@ -195,10 +195,9 @@ struct CommonRunArgs {
 
     #[arg(
         long,
-        default_value_t = true,
         help = "Wait for test run to finish if true, exits after triggering a run if false"
     )]
-    wait: bool,
+    wait: Option<bool>,
 
     #[arg(
         long,
