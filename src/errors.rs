@@ -33,6 +33,17 @@ pub enum EnvArgError {
     MissingValue { env_arg: String },
 }
 
+#[derive(Error, Debug, PartialEq)]
+pub enum PullArgError {
+    #[error(
+        "Invalid format for --pull-files argument. Expected format: ROOT:PATH. Your format: {arg}"
+    )]
+    InvalidFormat { arg: String },
+
+    #[error("Invalid root type for --pull-files argument. Expected types: [EXTERNAL_STORAGE, APP_DATA]. Your type: {used_type}")]
+    InvalidRootType { used_type: String },
+}
+
 #[derive(Error, Debug)]
 pub enum ArtifactError {
     #[error("Failed to retrieve artifact list.\nerror = {error}")]

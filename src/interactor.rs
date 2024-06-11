@@ -1,4 +1,4 @@
-use crate::cli::model::Platform;
+use crate::{cli::model::Platform, pull::PullFileConfig};
 use anyhow::Result;
 use globset::Glob;
 use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
@@ -125,6 +125,7 @@ impl TriggerTestRunInteractor {
         result_file: Option<PathBuf>,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
+        pull_file_config: Option<PullFileConfig>,
     ) -> Result<bool> {
         let client = RapiReqwestClient::new(base_url, api_key);
         let steps = match (wait, output) {
@@ -159,6 +160,7 @@ impl TriggerTestRunInteractor {
                 flavor,
                 env_args,
                 test_env_args,
+                pull_file_config,
             )
             .await?;
 
