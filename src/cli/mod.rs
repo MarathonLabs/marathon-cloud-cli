@@ -53,6 +53,7 @@ impl Cli {
                         instrumentation_arg,
                         retry_args,
                         analytics_args,
+                        pull_files,
                     } => {
                         android::run(
                             application,
@@ -66,6 +67,7 @@ impl Cli {
                             instrumentation_arg,
                             retry_args,
                             analytics_args,
+                            pull_files,
                         )
                         .await
                     }
@@ -410,6 +412,12 @@ enum RunCommands {
 
         #[arg(long, help = "Instrumentation arguments, example: FOO=BAR")]
         instrumentation_arg: Option<Vec<String>>,
+
+        #[arg(
+            long,
+            help = "Pull files from devices after the test run. The format is 'ROOT:PATH' where ROOT is one of [EXTERNAL_STORAGE, APP_DATA] and PATH is a relative path to the target file or directory. Example: 'EXTERNAL_STORAGE:Documents/some-results', 'APP_DATA:files/my_folder/some_file.txt'. Note: Files with the same name and path from different devices may overwrite each other."
+        )]
+        pull_files: Option<Vec<String>>,
     },
     #[allow(non_camel_case_types)]
     #[command(name = "ios")]

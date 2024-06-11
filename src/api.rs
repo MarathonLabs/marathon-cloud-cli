@@ -20,6 +20,7 @@ use tokio_util::io::ReaderStream;
 use crate::{
     errors::{ApiError, EnvArgError, InputError},
     filtering::model::SparseMarathonfile,
+    pull::PullFileConfig,
 };
 
 #[async_trait]
@@ -47,6 +48,7 @@ pub trait RapiClient {
         flavor: Option<String>,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
+        pull_file_config: Option<PullFileConfig>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -135,6 +137,7 @@ impl RapiClient for RapiReqwestClient {
         flavor: Option<String>,
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
+        pull_file_config: Option<PullFileConfig>,
     ) -> Result<String> {
         let url = format!("{}/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
@@ -327,6 +330,13 @@ impl RapiClient for RapiReqwestClient {
             form = form.text(
                 "filtering_configuration",
                 serde_json::to_string(&filtering_configuration)?,
+            );
+        }
+
+        if let Some(pull_file_config) = pull_file_config {
+            form = form.text(
+                "pull_file_config",
+                serde_json::to_string(&pull_file_config)?,
             );
         }
 

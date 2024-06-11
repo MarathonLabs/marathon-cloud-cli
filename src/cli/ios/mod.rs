@@ -269,6 +269,7 @@ If you provide any single or two of these parameters, the others will be inferre
             common.result_file_args.result_file,
             xctestrun_env,
             xctestrun_test_env,
+            None,
         )
         .await
 }

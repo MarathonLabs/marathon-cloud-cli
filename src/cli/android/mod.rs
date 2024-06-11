@@ -1,3 +1,4 @@
+use crate::pull::parse_pull_args;
 use anyhow::Result;
 use std::fmt::Display;
 
@@ -6,6 +7,7 @@ use crate::{
     errors::ConfigurationError,
     filtering,
     interactor::TriggerTestRunInteractor,
+    pull::PullFileConfig,
 };
 
 #[derive(Debug, clap::ValueEnum, Clone)]
@@ -83,6 +85,7 @@ pub(crate) async fn run(
     instrumentation_arg: Option<Vec<String>>,
     retry_args: RetryArgs,
     analytics_args: AnalyticsArgs,
+    pull_files: Option<Vec<String>>,
 ) -> Result<bool> {
     match (device.as_deref(), &flavor, &system_image, &os_version) {
         (Some("watch"), _, Some(SystemImage::Default) | None, Some(_) | None)
@@ -130,6 +133,11 @@ pub(crate) async fn run(
     let retry_args = cli::validate::retry_args(retry_args);
     cli::validate::result_file_args(&common.result_file_args)?;
 
+    let pull_file_config: Option<PullFileConfig> = match pull_files {
+        Some(args) => Some(parse_pull_args(args)?),
+        None => None,
+    };
+
     let present_wait: bool = match common.wait {
         None => true,
         Some(true) => true,
@@ -164,6 +172,7 @@ pub(crate) async fn run(
             common.result_file_args.result_file,
             instrumentation_arg,
             None,
+            pull_file_config,
         )
         .await
 }
