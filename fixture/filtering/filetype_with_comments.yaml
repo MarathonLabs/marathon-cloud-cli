@@ -1,0 +1,4 @@
+filteringConfiguration:
+  allowlist:
+    - type: "fully-qualified-test-name"
+      file: "tests_with_comments.txt"
