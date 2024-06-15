@@ -1,4 +1,5 @@
-filteringConfiguration:
+filteringConfiguration: #This is our filtering configuration block
   allowlist:
     - type: "fully-qualified-test-name"
+      # The following file contains actual values
       file: "tests_with_comments.txt"
