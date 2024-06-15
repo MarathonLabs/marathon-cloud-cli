@@ -54,6 +54,7 @@ h2 = "0.3.26"
 async_zip = { version = "0.0.17", features = ["tokio", "tokio-fs", "deflate"] }
 walkdir = "2.5.0"
 globset = "0.4"
+regex = "1.10.5"
 
 [dev-dependencies]
 rstest = "0.18.2"

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use regex::Regex;
 use shellexpand;
 use std::path::{Path, PathBuf};
 use tokio::{
@@ -265,8 +266,15 @@ async fn validate_filter(
                 values_file.read_to_string(&mut buffer).await?;
 
                 let mut values = Vec::new();
+
+                let comment_regex = Regex::new(r"\s+#.*$")?;
                 for value in buffer.lines() {
-                    values.push(value.to_owned());
+                    let value = value.trim();
+                    if value.is_empty() || value.starts_with('#') {
+                        continue;
+                    }
+                    let value = comment_regex.replace_all(value, "");
+                    values.push(value.as_ref().to_owned());
                 }
                 filter.values = Some(values);
                 filter.file = None;
@@ -419,6 +427,22 @@ mod tests {
         assert_eq!(
             result,
             r#"{"filteringConfiguration":{"allowlist":[{"type":"fully-qualified-test-name","values":["com.malinskiy.adam.SimpleTest#test1","com.malinskiy.adam.SimpleTest#test2"]}]}}"#
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_filetype_with_comments() -> Result<()> {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let fixture = Path::new(&manifest_dir)
+            .join("fixture")
+            .join("filtering")
+            .join("filetype_with_comments.yaml");
+        let result = convert(fixture).await?;
+        let result = serde_json::to_string(&result)?;
+        assert_eq!(
+            result,
+            r#"{"filteringConfiguration":{"allowlist":[{"type":"fully-qualified-test-name","values":["com.example.test1","com.example.test2","com.example","ClassName#test4","SimpleTestName","SimpleTestName2"]}]}}"#
         );
         Ok(())
     }
