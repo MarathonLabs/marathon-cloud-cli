@@ -1,0 +1,4 @@
+filteringConfiguration:
+  blockList:
+    - type: "fully-qualified-test-name"
+      jegex: ".*Test"

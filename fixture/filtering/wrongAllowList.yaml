@@ -1,0 +1,4 @@
+jilteringConfiguration:
+  allowList:
+    - type: "fully-qualified-test-name"
+      regex: ".*Test"

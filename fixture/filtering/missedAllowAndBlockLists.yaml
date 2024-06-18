@@ -1,0 +1,7 @@
+filtering_configuration:
+  bla:
+    - type: "fully-qualified-test-name"
+      regex: ".*Test"
+  bla2:
+    - type: "fully-qualified-test-name"
+      regex: ".*Test"
