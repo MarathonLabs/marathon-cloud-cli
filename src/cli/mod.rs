@@ -191,7 +191,9 @@ struct CommonRunArgs {
 
     #[arg(
         long,
-        help = "Test filters supplied as a YAML file following the schema at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic. For iOS see also https://docs.marathonlabs.io/runner/next/ios#test-plans"
+        help = "Test filters supplied as a YAML file following the schema at https://docs.marathonlabs.io/runner/configuration/filtering/#filtering-logic. 
+For iOS see also https://docs.marathonlabs.io/runner/next/ios#test-plans.
+Please be aware that if you use the 'annotation' filter type on Android, you should add the 'com.malinskiy.adam:android-junit4-test-annotation-producer:<version>' test dependency to parse custom test annotations."
     )]
     filter_file: Option<PathBuf>,
 
