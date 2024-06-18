@@ -97,6 +97,8 @@ pub enum FilteringConfigurationError {
     InvalidFilterType { mtype: String },
     #[error("Invalid configuration for filter {mtype}: {message}")]
     InvalidFilterConfiguration { mtype: String, message: String },
+    #[error("The following mandatory fields in --filter-file were missed: {fields}")]
+    MissedMandatoryFields { fields: String },
 }
 
 //Dumps the error to output recursively by looking at the source()

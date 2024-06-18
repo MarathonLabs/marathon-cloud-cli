@@ -1,0 +1,4 @@
+filtering_configuration:
+  allowlist:
+    - type: "fully-qualified-test-name"
+      regex: ".*Test"
