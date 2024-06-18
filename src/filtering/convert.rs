@@ -155,18 +155,18 @@ fn xctestplan_ids_to_filter(ids: &[String]) -> Filter {
 
 pub async fn validate(
     original_content: &String,
-    cnf: &mut FilteringConfiguration, 
-    workdir: &Path
+    cnf: &mut FilteringConfiguration,
+    workdir: &Path,
 ) -> Result<()> {
     if !original_content.contains("filteringConfiguration") {
-        anyhow::bail!(FilteringConfigurationError::MissedMandatoryFields { 
-            fields: "filteringConfiguration".to_string() 
+        anyhow::bail!(FilteringConfigurationError::MissedMandatoryFields {
+            fields: "filteringConfiguration".to_string()
         });
     }
 
     if !original_content.contains("allowlist") && !original_content.contains("blocklist") {
-        anyhow::bail!(FilteringConfigurationError::MissedMandatoryFields { 
-            fields: "At least one of 'allowlist' and 'blocklist' should be presented".to_string() 
+        anyhow::bail!(FilteringConfigurationError::MissedMandatoryFields {
+            fields: "At least one of 'allowlist' and 'blocklist' should be presented".to_string()
         });
     }
 
