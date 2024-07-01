@@ -82,7 +82,7 @@ pub enum InputError {
         supported: String,
     },
 
-    #[error("--concurrency-limit arg should be positive number")]
+    #[error("--concurrency-limit arg should be a positive number")]
     NonPositiveConcurrencyLimit,
 }
 
