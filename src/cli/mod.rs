@@ -232,6 +232,12 @@ Please be aware that if you use the 'annotation' filter type on Android, you sho
 
     #[command(flatten)]
     result_file_args: ResultFileArgs,
+
+    #[arg(
+        long,
+        help = "Set a limit on the maximum number of concurrent devices for the particular run"
+    )]
+    concurrency_limit: Option<u32>,
 }
 
 #[derive(Debug, Args)]

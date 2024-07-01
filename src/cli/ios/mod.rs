@@ -270,6 +270,7 @@ If you provide any single or two of these parameters, the others will be inferre
             xctestrun_env,
             xctestrun_test_env,
             None,
+            common.concurrency_limit,
         )
         .await
 }

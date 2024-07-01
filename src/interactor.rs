@@ -126,6 +126,7 @@ impl TriggerTestRunInteractor {
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
         pull_file_config: Option<PullFileConfig>,
+        concurrency_limit: Option<u32>,
     ) -> Result<bool> {
         let client = RapiReqwestClient::new(base_url, api_key);
         let steps = match (wait, output) {
@@ -161,6 +162,7 @@ impl TriggerTestRunInteractor {
                 env_args,
                 test_env_args,
                 pull_file_config,
+                concurrency_limit,
             )
             .await?;
 
