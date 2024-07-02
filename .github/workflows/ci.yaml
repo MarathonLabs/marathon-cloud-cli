@@ -433,7 +433,7 @@ jobs:
         path: ${{ steps.debian-package.outputs.DPKG_PATH }}
 
     - name: Publish archives and packages
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       if: steps.is-release.outputs.IS_RELEASE
       with:
         files: |
