@@ -1,5 +1,8 @@
 name: deploy-docker-image
 
+permissions:
+  contents: write
+
 on:
   push:
     branches:

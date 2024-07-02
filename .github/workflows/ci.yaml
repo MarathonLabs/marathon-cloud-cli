@@ -1,4 +1,8 @@
 name: cicd
+
+permissions:
+  contents: write
+
 env:
   CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
   MSRV_FEATURES: --no-default-features
