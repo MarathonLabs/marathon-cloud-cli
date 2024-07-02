@@ -1,4 +1,4 @@
-use crate::pull::parse_pull_args;
+use crate::{errors::InputError, pull::parse_pull_args};
 use anyhow::Result;
 use std::fmt::Display;
 
@@ -138,6 +138,10 @@ pub(crate) async fn run(
         None => None,
     };
 
+    if common.concurrency_limit <= Some(0) {
+        return Err(InputError::NonPositiveConcurrencyLimit)?;
+    }
+
     let present_wait: bool = match common.wait {
         None => true,
         Some(true) => true,
@@ -173,6 +177,7 @@ pub(crate) async fn run(
             instrumentation_arg,
             None,
             pull_file_config,
+            common.concurrency_limit,
         )
         .await
 }

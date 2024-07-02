@@ -49,6 +49,7 @@ pub trait RapiClient {
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
         pull_file_config: Option<PullFileConfig>,
+        concurrency_limit: Option<u32>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -138,6 +139,7 @@ impl RapiClient for RapiReqwestClient {
         env_args: Option<Vec<String>>,
         test_env_args: Option<Vec<String>>,
         pull_file_config: Option<PullFileConfig>,
+        concurrency_limit: Option<u32>,
     ) -> Result<String> {
         let url = format!("{}/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
@@ -338,6 +340,10 @@ impl RapiClient for RapiReqwestClient {
                 "pull_file_config",
                 serde_json::to_string(&pull_file_config)?,
             );
+        }
+
+        if let Some(concurrency_limit) = concurrency_limit {
+            form = form.text("concurrency_limit", concurrency_limit.to_string())
         }
 
         let response = self.client.post(url).multipart(form).send().await?;

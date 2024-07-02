@@ -232,6 +232,13 @@ Please be aware that if you use the 'annotation' filter type on Android, you sho
 
     #[command(flatten)]
     result_file_args: ResultFileArgs,
+
+    #[arg(
+        long,
+        help = "Limit maximum number of concurrent devices. 
+Warning: Using this argument may BREAK the 15-minute run promise!"
+    )]
+    concurrency_limit: Option<u32>,
 }
 
 #[derive(Debug, Args)]
@@ -417,7 +424,10 @@ enum RunCommands {
 
         #[arg(
             long,
-            help = "Pull files from devices after the test run. The format is 'ROOT:PATH' where ROOT is one of [EXTERNAL_STORAGE, APP_DATA] and PATH is a relative path to the target file or directory. Example: 'EXTERNAL_STORAGE:Documents/some-results', 'APP_DATA:files/my_folder/some_file.txt'. Note: Files with the same name and path from different devices may overwrite each other."
+            help = "Pull files from devices after the test run. 
+The format is 'ROOT:PATH' where ROOT is one of [EXTERNAL_STORAGE, APP_DATA] and PATH is a relative path to the target file or directory. 
+Example: 'EXTERNAL_STORAGE:Documents/some-results', 'APP_DATA:files/my_folder/some_file.txt'. 
+Note: Files with the same name and path from different devices may overwrite each other."
         )]
         pull_files: Option<Vec<String>>,
     },
