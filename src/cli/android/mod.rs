@@ -138,8 +138,10 @@ pub(crate) async fn run(
         None => None,
     };
 
-    if common.concurrency_limit <= Some(0) {
-        return Err(InputError::NonPositiveConcurrencyLimit)?;
+    if let Some(limit) = common.concurrency_limit {
+        if limit == 0 {
+            return Err(InputError::NonPositiveConcurrencyLimit)?;
+        }
     }
 
     let present_wait: bool = match common.wait {
