@@ -180,6 +180,8 @@ pub(crate) async fn run(
             None,
             pull_file_config,
             common.concurrency_limit,
+            None,
+            None,
         )
         .await
 }

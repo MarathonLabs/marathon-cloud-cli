@@ -187,6 +187,8 @@ pub(crate) async fn run(
     xctestplan_target_name: Option<String>,
     retry_args: super::RetryArgs,
     analytics_args: super::AnalyticsArgs,
+    test_timeout_default: Option<u32>,
+    test_timeout_max: Option<u32>,
 ) -> Result<bool> {
     let supported_configs = get_supported_configs();
     let (device, xcode_version, os_version) =
@@ -271,6 +273,8 @@ If you provide any single or two of these parameters, the others will be inferre
             xctestrun_test_env,
             None,
             common.concurrency_limit,
+            test_timeout_default,
+            test_timeout_max,
         )
         .await
 }

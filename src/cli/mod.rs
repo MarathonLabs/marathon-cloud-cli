@@ -85,6 +85,8 @@ impl Cli {
                         xctestplan_target_name,
                         retry_args,
                         analytics_args,
+                        test_timeout_default,
+                        test_timeout_max,
                     } => {
                         ios::run(
                             application,
@@ -100,6 +102,8 @@ impl Cli {
                             xctestplan_target_name,
                             retry_args,
                             analytics_args,
+                            test_timeout_default,
+                            test_timeout_max,
                         )
                         .await
                     }
@@ -487,5 +491,17 @@ Note: Files with the same name and path from different devices may overwrite eac
 
         #[arg(long, help = "Target name to use for test filtering in .xctestplan")]
         xctestplan_target_name: Option<String>,
+
+        #[arg(
+            long,
+            help = "Set the xctestrun default execution time an individual test is given to execute. Seconds"
+        )]
+        test_timeout_default: Option<u32>,
+
+        #[arg(
+            long,
+            help = "Set the maximum execution time an individual test is given to execute, regardless of the test's preferred allowance. Seconds"
+        )]
+        test_timeout_max: Option<u32>,
     },
 }
