@@ -140,7 +140,7 @@ pub(crate) async fn run(
 
     if let Some(limit) = common.concurrency_limit {
         if limit == 0 {
-            return Err(InputError::NonPositiveConcurrencyLimit)?;
+            return Err(InputError::NonPositiveValue { arg: "--concurrency-limit".to_owned() })?;
         }
     }
 

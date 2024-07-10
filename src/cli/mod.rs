@@ -494,13 +494,14 @@ Note: Files with the same name and path from different devices may overwrite eac
 
         #[arg(
             long,
-            help = "Set the xctestrun default execution time an individual test is given to execute. Seconds"
+            default_value = "600",
+            help = "Default timeout for each test in seconds"
         )]
         test_timeout_default: Option<u32>,
 
         #[arg(
             long,
-            help = "Set the maximum execution time an individual test is given to execute, regardless of the test's preferred allowance. Seconds"
+            help = "Maximum test timeout in seconds, overriding all other test timeout settings"
         )]
         test_timeout_max: Option<u32>,
     },
