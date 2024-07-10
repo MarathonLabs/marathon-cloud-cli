@@ -239,19 +239,25 @@ If you provide any single or two of these parameters, the others will be inferre
 
     if let Some(limit) = common.concurrency_limit {
         if limit == 0 {
-            return Err(InputError::NonPositiveValue { arg: "--concurrency-limit".to_owned() })?;
+            return Err(InputError::NonPositiveValue {
+                arg: "--concurrency-limit".to_owned(),
+            })?;
         }
     }
 
     if let Some(limit) = test_timeout_default {
         if limit == 0 {
-            return Err(InputError::NonPositiveValue { arg: "--test-timeout-default".to_owned() })?;
+            return Err(InputError::NonPositiveValue {
+                arg: "--test-timeout-default".to_owned(),
+            })?;
         }
     }
 
     if let Some(limit) = test_timeout_max {
         if limit == 0 {
-            return Err(InputError::NonPositiveValue { arg: "--test-timeout-max".to_owned() })?;
+            return Err(InputError::NonPositiveValue {
+                arg: "--test-timeout-max".to_owned(),
+            })?;
         }
     }
 
