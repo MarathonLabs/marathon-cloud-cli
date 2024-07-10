@@ -187,6 +187,8 @@ pub(crate) async fn run(
     xctestplan_target_name: Option<String>,
     retry_args: super::RetryArgs,
     analytics_args: super::AnalyticsArgs,
+    test_timeout_default: Option<u32>,
+    test_timeout_max: Option<u32>,
 ) -> Result<bool> {
     let supported_configs = get_supported_configs();
     let (device, xcode_version, os_version) =
@@ -235,6 +237,30 @@ If you provide any single or two of these parameters, the others will be inferre
     let retry_args = cli::validate::retry_args(retry_args);
     cli::validate::result_file_args(&common.result_file_args)?;
 
+    if let Some(limit) = common.concurrency_limit {
+        if limit == 0 {
+            return Err(InputError::NonPositiveValue {
+                arg: "--concurrency-limit".to_owned(),
+            })?;
+        }
+    }
+
+    if let Some(limit) = test_timeout_default {
+        if limit == 0 {
+            return Err(InputError::NonPositiveValue {
+                arg: "--test-timeout-default".to_owned(),
+            })?;
+        }
+    }
+
+    if let Some(limit) = test_timeout_max {
+        if limit == 0 {
+            return Err(InputError::NonPositiveValue {
+                arg: "--test-timeout-max".to_owned(),
+            })?;
+        }
+    }
+
     let present_wait: bool = match common.wait {
         None => true,
         Some(true) => true,
@@ -271,6 +297,8 @@ If you provide any single or two of these parameters, the others will be inferre
             xctestrun_test_env,
             None,
             common.concurrency_limit,
+            test_timeout_default,
+            test_timeout_max,
         )
         .await
 }

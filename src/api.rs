@@ -50,6 +50,8 @@ pub trait RapiClient {
         test_env_args: Option<Vec<String>>,
         pull_file_config: Option<PullFileConfig>,
         concurrency_limit: Option<u32>,
+        test_timeout_default: Option<u32>,
+        test_timeout_max: Option<u32>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -140,6 +142,8 @@ impl RapiClient for RapiReqwestClient {
         test_env_args: Option<Vec<String>>,
         pull_file_config: Option<PullFileConfig>,
         concurrency_limit: Option<u32>,
+        test_timeout_default: Option<u32>,
+        test_timeout_max: Option<u32>,
     ) -> Result<String> {
         let url = format!("{}/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
@@ -344,6 +348,14 @@ impl RapiClient for RapiReqwestClient {
 
         if let Some(concurrency_limit) = concurrency_limit {
             form = form.text("concurrency_limit", concurrency_limit.to_string())
+        }
+
+        if let Some(test_timeout_default) = test_timeout_default {
+            form = form.text("test_timeout_default", test_timeout_default.to_string())
+        }
+
+        if let Some(test_timeout_max) = test_timeout_max {
+            form = form.text("test_timeout_max", test_timeout_max.to_string())
         }
 
         let response = self.client.post(url).multipart(form).send().await?;
