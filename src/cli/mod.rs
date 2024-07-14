@@ -494,7 +494,7 @@ Note: Files with the same name and path from different devices may overwrite eac
 
         #[arg(
             long,
-            default_value = "600",
+            default_value = "300",
             help = "Default timeout for each test in seconds"
         )]
         test_timeout_default: Option<u32>,
