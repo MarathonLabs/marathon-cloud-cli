@@ -185,7 +185,7 @@ mod tests {
     use std::fs::{self, File};
     use std::io::Write;
     use std::path::Path;
-    use tempdir::TempDir;
+    use tempfile::tempdir;
 
     fn read_fixture(fixture_name: &str) -> String {
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
@@ -198,7 +198,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_patch_allure_paths_directory_does_not_exist() {
-        let temp_dir = TempDir::new("test_patch_allure_paths").unwrap();
+        let temp_dir = tempdir().unwrap();
         let output_path = temp_dir.path().join("non_existing");
 
         let result = patch_allure_paths(&output_path).await;
@@ -207,7 +207,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_patch_allure_paths_no_json_files() {
-        let temp_dir = TempDir::new("test_patch_allure_paths").unwrap();
+        let temp_dir = tempdir().unwrap();
         let allure_results_path = temp_dir.path().join("report/allure-results");
         fs::create_dir_all(&allure_results_path).unwrap();
 
@@ -217,7 +217,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_patch_allure_paths_patch_json_files() {
-        let temp_dir = TempDir::new("test_patch_allure_paths").unwrap();
+        let temp_dir = tempdir().unwrap();
         let allure_results_path = temp_dir.path().join("report/allure-results");
         fs::create_dir_all(&allure_results_path).unwrap();
 
@@ -243,7 +243,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_patch_allure_paths_no_patch_required() {
-        let temp_dir = TempDir::new("test_patch_allure_paths").unwrap();
+        let temp_dir = tempdir().unwrap();
         let allure_results_path = temp_dir.path().join("report/allure-results");
         fs::create_dir_all(&allure_results_path).unwrap();
 
