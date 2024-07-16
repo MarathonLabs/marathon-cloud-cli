@@ -1,0 +1,59 @@
+{
+  "uuid": "05e857d6-2862-47a4-ac10-b32654198e6e",
+  "historyId": "36171c8a02fe5023f0352d87f359c4d3",
+  "fullName": "com.matsiuk.testgenerator.generated.Some10LoadTest.test10",
+  "labels": [
+    {
+      "name": "host",
+      "value": "127.0.0.1:5037:172.17.0.4:5555"
+    },
+    {
+      "name": "package",
+      "value": "com.matsiuk.testgenerator.generated"
+    },
+    {
+      "name": "testClass",
+      "value": "com.matsiuk.testgenerator.generated.Some10LoadTest"
+    },
+    {
+      "name": "testMethod",
+      "value": "test10"
+    },
+    {
+      "name": "suite",
+      "value": "com.matsiuk.testgenerator.generated.Some10LoadTest"
+    }
+  ],
+  "links": [],
+  "name": "test10",
+  "status": "failed",
+  "statusDetails": {
+    "known": false,
+    "muted": false,
+    "flaky": false,
+    "message": "androidx.test.espresso.NoActivityResumedException: No activities found. Did you forget to launch the activity by calling getActivity() or startActivitySync or similar?",
+    "trace": "androidx.test.espresso.NoActivityResumedException: No activities found. Did you forget to launch the activity by calling getActivity() or startActivitySync or similar?\n\tat dalvik.system.VMStack.getThreadStackTrace(Native Method)\n\tat java.lang.Thread.getStackTrace(Thread.java:1736)\n\tat com.kaspersky.kaspresso.failure.FailureLoggingProviderImpl.describedWith(FailureLoggingProviderImpl.kt:96)\n\tat com.kaspersky.kaspresso.failure.FailureLoggingProviderImpl.logDescriptionAndThrow(FailureLoggingProviderImpl.kt:69)\n\tat com.kaspersky.kaspresso.failure.LoggingFailureHandler.logDescriptionAndThrow(Unknown Source:2)\n\tat com.kaspersky.kaspresso.failure.LoggingFailureHandler.handle(LoggingFailureHandler.kt:21)\n\tat androidx.test.espresso.ViewInteraction.waitForAndHandleInteractionResults(ViewInteraction.java:8)\n\tat androidx.test.espresso.ViewInteraction.check(ViewInteraction.java:12)\n\tat com.kaspersky.kaspresso.interceptors.tolibrary.kakao.KakaoViewInterceptor$interceptCheck$1.invoke(KakaoViewInterceptor.kt:29)\n\tat com.kaspersky.kaspresso.interceptors.tolibrary.kakao.KakaoViewInterceptor$interceptCheck$1.invoke(KakaoViewInterceptor.kt:27)\n\tat com.kaspersky.kaspresso.autoscroll.AutoScrollProviderImpl.withAutoScroll(AutoScrollProviderImpl.kt:31)\n\tat com.kaspersky.kaspresso.interceptors.behavior.impl.autoscroll.AutoScrollViewBehaviorInterceptor.withAutoScroll(Unknown Source:12)\n\tat com.kaspersky.kaspresso.interceptors.behavior.impl.autoscroll.AutoScrollViewBehaviorInterceptor.intercept(AutoScrollViewBehaviorInterceptor.kt:26)\n\tat com.kaspersky.kaspresso.interceptors.behavior.impl.autoscroll.AutoScrollViewBehaviorInterceptor.intercept(AutoScrollViewBehaviorInterceptor.kt:14)\n\tat com.kaspersky.kaspresso.interceptors.tolibrary.kakao.KakaoViewInterceptor$interceptCheck$2$1.invoke(KakaoViewInterceptor.kt:34)\n\tat com.kaspersky.kaspresso.interceptors.tolibrary.kakao.KakaoViewInterceptor$interceptCheck$2$1.invoke(KakaoViewInterceptor.kt:34)\n\tat com.kaspersky.kaspresso.systemsafety.SystemDialogSafetyProviderImpl.passSystemDialogs(SystemDialogSafetyProviderImpl.kt:56)\n\tat com.kaspersky.kaspresso.interceptors.behavior.impl.systemsafety.SystemDialogSafetyViewBehaviorInterceptor.passSystemDialogs(Unknown Source:7)\n\tat com.kaspersky.kaspresso.interceptors.behavior.impl.systemsafety.SystemDialogSafetyViewBehaviorInterceptor.intercept(SystemDialogSafetyViewBehaviorInterceptor.kt:28)\n\tat com.kaspersky.kaspresso.interceptors.behavior.impl.systemsafety.SystemDialogSafetyViewBehaviorInterceptor.intercept(SystemDialogSafetyViewBehaviorInterceptor.kt:15)\n\tat com.kaspersky.kaspresso.interceptors.tolibrary.kakao.KakaoViewInterceptor$interceptCheck$2$1.invoke(KakaoViewInterceptor.kt:34)\n\tat com.kaspersky.kaspresso.interceptors.tolibrary.kakao.KakaoViewInterceptor$interceptCheck$2$1.invoke(KakaoViewInterceptor.kt:34)\n\tat com.kaspersky.kaspresso.flakysafety.algorithm.FlakySafetyAlgorithm.invokeFlakySafely(FlakySafetyAlgorithm.kt:32)\n\tat com.kaspersky.kaspresso.flakysafety.algorithm.FlakySafetyAlgorithm.invokeFlakySafely$default(FlakySafetyAlgorithm.kt:22)\n\tat com.kaspersky.kaspresso.flakysafety.FlakySafetyProviderSimpleImpl.flakySafely(FlakySafetyProviderSimpleImpl.kt:27)\n\tat com.kaspersky.kaspresso.interceptors.behavior.impl.flakysafety.FlakySafeViewBehaviorInterceptor.flakySafely(Unknown Source:7)\n\tat com.kaspersky.kaspresso.interceptors.behavior.impl.flakysafety.FlakySafeViewBehaviorInterceptor.intercept(FlakySafeViewBehaviorInterceptor.kt:26)\n\tat com.kaspersky.kaspresso.interceptors.behavior.impl.flakysafety.FlakySafeViewBehaviorInterceptor.intercept(FlakySafeViewBehaviorInterceptor.kt:14)\n\tat com.kaspersky.kaspresso.interceptors.tolibrary.kakao.KakaoViewInterceptor$interceptCheck$2$1.invoke(KakaoViewInterceptor.kt:34)\n\tat com.kaspersky.kaspresso.interceptors.tolibrary.kakao.KakaoViewInterceptor$interceptCheck$2$1.invoke(KakaoViewInterceptor.kt:34)\n\tat com.kaspersky.kaspresso.interceptors.tolibrary.kakao.KakaoViewInterceptor.interceptCheck(KakaoViewInterceptor.kt:36)\n\tat com.kaspersky.kaspresso.interceptors.tolibrary.LibraryInterceptorsInjector$injectKaspressoInKakao$1$1$1.invoke(LibraryInterceptorsInjector.kt:54)\n\tat com.kaspersky.kaspresso.interceptors.tolibrary.LibraryInterceptorsInjector$injectKaspressoInKakao$1$1$1.invoke(LibraryInterceptorsInjector.kt:54)\n\tat io.github.kakaocup.kakao.delegate.Delegate$DefaultImpls.interceptOnCheck(Delegate.kt:61)\n\tat io.github.kakaocup.kakao.delegate.Delegate$DefaultImpls.interceptCheck$intercept(Delegate.kt:28)\n\tat io.github.kakaocup.kakao.delegate.Delegate$DefaultImpls.interceptCheck(Delegate.kt:33)\n\tat io.github.kakaocup.kakao.delegate.ViewInteractionDelegate.interceptCheck(ViewInteractionDelegate.kt:21)\n\tat io.github.kakaocup.kakao.delegate.ViewInteractionDelegate.interceptCheck(ViewInteractionDelegate.kt:21)\n\tat io.github.kakaocup.kakao.delegate.ViewInteractionDelegate.check(ViewInteractionDelegate.kt:26)\n\tat io.github.kakaocup.kakao.common.assertions.BaseAssertions$DefaultImpls.isVisible(BaseAssertions.kt:92)\n\tat io.github.kakaocup.kakao.common.views.KBaseView.isVisible(KBaseView.kt:32)\n\tat com.matsiuk.testgenerator.generated.Some10LoadTest$test10$1$1$1$1.invoke(Some10LoadTest.kt:35)\n\tat com.matsiuk.testgenerator.generated.Some10LoadTest$test10$1$1$1$1.invoke(Some10LoadTest.kt:34)\n\tat io.github.kakaocup.kakao.common.views.KDSLView.invoke(KDSLView.kt:12)\n\tat com.matsiuk.testgenerator.generated.Some10LoadTest$test10$1$1$1.invoke(Some10LoadTest.kt:34)\n\tat com.matsiuk.testgenerator.generated.Some10LoadTest$test10$1$1$1.invoke(Some10LoadTest.kt:33)\n\tat io.github.kakaocup.kakao.screen.Screen.invoke(Screen.kt:119)\n\tat com.matsiuk.testgenerator.generated.Some10LoadTest$test10$1$1.invoke(Some10LoadTest.kt:33)\n\tat com.matsiuk.testgenerator.generated.Some10LoadTest$test10$1$1.invoke(Some10LoadTest.kt:31)\n\tat com.kaspersky.kaspresso.testcases.core.testcontext.TestContext.step(TestContext.kt:39)\n\tat com.matsiuk.testgenerator.generated.Some10LoadTest$test10$1.invoke(Some10LoadTest.kt:31)\n\tat com.matsiuk.testgenerator.generated.Some10LoadTest$test10$1.invoke(Some10LoadTest.kt:30)\n\tat com.kaspersky.kaspresso.testcases.core.TestRunner.runMainTestSection(TestRunner.kt:146)\n\tat com.kaspersky.kaspresso.testcases.core.TestRunner.run(TestRunner.kt:59)\n\tat com.kaspersky.kaspresso.testcases.core.sections.MainTestSection.run(MainTestSection.kt:29)\n\tat com.kaspersky.kaspresso.testcases.api.testcase.BaseTestCase.run(BaseTestCase.kt:92)\n\tat com.kaspersky.kaspresso.testcases.api.testcase.BaseTestCase.run$default(BaseTestCase.kt:87)\n\tat com.matsiuk.testgenerator.generated.Some10LoadTest.test10(Some10LoadTest.kt:30)"
+  },
+  "stage": "scheduled",
+  "steps": [],
+  "attachments": [
+    {
+      "name": "Video",
+      "source": "/home/jenkins/agent/workspace/android/work/output/video/omni/127.0.0.1-5037-172.17.0.4-5555/com.matsiuk.testgenerator.generated.Some10LoadTest#test10-6d563180-073b-4664-bfe7-b62d03d55fa7.mp4",
+      "type": "video/mp4"
+    },
+    {
+      "name": "Log",
+      "source": "/home/jenkins/agent/workspace/android/work/output/logs/omni/127.0.0.1-5037-172.17.0.4-5555/com.matsiuk.testgenerator.generated.Some10LoadTest#test10-6d563180-073b-4664-bfe7-b62d03d55fa7.log",
+      "type": "text/plain"
+    },
+    {
+      "name": "SomeFile",
+      "source": "/home/jenkins/agent/workspace/android/work/output/some_folder/omni/127.0.0.1-5037-172.17.0.4-5555/SomeFile.txt",
+      "type": "text/plain"
+    }
+  ],
+  "parameters": [],
+  "start": 1721128106461,
+  "stop": 1721128113778
+}
