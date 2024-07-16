@@ -18,7 +18,7 @@ use tokio::{
 
 use crate::{
     api::{Artifact, RapiClient, RapiReqwestClient},
-    artifacts::{download_artifacts, fetch_artifact_list},
+    artifacts::{download_artifacts, fetch_artifact_list, patch_allure_paths},
     errors::InputError,
     filtering::model::SparseMarathonfile,
     formatter::{Formatter, StandardFormatter},
@@ -64,6 +64,7 @@ impl DownloadArtifactsInteractor {
         formatter.stage("Downloading files...");
         download_artifacts(&client, id, artifacts, output, &token, no_progress_bars).await?;
         formatter.stage("Patching local relative paths...");
+        patch_allure_paths(output)?;
 
         formatter.message(&format!("Done in {}", HumanDuration(started.elapsed())));
         Ok(())
@@ -235,6 +236,7 @@ impl TriggerTestRunInteractor {
                         )
                         .await?;
                         formatter.stage("Patching local relative paths...");
+                        patch_allure_paths(output)?;
                     }
                     return match (stat.state.as_str(), ignore_test_failures) {
                         ("failure", Some(false) | None) => Ok(false),
