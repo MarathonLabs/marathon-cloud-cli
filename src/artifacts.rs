@@ -111,7 +111,7 @@ pub async fn download_artifacts(
     Ok(())
 }
 
-pub fn patch_allure_paths(output: &Path) -> Result<()> {
+pub async fn patch_allure_paths(output: &Path) -> Result<()> {
     // Define the required path
     let required_path = output.join("report/allure-results");
 
@@ -128,7 +128,7 @@ pub fn patch_allure_paths(output: &Path) -> Result<()> {
                 if let Ok(entry) = entry {
                     let path = entry.path();
                     if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
-                        if let Err(e) = patch_file(&path) {
+                        if let Err(e) = patch_file(&path).await {
                             panic!("Failed to patch file {:?}: {}", path, e);
                         }
                     }
@@ -142,7 +142,7 @@ pub fn patch_allure_paths(output: &Path) -> Result<()> {
     Ok(())
 }
 
-fn patch_file(path: &Path) -> io::Result<()> {
+async fn patch_file(path: &Path) -> io::Result<()> {
     // Read the JSON file
     let mut file = File::open(&path)?;
     let mut content = String::new();
@@ -159,6 +159,7 @@ fn patch_file(path: &Path) -> io::Result<()> {
         for attachment in attachments {
             if let Some(source) = attachment.get_mut("source") {
                 if let Some(source_str) = source.as_str() {
+                    // touch only logs and video
                     if let Some(index) = source_str
                         .find("logs/omni")
                         .or_else(|| source_str.find("video/omni"))
@@ -200,7 +201,7 @@ mod tests {
         let temp_dir = TempDir::new("test_patch_allure_paths").unwrap();
         let output_path = temp_dir.path().join("non_existing");
 
-        let result = patch_allure_paths(&output_path);
+        let result = patch_allure_paths(&output_path).await;
         assert!(result.is_ok());
     }
 
@@ -210,7 +211,7 @@ mod tests {
         let allure_results_path = temp_dir.path().join("report/allure-results");
         fs::create_dir_all(&allure_results_path).unwrap();
 
-        let result = patch_allure_paths(temp_dir.path());
+        let result = patch_allure_paths(temp_dir.path()).await;
         assert!(result.is_ok());
     }
 
@@ -227,7 +228,7 @@ mod tests {
         let mut file = File::create(&json_file_path).unwrap();
         file.write_all(original_json.as_bytes()).unwrap();
 
-        let result = patch_allure_paths(temp_dir.path());
+        let result = patch_allure_paths(temp_dir.path()).await;
         assert!(result.is_ok());
 
         let mut file = File::open(&json_file_path).unwrap();
@@ -253,7 +254,7 @@ mod tests {
         let mut file = File::create(&json_file_path).unwrap();
         file.write_all(original_json.as_bytes()).unwrap();
 
-        let result = patch_allure_paths(temp_dir.path());
+        let result = patch_allure_paths(temp_dir.path()).await;
         assert!(result.is_ok());
 
         let mut file = File::open(&json_file_path).unwrap();

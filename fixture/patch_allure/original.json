@@ -46,6 +46,11 @@
       "name": "Log",
       "source": "/home/jenkins/agent/workspace/android/work/output/logs/omni/127.0.0.1-5037-172.17.0.4-5555/com.matsiuk.testgenerator.generated.Some10LoadTest#test10-6d563180-073b-4664-bfe7-b62d03d55fa7.log",
       "type": "text/plain"
+    },
+    {
+      "name": "SomeFile",
+      "source": "/home/jenkins/agent/workspace/android/work/output/some_folder/omni/127.0.0.1-5037-172.17.0.4-5555/SomeFile.txt",
+      "type": "text/plain"
     }
   ],
   "parameters": [],

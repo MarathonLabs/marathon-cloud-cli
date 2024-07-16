@@ -64,7 +64,7 @@ impl DownloadArtifactsInteractor {
         formatter.stage("Downloading files...");
         download_artifacts(&client, id, artifacts, output, &token, no_progress_bars).await?;
         formatter.stage("Patching local relative paths...");
-        patch_allure_paths(output)?;
+        patch_allure_paths(output).await?;
 
         formatter.message(&format!("Done in {}", HumanDuration(started.elapsed())));
         Ok(())
@@ -236,7 +236,7 @@ impl TriggerTestRunInteractor {
                         )
                         .await?;
                         formatter.stage("Patching local relative paths...");
-                        patch_allure_paths(output)?;
+                        patch_allure_paths(output).await?;
                     }
                     return match (stat.state.as_str(), ignore_test_failures) {
                         ("failure", Some(false) | None) => Ok(false),
