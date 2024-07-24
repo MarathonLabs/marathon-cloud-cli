@@ -8,8 +8,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use log::debug;
-use log::info;
 use reqwest::{Body, Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -24,7 +22,6 @@ use crate::{
 };
 
 use tokio_util::io::ReaderStream;
-use tokio::io::AsyncReadExt;
 
 #[async_trait]
 pub trait RapiClient {
@@ -187,7 +184,9 @@ impl RapiClient for RapiReqwestClient {
             concurrency_limit: concurrency_limit.clone(),
             country: None,
             device: device.clone(),
-            filtering_configuration: Some(serde_json::to_string(&filtering_configuration)?),
+            filtering_configuration: filtering_configuration
+                .map(|config| serde_json::to_string(&config).ok())
+                .flatten(),
             flavor: flavor.clone(),
             isolated: isolated.clone(),
             language: None,
@@ -196,7 +195,9 @@ impl RapiClient for RapiReqwestClient {
             os_version: os_version.clone(),
             // TODO add project,
             project: None,
-            pull_file_config: Some(serde_json::to_string(&pull_file_config)?),
+            pull_file_config: pull_file_config
+                .map(|config| serde_json::to_string(&config).ok())
+                .flatten(),
             retry_quota_test_preventive: retry_quota_test_preventive.clone(),
             retry_quota_test_reactive: retry_quota_test_reactive.clone(),
             retry_quota_test_uncompleted: retry_quota_test_uncompleted.clone(),
@@ -404,11 +405,7 @@ async fn upload_to_s3(
     let request_body = UploadRequest {
         filename: file_name.to_string(),
     };
-    let upload_url_response = client
-        .post(url)
-        .json(&request_body)
-        .send()
-        .await?;
+    let upload_url_response = client.post(url).json(&request_body).send().await?;
     let upload_url_response = api_error_adapter(upload_url_response)
         .await?
         .json::<UploadUrlResponse>()
