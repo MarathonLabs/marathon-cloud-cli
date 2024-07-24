@@ -303,7 +303,7 @@ struct ApiArgs {
 
     #[arg(
         long,
-        default_value = "https://cloud.marathonlabs.io/api/v1",
+        default_value = "https://cloud.marathonlabs.io/api",
         help = "Base url for Marathon Cloud API"
     )]
     base_url: String,

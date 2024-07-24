@@ -197,7 +197,7 @@ impl TriggerTestRunInteractor {
                     let base_report_url = &base_report_url[..Position::AfterPort];
 
                     let state = stat.state.clone();
-                    let report = format!("{}/report/{}", base_report_url, id);
+                    let report = format!("{}/v1/report/{}", base_report_url, id);
                     let passed = stat.passed;
                     let failed = stat.failed;
                     let ignored = stat.ignored;
