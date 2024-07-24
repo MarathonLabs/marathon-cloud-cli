@@ -52,6 +52,7 @@ pub trait RapiClient {
         concurrency_limit: Option<u32>,
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
+        project: Option<String>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -144,6 +145,7 @@ impl RapiClient for RapiReqwestClient {
         concurrency_limit: Option<u32>,
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
+        project: Option<String>,
     ) -> Result<String> {
         let url = format!("{}/v2/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
@@ -193,8 +195,7 @@ impl RapiClient for RapiReqwestClient {
             link: link.clone(),
             name: name.clone(),
             os_version: os_version.clone(),
-            // TODO add project,
-            project: None,
+            project: project.clone(),
             pull_file_config: pull_file_config
                 .map(|config| serde_json::to_string(&config).ok())
                 .flatten(),

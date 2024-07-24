@@ -243,6 +243,12 @@ Please be aware that if you use the 'annotation' filter type on Android, you sho
 Warning: Using this argument may BREAK the 15-minute run promise!"
     )]
     concurrency_limit: Option<u32>,
+
+    #[arg(
+        long,
+        help = "The unique identifier (slug) for the project"
+    )]
+    project: Option<String>,
 }
 
 #[derive(Debug, Args)]
