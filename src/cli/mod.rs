@@ -244,10 +244,7 @@ Warning: Using this argument may BREAK the 15-minute run promise!"
     )]
     concurrency_limit: Option<u32>,
 
-    #[arg(
-        long,
-        help = "The unique identifier (slug) for the project"
-    )]
+    #[arg(long, help = "The unique identifier (slug) for the project")]
     project: Option<String>,
 }
 
