@@ -1,5 +1,6 @@
 mod api;
 mod artifacts;
+mod bundle;
 pub mod cli;
 mod compression;
 mod errors;

@@ -296,7 +296,7 @@ If you provide any single or two of these parameters, the others will be inferre
             filtering_configuration,
             &common.output,
             Some(application),
-            test_application,
+            Some(test_application),
             os_version.map(|x| x.to_string()),
             None,
             device.map(|x| x.to_string()),
@@ -312,6 +312,8 @@ If you provide any single or two of these parameters, the others will be inferre
             test_timeout_default,
             test_timeout_max,
             common.project,
+            None,
+            None,
         )
         .await
 }

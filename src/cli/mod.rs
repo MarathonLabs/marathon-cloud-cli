@@ -54,6 +54,8 @@ impl Cli {
                         retry_args,
                         analytics_args,
                         pull_files,
+                        application_bundle,
+                        library_bundle,
                     } => {
                         android::run(
                             application,
@@ -68,6 +70,8 @@ impl Cli {
                             retry_args,
                             analytics_args,
                             pull_files,
+                            application_bundle,
+                            library_bundle,
                         )
                         .await
                     }
@@ -396,7 +400,7 @@ enum RunCommands {
             long,
             help = "test application filepath, example: /home/user/workspace/testSample.apk"
         )]
-        test_application: PathBuf,
+        test_application: Option<PathBuf>,
 
         #[arg(value_enum, long, help = "OS version")]
         os_version: Option<android::OsVersion>,
@@ -437,6 +441,24 @@ Example: 'EXTERNAL_STORAGE:Documents/some-results', 'APP_DATA:files/my_folder/so
 Note: Files with the same name and path from different devices may overwrite each other."
         )]
         pull_files: Option<Vec<String>>,
+
+        #[arg(
+            long,
+            conflicts_with_all = &["application", "test_application"],
+            help = "Application bundle containing the application apk and test application apk.
+The format is '<app_apk_path>,<test_apk_path>'. The delimeter is a comma.
+Example: '--application-bundle apks/feature1-app-debug.apk,apks/feature1-app-debug-androidTest.apk --application-bundle apks/feature2-app-debug.apk,apks/feature2-app-debug-androidTest.apk'"
+        )]
+        application_bundle: Option<Vec<String>>,
+
+        #[arg(
+            long,
+            conflicts_with_all = &["application", "test_application"],
+            help = "Library bundle containing the library test apk. Library testing requires only Test APK.
+The format is '<test_apk_path>'.
+Example: '--library-bundle apks/library1-debug-androidTest.apk --library-bundle apks/library2-debug-androidTest.apk'"
+        )]
+        library_bundle: Option<Vec<PathBuf>>,
     },
     #[allow(non_camel_case_types)]
     #[command(name = "ios")]

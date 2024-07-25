@@ -1,8 +1,9 @@
 use crate::{errors::InputError, pull::parse_pull_args};
 use anyhow::Result;
-use std::fmt::Display;
+use std::{fmt::Display, path::PathBuf};
 
 use crate::{
+    bundle,
     cli::{self, AnalyticsArgs, ApiArgs, CommonRunArgs, RetryArgs},
     errors::ConfigurationError,
     filtering,
@@ -75,7 +76,7 @@ impl Display for Flavor {
 
 pub(crate) async fn run(
     application: Option<std::path::PathBuf>,
-    test_application: std::path::PathBuf,
+    test_application: Option<std::path::PathBuf>,
     os_version: Option<OsVersion>,
     system_image: Option<SystemImage>,
     device: Option<String>,
@@ -86,7 +87,39 @@ pub(crate) async fn run(
     retry_args: RetryArgs,
     analytics_args: AnalyticsArgs,
     pull_files: Option<Vec<String>>,
+    application_bundle: Option<Vec<String>>,
+    library_bundle: Option<Vec<PathBuf>>,
 ) -> Result<bool> {
+    if application.is_none()
+        && test_application.is_none()
+        && application_bundle.is_none()
+        && library_bundle.is_none()
+    {
+        return Err(ConfigurationError::UnsupportedRunConfiguration {
+            message:
+                "Please set up APKs for testing. The following argument combinations are possible:
+--test-application <TEST_APPLICATION> - for library testing
+--application <APPLICATION> --test-application <TEST_APPLICATION> - for application testing
+--application-bundle <APPLICATION>,<TEST_APPLICATION> - advanced mode that allows setting up one or more application bundles for testing
+--library-bundle <TEST_APPLICATION> - advanced mode that allows setting up one or more library bundles for testing"
+                    .into(),
+        }
+        .into());
+    }
+
+    if application.is_some()
+        && test_application.is_none()
+        && application_bundle.is_none()
+        && library_bundle.is_none()
+    {
+        return Err(ConfigurationError::UnsupportedRunConfiguration {
+            message: "Please set up Testing APK:
+--test-application <TEST_APPLICATION>"
+                .into(),
+        }
+        .into());
+    }
+
     match (device.as_deref(), &flavor, &system_image, &os_version) {
         (Some("watch"), _, Some(SystemImage::Default) | None, Some(_) | None)
         | (
@@ -122,6 +155,32 @@ pub(crate) async fn run(
             .into());
         }
         _ => {}
+    }
+
+    if let Some(app_path) = application.clone() {
+        if !app_path.exists() {
+            return Err(InputError::InvalidFileName { path: app_path })?;
+        }
+    }
+
+    if let Some(app_path) = test_application.clone() {
+        if !app_path.exists() {
+            return Err(InputError::InvalidFileName { path: app_path })?;
+        }
+    }
+
+    let mut transformed_application_bundle = None;
+    if let Some(application_bundle) = application_bundle {
+        transformed_application_bundle =
+            Some(bundle::transform_and_validate_bundle(application_bundle)?);
+    }
+
+    if let Some(lib_bundles) = library_bundle.clone() {
+        for bundle in lib_bundles {
+            if !bundle.exists() {
+                return Err(InputError::InvalidFileName { path: bundle })?;
+            }
+        }
     }
 
     let filter_file = common.filter_file.map(filtering::convert::convert);
@@ -185,6 +244,8 @@ pub(crate) async fn run(
             None,
             None,
             common.project,
+            transformed_application_bundle,
+            library_bundle,
         )
         .await
 }
