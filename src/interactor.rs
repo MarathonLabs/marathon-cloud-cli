@@ -1,4 +1,4 @@
-use crate::{cli::model::Platform, pull::PullFileConfig};
+use crate::{bundle::ApplicationBundle, cli::model::Platform, pull::PullFileConfig};
 use anyhow::Result;
 use globset::Glob;
 use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
@@ -115,7 +115,7 @@ impl TriggerTestRunInteractor {
         filtering_configuration: Option<SparseMarathonfile>,
         output: &Option<PathBuf>,
         application: Option<PathBuf>,
-        test_application: PathBuf,
+        test_application: Option<PathBuf>,
         os_version: Option<String>,
         system_image: Option<String>,
         device: Option<String>,
@@ -131,6 +131,8 @@ impl TriggerTestRunInteractor {
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
         project: Option<String>,
+        application_bundle: Option<Vec<ApplicationBundle>>,
+        library_bundle: Option<Vec<PathBuf>>,
     ) -> Result<bool> {
         let client = RapiReqwestClient::new(base_url, api_key);
         let steps = match (wait, output) {
@@ -170,6 +172,8 @@ impl TriggerTestRunInteractor {
                 test_timeout_default,
                 test_timeout_max,
                 project,
+                application_bundle,
+                library_bundle,
             )
             .await?;
 

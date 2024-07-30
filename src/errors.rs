@@ -61,6 +61,9 @@ pub enum InputError {
     #[error("Can't open file. Double check you've supplied correct path\npath = {path}")]
     OpenFileFailure { path: PathBuf, error: io::Error },
 
+    #[error("Invalid application bundle. The bundle should contain only the APP path and the TEST APP path. \nExample: '--application-bundle apks/feature1-app-debug.apk,apks/feature1-app-debug-androidTest.apk' \nbundle = {bundle}")]
+    InvalidApplicationBundle { bundle: String },
+
     #[error("Invalid xctestplan file: no test targets specified. Double check you've supplied correct path")]
     XctestplanMissingTargets,
 

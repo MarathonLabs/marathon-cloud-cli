@@ -10,12 +10,14 @@ use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::{Body, Client, StatusCode};
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 use time::OffsetDateTime;
 use tokio::fs::{create_dir_all, File};
 use tokio::io;
 
 use crate::{
+    bundle::ApplicationBundle,
     errors::{ApiError, EnvArgError, InputError},
     filtering::model::SparseMarathonfile,
     pull::PullFileConfig,
@@ -29,7 +31,7 @@ pub trait RapiClient {
     async fn create_run(
         &self,
         app: Option<PathBuf>,
-        test_app: PathBuf,
+        test_app: Option<PathBuf>,
         name: Option<String>,
         link: Option<String>,
         platform: String,
@@ -53,6 +55,8 @@ pub trait RapiClient {
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
         project: Option<String>,
+        application_bundle: Option<Vec<ApplicationBundle>>,
+        library_bundle: Option<Vec<PathBuf>>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -122,7 +126,7 @@ impl RapiClient for RapiReqwestClient {
     async fn create_run(
         &self,
         app: Option<PathBuf>,
-        test_app: PathBuf,
+        test_app: Option<PathBuf>,
         name: Option<String>,
         link: Option<String>,
         platform: String,
@@ -146,22 +150,30 @@ impl RapiClient for RapiReqwestClient {
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
         project: Option<String>,
+        application_bundle: Option<Vec<ApplicationBundle>>,
+        library_bundle: Option<Vec<PathBuf>>,
     ) -> Result<String> {
         let url = format!("{}/v2/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
         let url = reqwest::Url::parse_with_params(&url, &params)
             .map_err(|error| ApiError::InvalidParameters { error })?;
 
-        let s3_test_app_path = upload_to_s3(
-            &self.client,
-            self.base_url.clone(),
-            self.api_key.clone(),
-            test_app.clone(),
-            no_progress_bar,
-        )
-        .await?;
+        let mut s3_test_app_path = None;
+        if let Some(test_app) = test_app {
+            s3_test_app_path = Some(
+                upload_to_s3(
+                    &self.client,
+                    self.base_url.clone(),
+                    self.api_key.clone(),
+                    test_app.clone(),
+                    no_progress_bar,
+                )
+                .await?,
+            );
+        }
+
         let mut s3_app_path = None;
-        if let Some(ref app) = app {
+        if let Some(app) = app {
             s3_app_path = Some(
                 upload_to_s3(
                     &self.client,
@@ -173,6 +185,61 @@ impl RapiClient for RapiReqwestClient {
                 .await?,
             );
         }
+
+        let mut create_run_bundles: Vec<CreateRunBundle> = Vec::new();
+
+        if let Some(app_bundles) = application_bundle {
+            for app_bundle in app_bundles {
+                let s3_app_path = upload_to_s3(
+                    &self.client,
+                    self.base_url.clone(),
+                    self.api_key.clone(),
+                    app_bundle.app_path.clone(),
+                    no_progress_bar,
+                )
+                .await?;
+
+                let s3_test_app_path = upload_to_s3(
+                    &self.client,
+                    self.base_url.clone(),
+                    self.api_key.clone(),
+                    app_bundle.test_app_path.clone(),
+                    no_progress_bar,
+                )
+                .await?;
+
+                let create_run_bundle = CreateRunBundle {
+                    s3_app_path: Some(s3_app_path),
+                    s3_test_app_path: s3_test_app_path.clone(),
+                };
+                create_run_bundles.push(create_run_bundle);
+            }
+        }
+
+        if let Some(library_bundles) = library_bundle {
+            for lib_bundle in library_bundles {
+                let s3_test_app_path = upload_to_s3(
+                    &self.client,
+                    self.base_url.clone(),
+                    self.api_key.clone(),
+                    lib_bundle.clone(),
+                    no_progress_bar,
+                )
+                .await?;
+
+                let create_run_bundle = CreateRunBundle {
+                    s3_app_path: None,
+                    s3_test_app_path: s3_test_app_path.clone(),
+                };
+                create_run_bundles.push(create_run_bundle);
+            }
+        }
+
+        let bundles = if create_run_bundles.is_empty() {
+            None
+        } else {
+            Some(create_run_bundles)
+        };
 
         let env_args_map = vec_to_hashmap(env_args)?;
         let test_env_args_map = vec_to_hashmap(test_env_args)?;
@@ -208,6 +275,7 @@ impl RapiClient for RapiReqwestClient {
             test_timeout_max: test_timeout_max.clone(),
             env_args: env_args_map,
             test_env_args: test_env_args_map,
+            bundles: bundles,
         };
 
         let response = self.client.post(url).json(&create_request).send().await?;
@@ -477,58 +545,72 @@ struct UploadUrlResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[skip_serializing_none]
 struct CreateRunRequest {
-    s3_test_app_path: String,
+    #[serde(rename = "platform")]
     platform: String,
 
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    analytics_read_only: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    code_coverage: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    concurrency_limit: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    country: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    device: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    filtering_configuration: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    flavor: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    isolated: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    language: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    link: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    name: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    os_version: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    project: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pull_file_config: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    retry_quota_test_preventive: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    retry_quota_test_reactive: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    retry_quota_test_uncompleted: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "s3_test_app_path", default)]
+    s3_test_app_path: Option<String>,
+    #[serde(rename = "s3_app_path", default)]
     s3_app_path: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "analytics_read_only", default)]
+    analytics_read_only: Option<bool>,
+    #[serde(rename = "code_coverage", default)]
+    code_coverage: Option<bool>,
+    #[serde(rename = "concurrency_limit", default)]
+    concurrency_limit: Option<u32>,
+    #[serde(rename = "country", default)]
+    country: Option<String>,
+    #[serde(rename = "device", default)]
+    device: Option<String>,
+    #[serde(rename = "filtering_configuration", default)]
+    filtering_configuration: Option<String>,
+    #[serde(rename = "flavor", default)]
+    flavor: Option<String>,
+    #[serde(rename = "isolated", default)]
+    isolated: Option<bool>,
+    #[serde(rename = "language", default)]
+    language: Option<String>,
+    #[serde(rename = "link", default)]
+    link: Option<String>,
+    #[serde(rename = "name", default)]
+    name: Option<String>,
+    #[serde(rename = "os_version", default)]
+    os_version: Option<String>,
+    #[serde(rename = "project", default)]
+    project: Option<String>,
+    #[serde(rename = "pull_file_config", default)]
+    pull_file_config: Option<String>,
+    #[serde(rename = "retry_quota_test_preventive", default)]
+    retry_quota_test_preventive: Option<u32>,
+    #[serde(rename = "retry_quota_test_reactive", default)]
+    retry_quota_test_reactive: Option<u32>,
+    #[serde(rename = "retry_quota_test_uncompleted", default)]
+    retry_quota_test_uncompleted: Option<u32>,
+    #[serde(rename = "system_image", default)]
     system_image: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "xcode_version", default)]
     xcode_version: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "test_timeout_default", default)]
     test_timeout_default: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "test_timeout_max", default)]
     test_timeout_max: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "env_args", default)]
     env_args: Option<HashMap<String, String>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "test_env_args", default)]
     test_env_args: Option<HashMap<String, String>>,
+    #[serde(rename = "bundles", default)]
+    bundles: Option<Vec<CreateRunBundle>>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct CreateRunBundle {
+    #[serde(rename = "s3_test_app_path")]
+    s3_test_app_path: String,
+
+    #[serde(rename = "s3_app_path", skip_serializing_if = "Option::is_none")]
+    s3_app_path: Option<String>,
 }
 
 #[derive(Deserialize)]
