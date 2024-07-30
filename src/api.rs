@@ -8,20 +8,20 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use reqwest::{multipart::Part, Body, Client, StatusCode};
+use reqwest::{Body, Client, StatusCode};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use time::OffsetDateTime;
-use tokio::{
-    fs::{create_dir_all, File},
-    io,
-};
-use tokio_util::io::ReaderStream;
+use tokio::fs::{create_dir_all, File};
+use tokio::io;
 
 use crate::{
     errors::{ApiError, EnvArgError, InputError},
     filtering::model::SparseMarathonfile,
     pull::PullFileConfig,
 };
+
+use tokio_util::io::ReaderStream;
 
 #[async_trait]
 pub trait RapiClient {
@@ -52,6 +52,7 @@ pub trait RapiClient {
         concurrency_limit: Option<u32>,
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
+        project: Option<String>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -91,7 +92,7 @@ impl RapiReqwestClient {
 impl Default for RapiReqwestClient {
     fn default() -> Self {
         Self {
-            base_url: String::from("https:://cloud.marathonlabs.io/api/v1"),
+            base_url: String::from("https:://cloud.marathonlabs.io/api"),
             api_key: "".into(),
             client: Client::builder()
                 .pool_idle_timeout(Some(Duration::from_secs(20)))
@@ -105,7 +106,7 @@ impl Default for RapiReqwestClient {
 #[async_trait]
 impl RapiClient for RapiReqwestClient {
     async fn get_token(&self) -> Result<String> {
-        let url = format!("{}/user/jwt", self.base_url);
+        let url = format!("{}/v1/user/jwt", self.base_url);
         let params = [("api_key", self.api_key.clone())];
         let url = reqwest::Url::parse_with_params(&url, &params)
             .map_err(|error| ApiError::InvalidParameters { error })?;
@@ -144,221 +145,72 @@ impl RapiClient for RapiReqwestClient {
         concurrency_limit: Option<u32>,
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
+        project: Option<String>,
     ) -> Result<String> {
-        let url = format!("{}/run", self.base_url);
+        let url = format!("{}/v2/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
         let url = reqwest::Url::parse_with_params(&url, &params)
             .map_err(|error| ApiError::InvalidParameters { error })?;
 
-        let mut form = reqwest::multipart::Form::new().text("platform", platform);
-
-        let file = File::open(&test_app)
-            .await
-            .map_err(|error| InputError::OpenFileFailure {
-                path: test_app.clone(),
-                error,
-            })?;
-        let test_app_file_name = test_app
-            .file_name()
-            .map(|val| val.to_string_lossy().to_string())
-            .ok_or(InputError::InvalidFileName {
-                path: test_app.clone(),
-            })?;
-        let test_app_total_size = file.metadata().await?.len();
-        let mut test_app_reader = ReaderStream::new(file);
-        let mut multi_progress: Option<MultiProgress> = if !no_progress_bar {
-            Some(MultiProgress::new())
-        } else {
-            None
-        };
-        let test_app_progress_bar;
-        let test_app_body;
-        if !no_progress_bar {
-            let sty = ProgressStyle::with_template(
-                "{spinner:.blue} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
-            )
-            .unwrap()
-            .progress_chars("#>-");
-
-            let pb = ProgressBar::new(test_app_total_size);
-            pb.enable_steady_tick(Duration::from_millis(80));
-            test_app_progress_bar = multi_progress.as_mut().unwrap().add(pb);
-            test_app_progress_bar.set_style(sty.clone());
-            let mut test_app_progress = 0u64;
-            let test_app_stream = async_stream::stream! {
-                while let Some(chunk) = test_app_reader.next().await {
-                    let test_app_progress_bar = test_app_progress_bar.clone();
-                    if let Ok(chunk) = &chunk {
-                        let new = min(test_app_progress + (chunk.len() as u64), test_app_total_size);
-                        test_app_progress = new;
-                        test_app_progress_bar.set_position(new);
-                        if test_app_progress >= test_app_total_size {
-                            test_app_progress_bar.finish_and_clear();
-                        }
-                    }
-                    yield chunk;
-                }
-            };
-            test_app_body = Body::wrap_stream(test_app_stream);
-        } else {
-            test_app_body = Body::wrap_stream(test_app_reader);
-        }
-        form = form.part(
-            "testapp",
-            Part::stream_with_length(test_app_body, test_app_total_size)
-                .file_name(test_app_file_name),
-        );
-
-        if let Some(app) = app {
-            let file = File::open(&app)
-                .await
-                .map_err(|error| InputError::OpenFileFailure {
-                    path: app.clone(),
-                    error,
-                })?;
-
-            let app_file_name = app
-                .file_name()
-                .map(|val| val.to_string_lossy().to_string())
-                .ok_or(InputError::InvalidFileName { path: app.clone() })?;
-
-            let app_total_size = file.metadata().await?.len();
-            let mut app_reader = ReaderStream::new(file);
-            let app_body;
-
-            if !no_progress_bar {
-                let pb = ProgressBar::new(app_total_size);
-                pb.enable_steady_tick(Duration::from_millis(80));
-                let app_progress_bar = multi_progress.unwrap().add(pb);
-                let sty = ProgressStyle::with_template(
-                    "{spinner:.blue} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
+        let s3_test_app_path = upload_to_s3(
+            &self.client,
+            self.base_url.clone(),
+            self.api_key.clone(),
+            test_app.clone(),
+            no_progress_bar,
+        )
+        .await?;
+        let mut s3_app_path = None;
+        if let Some(ref app) = app {
+            s3_app_path = Some(
+                upload_to_s3(
+                    &self.client,
+                    self.base_url.clone(),
+                    self.api_key.clone(),
+                    app.clone(),
+                    no_progress_bar,
                 )
-                .unwrap()
-                .progress_chars("#>-");
-                app_progress_bar.set_style(sty);
-
-                let mut app_progress = 0u64;
-                let app_stream = async_stream::stream! {
-                    while let Some(chunk) = app_reader.next().await {
-                        let app_progress_bar = app_progress_bar.clone();
-                        if let Ok(chunk) = &chunk {
-                            let new = min(app_progress + (chunk.len() as u64), app_total_size);
-                            app_progress = new;
-                            app_progress_bar.set_position(new);
-                            if app_progress >= app_total_size {
-                                app_progress_bar.finish_and_clear();
-                            }
-                        }
-                        yield chunk;
-                    }
-                };
-                app_body = Body::wrap_stream(app_stream);
-            } else {
-                app_body = Body::wrap_stream(app_reader);
-            }
-
-            form = form.part(
-                "app",
-                Part::stream_with_length(app_body, app_total_size).file_name(app_file_name),
+                .await?,
             );
         }
 
-        if let Some(name) = name {
-            form = form.text("name", name)
-        }
+        let env_args_map = vec_to_hashmap(env_args)?;
+        let test_env_args_map = vec_to_hashmap(test_env_args)?;
 
-        if let Some(env_args) = env_args {
-            form = process_args(form, env_args, "env_args")?;
-        }
+        let create_request = CreateRunRequest {
+            s3_test_app_path: s3_test_app_path.clone(),
+            platform: platform.clone(),
+            s3_app_path: s3_app_path.clone(),
+            analytics_read_only: analytics_read_only.clone(),
+            code_coverage: code_coverage.clone(),
+            concurrency_limit: concurrency_limit.clone(),
+            country: None,
+            device: device.clone(),
+            filtering_configuration: filtering_configuration
+                .map(|config| serde_json::to_string(&config).ok())
+                .flatten(),
+            flavor: flavor.clone(),
+            isolated: isolated.clone(),
+            language: None,
+            link: link.clone(),
+            name: name.clone(),
+            os_version: os_version.clone(),
+            project: project.clone(),
+            pull_file_config: pull_file_config
+                .map(|config| serde_json::to_string(&config).ok())
+                .flatten(),
+            retry_quota_test_preventive: retry_quota_test_preventive.clone(),
+            retry_quota_test_reactive: retry_quota_test_reactive.clone(),
+            retry_quota_test_uncompleted: retry_quota_test_uncompleted.clone(),
+            system_image: system_image.clone(),
+            xcode_version: xcode_version.clone(),
+            test_timeout_default: test_timeout_default.clone(),
+            test_timeout_max: test_timeout_max.clone(),
+            env_args: env_args_map,
+            test_env_args: test_env_args_map,
+        };
 
-        if let Some(test_env_args) = test_env_args {
-            form = process_args(form, test_env_args, "test_env_args")?;
-        }
-
-        if let Some(link) = link {
-            form = form.text("link", link)
-        }
-
-        if let Some(os_version) = os_version {
-            form = form.text("osversion", os_version)
-        }
-
-        if let Some(system_image) = system_image {
-            form = form.text("system_image", system_image)
-        }
-
-        if let Some(device) = device {
-            form = form.text("device", device)
-        }
-
-        if let Some(xcode_version) = xcode_version {
-            form = form.text("xcode_version", xcode_version.to_string())
-        }
-
-        if let Some(isolated) = isolated {
-            form = form.text("isolated", isolated.to_string())
-        }
-
-        if let Some(code_coverage) = code_coverage {
-            form = form.text("code_coverage", code_coverage.to_string())
-        }
-
-        if let Some(retry_quota_test_uncompleted) = retry_quota_test_uncompleted {
-            form = form.text(
-                "retry_quota_test_uncompleted",
-                retry_quota_test_uncompleted.to_string(),
-            )
-        }
-
-        if let Some(retry_quota_test_preventive) = retry_quota_test_preventive {
-            form = form.text(
-                "retry_quota_test_preventive",
-                retry_quota_test_preventive.to_string(),
-            )
-        }
-
-        if let Some(retry_quota_test_reactive) = retry_quota_test_reactive {
-            form = form.text(
-                "retry_quota_test_reactive",
-                retry_quota_test_reactive.to_string(),
-            )
-        }
-
-        if let Some(analytics_read_only) = analytics_read_only {
-            form = form.text("analytics_read_only", analytics_read_only.to_string())
-        }
-
-        if let Some(flavor) = flavor {
-            form = form.text("flavor", flavor)
-        }
-
-        if let Some(filtering_configuration) = filtering_configuration {
-            form = form.text(
-                "filtering_configuration",
-                serde_json::to_string(&filtering_configuration)?,
-            );
-        }
-
-        if let Some(pull_file_config) = pull_file_config {
-            form = form.text(
-                "pull_file_config",
-                serde_json::to_string(&pull_file_config)?,
-            );
-        }
-
-        if let Some(concurrency_limit) = concurrency_limit {
-            form = form.text("concurrency_limit", concurrency_limit.to_string())
-        }
-
-        if let Some(test_timeout_default) = test_timeout_default {
-            form = form.text("test_timeout_default", test_timeout_default.to_string())
-        }
-
-        if let Some(test_timeout_max) = test_timeout_max {
-            form = form.text("test_timeout_max", test_timeout_max.to_string())
-        }
-
-        let response = self.client.post(url).multipart(form).send().await?;
+        let response = self.client.post(url).json(&create_request).send().await?;
         let response = api_error_adapter(response)
             .await?
             .json::<CreateRunResponse>()
@@ -369,7 +221,7 @@ impl RapiClient for RapiReqwestClient {
     }
 
     async fn get_run(&self, id: &str) -> Result<TestRun> {
-        let url = format!("{}/run/{}", self.base_url, id);
+        let url = format!("{}/v1/run/{}", self.base_url, id);
         let params = [("api_key", self.api_key.clone())];
         let url = reqwest::Url::parse_with_params(&url, &params)
             .map_err(|error| ApiError::InvalidParameters { error })?;
@@ -384,7 +236,7 @@ impl RapiClient for RapiReqwestClient {
     }
 
     async fn list_artifact(&self, jwt_token: &str, id: &str) -> Result<Vec<Artifact>> {
-        let url = format!("{}/artifact/{}", self.base_url, id);
+        let url = format!("{}/v1/artifact/{}", self.base_url, id);
 
         let response = self
             .client
@@ -408,7 +260,7 @@ impl RapiClient for RapiReqwestClient {
         base_path: PathBuf,
         run_id: &str,
     ) -> Result<()> {
-        let url = format!("{}/artifact", self.base_url);
+        let url = format!("{}/v1/artifact", self.base_url);
         let params = [("key", artifact.id.to_owned())];
         let url = reqwest::Url::parse_with_params(&url, &params)
             .map_err(|error| ApiError::InvalidParameters { error })?;
@@ -446,7 +298,7 @@ impl RapiClient for RapiReqwestClient {
     }
 
     async fn get_devices_android(&self, jwt_token: &str) -> Result<Vec<AndroidDevice>> {
-        let url = format!("{}/devices/android", self.base_url);
+        let url = format!("{}/v1/devices/android", self.base_url);
 
         let response = self
             .client
@@ -464,33 +316,36 @@ impl RapiClient for RapiReqwestClient {
     }
 }
 
-fn process_args(
-    mut form: reqwest::multipart::Form,
-    args: Vec<String>,
-    key_prefix: &str,
-) -> Result<reqwest::multipart::Form, EnvArgError> {
-    for arg in args {
-        let key_value: Vec<&str> = arg.splitn(2, '=').collect();
-        if key_value.len() == 2 {
-            let key = key_value[0];
-            let value = key_value
-                .get(1)
-                .map(|val| val.to_string())
-                .unwrap_or_else(|| "".to_string());
-            if value.is_empty() {
-                return Err(EnvArgError::MissingValue {
-                    env_arg: arg.clone(),
-                });
+fn vec_to_hashmap(
+    vec: Option<Vec<String>>,
+) -> Result<Option<HashMap<String, String>>, EnvArgError> {
+    match vec {
+        Some(args) => {
+            let mut map = HashMap::new();
+            for arg in args {
+                let key_value: Vec<&str> = arg.splitn(2, '=').collect();
+                if key_value.len() == 2 {
+                    let key = key_value[0];
+                    let value = key_value
+                        .get(1)
+                        .map(|val| val.to_string())
+                        .unwrap_or_else(|| "".to_string());
+                    if value.is_empty() {
+                        return Err(EnvArgError::MissingValue {
+                            env_arg: arg.clone(),
+                        });
+                    }
+                    map.insert(key.to_string(), value.to_string());
+                } else {
+                    return Err(EnvArgError::InvalidKeyValue {
+                        env_arg: arg.clone(),
+                    });
+                }
             }
-            let key_formatted = format!("{}[{}]", key_prefix, key);
-            form = form.text(key_formatted, value);
-        } else {
-            return Err(EnvArgError::InvalidKeyValue {
-                env_arg: arg.clone(),
-            });
+            Ok(Some(map))
         }
+        None => Ok(None),
     }
-    Ok(form)
 }
 
 async fn api_error_adapter(response: reqwest::Response) -> Result<reqwest::Response> {
@@ -517,6 +372,163 @@ async fn api_error_adapter(response: reqwest::Response) -> Result<reqwest::Respo
             }
         }
     }
+}
+
+async fn upload_to_s3(
+    client: &Client,
+    base_url_with_params: String,
+    api_key: String,
+    file_path: PathBuf,
+    no_progress_bar: bool,
+) -> Result<String> {
+    // Open file
+    let file = File::open(&file_path)
+        .await
+        .map_err(|error| InputError::OpenFileFailure {
+            path: file_path.clone(),
+            error,
+        })?;
+
+    // Extract filename from PathBuf
+    let file_name = file_path
+        .file_name()
+        .map(|val| val.to_string_lossy().to_string())
+        .ok_or(InputError::InvalidFileName {
+            path: file_path.clone(),
+        })?;
+
+    // Request upload URL
+    let url = format!("{}/v2/upload/presigned-url", base_url_with_params);
+    let params = [("api_key", api_key.clone())];
+    let url = reqwest::Url::parse_with_params(&url, &params)
+        .map_err(|error| ApiError::InvalidParameters { error })?;
+
+    let request_body = UploadRequest {
+        filename: file_name.to_string(),
+    };
+    let upload_url_response = client.post(url).json(&request_body).send().await?;
+    let upload_url_response = api_error_adapter(upload_url_response)
+        .await?
+        .json::<UploadUrlResponse>()
+        .await
+        .map_err(|error| ApiError::DeserializationFailure { error })?;
+
+    // Progress stuff
+    let file_total_size = file.metadata().await?.len();
+    let mut file_reader = ReaderStream::new(file);
+    let mut multi_progress: Option<MultiProgress> = if !no_progress_bar {
+        Some(MultiProgress::new())
+    } else {
+        None
+    };
+    let file_progress_bar;
+    let file_body;
+    if !no_progress_bar {
+        let sty = ProgressStyle::with_template(
+            "{spinner:.blue} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
+        )
+        .unwrap()
+        .progress_chars("#>-");
+
+        let pb = ProgressBar::new(file_total_size);
+        pb.enable_steady_tick(Duration::from_millis(80));
+        file_progress_bar = multi_progress.as_mut().unwrap().add(pb);
+        file_progress_bar.set_style(sty.clone());
+        let mut file_progress = 0u64;
+        let file_stream = async_stream::stream! {
+            while let Some(chunk) = file_reader.next().await {
+                let file_progress_bar = file_progress_bar.clone();
+                if let Ok(chunk) = &chunk {
+                    let new = min(file_progress + (chunk.len() as u64), file_total_size);
+                    file_progress = new;
+                    file_progress_bar.set_position(new);
+                    if file_progress >= file_total_size {
+                        file_progress_bar.finish_and_clear();
+                    }
+                }
+                yield chunk;
+            }
+        };
+        file_body = Body::wrap_stream(file_stream);
+    } else {
+        file_body = Body::wrap_stream(file_reader);
+    }
+
+    let s3_response = client
+        .put(upload_url_response.url.clone())
+        .header("Content-Length", file_total_size)
+        .body(file_body)
+        .send()
+        .await?;
+    api_error_adapter(s3_response).await?;
+
+    Ok(upload_url_response.file_path.clone())
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct UploadRequest {
+    filename: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct UploadUrlResponse {
+    file_path: String,
+    url: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct CreateRunRequest {
+    s3_test_app_path: String,
+    platform: String,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    analytics_read_only: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    code_coverage: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    concurrency_limit: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    country: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    device: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    filtering_configuration: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    flavor: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    isolated: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    language: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    link: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    os_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    project: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pull_file_config: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    retry_quota_test_preventive: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    retry_quota_test_reactive: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    retry_quota_test_uncompleted: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    s3_app_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    system_image: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    xcode_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    test_timeout_default: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    test_timeout_max: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    env_args: Option<HashMap<String, String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    test_env_args: Option<HashMap<String, String>>,
 }
 
 #[derive(Deserialize)]
@@ -575,4 +587,73 @@ pub struct AndroidDevice {
     pub height: u32,
     #[serde(rename = "dpi")]
     pub dpi: u32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_vec_to_hashmap_valid_input() {
+        let input = Some(vec![
+            "KEY1=VALUE1".to_string(),
+            "KEY2=VALUE2".to_string(),
+            "KEY3=VALUE3".to_string(),
+        ]);
+        let mut expected = HashMap::new();
+        expected.insert("KEY1".to_string(), "VALUE1".to_string());
+        expected.insert("KEY2".to_string(), "VALUE2".to_string());
+        expected.insert("KEY3".to_string(), "VALUE3".to_string());
+
+        let result = vec_to_hashmap(input);
+
+        assert_eq!(result, Ok(Some(expected)));
+    }
+
+    #[test]
+    fn test_vec_to_hashmap_missing_value() {
+        let input = Some(vec!["KEY1=VALUE1".to_string(), "KEY2=".to_string()]);
+
+        let result = vec_to_hashmap(input);
+
+        assert_eq!(
+            result,
+            Err(EnvArgError::MissingValue {
+                env_arg: "KEY2=".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn test_vec_to_hashmap_invalid_key_value() {
+        let input = Some(vec!["KEY1=VALUE1".to_string(), "KEY2".to_string()]);
+
+        let result = vec_to_hashmap(input);
+
+        assert_eq!(
+            result,
+            Err(EnvArgError::InvalidKeyValue {
+                env_arg: "KEY2".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn test_vec_to_hashmap_none_input() {
+        let input = None;
+
+        let result = vec_to_hashmap(input);
+
+        assert_eq!(result, Ok(None));
+    }
+
+    #[test]
+    fn test_vec_to_hashmap_empty_vector() {
+        let input = Some(vec![]);
+
+        let result = vec_to_hashmap(input);
+
+        assert_eq!(result, Ok(Some(HashMap::new())));
+    }
 }

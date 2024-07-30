@@ -184,6 +184,7 @@ pub(crate) async fn run(
             common.concurrency_limit,
             None,
             None,
+            common.project,
         )
         .await
 }

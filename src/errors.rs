@@ -24,7 +24,7 @@ pub enum ApiError {
     InvalidAuthenticationToken { error: ReqwestError },
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum EnvArgError {
     #[error("Invalid environment or testing environment variable. Double check you've supplied correct value\nvalue = {env_arg}")]
     InvalidKeyValue { env_arg: String },

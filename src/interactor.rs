@@ -130,6 +130,7 @@ impl TriggerTestRunInteractor {
         concurrency_limit: Option<u32>,
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
+        project: Option<String>,
     ) -> Result<bool> {
         let client = RapiReqwestClient::new(base_url, api_key);
         let steps = match (wait, output) {
@@ -168,6 +169,7 @@ impl TriggerTestRunInteractor {
                 concurrency_limit,
                 test_timeout_default,
                 test_timeout_max,
+                project,
             )
             .await?;
 
@@ -197,7 +199,7 @@ impl TriggerTestRunInteractor {
                     let base_report_url = &base_report_url[..Position::AfterPort];
 
                     let state = stat.state.clone();
-                    let report = format!("{}/report/{}", base_report_url, id);
+                    let report = format!("{}/v1/report/{}", base_report_url, id);
                     let passed = stat.passed;
                     let failed = stat.failed;
                     let ignored = stat.ignored;
