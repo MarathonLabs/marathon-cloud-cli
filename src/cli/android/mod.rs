@@ -98,7 +98,6 @@ pub(crate) async fn run(
         return Err(ConfigurationError::UnsupportedRunConfiguration {
             message:
                 "Please set up APKs for testing. The following argument combinations are possible:
---test-application <TEST_APPLICATION> - for library testing
 --application <APPLICATION> --test-application <TEST_APPLICATION> - for application testing
 --application-bundle <APPLICATION>,<TEST_APPLICATION> - advanced mode that allows setting up one or more application bundles for testing
 --library-bundle <TEST_APPLICATION> - advanced mode that allows setting up one or more library bundles for testing"
@@ -115,6 +114,20 @@ pub(crate) async fn run(
         return Err(ConfigurationError::UnsupportedRunConfiguration {
             message: "Please set up Testing APK:
 --test-application <TEST_APPLICATION>"
+                .into(),
+        }
+        .into());
+    }
+
+    if application.is_none()
+        && test_application.is_some()
+        && application_bundle.is_none()
+        && library_bundle.is_none()
+    {
+        return Err(ConfigurationError::UnsupportedRunConfiguration {
+            message: "Please set up Application APK:
+--application <TEST_APPLICATION>
+If you are interesting in library testing then please use advance mode with --library-bundle argument"
                 .into(),
         }
         .into());

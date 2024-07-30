@@ -611,7 +611,6 @@ struct CreateRunBundle {
 
     #[serde(
         rename = "s3_app_path",
-        default,
         skip_serializing_if = "Option::is_none"
     )]
     s3_app_path: Option<String>,
