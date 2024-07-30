@@ -37,7 +37,7 @@ reqwest = { version = "0.12.4", default-features = false, features = [
   "stream",
   "rustls-tls",
 ] }
-time = { version = "0.3", features = ["serde-well-known"] }
+time = { version = "0.3.36", features = ["serde-well-known"] }
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7"
 futures = "0.3"
