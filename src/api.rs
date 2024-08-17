@@ -637,6 +637,8 @@ pub struct TestRun {
     pub completed: Option<OffsetDateTime>,
     #[serde(rename = "total_run_time")]
     pub total_run_time_seconds: Option<f64>,
+    #[serde(rename = "error_message")]
+    pub error_message: Option<String>,
 }
 
 #[derive(Deserialize)]
