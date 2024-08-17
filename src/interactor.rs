@@ -227,6 +227,11 @@ impl TriggerTestRunInteractor {
                         let data = serialize_event(&result_file, &event)?;
                         file.write_all(data.as_bytes()).await?;
                     }
+                    if let Some(error_message) = stat.error_message {
+                        formatter.message(&format!("Error message:"));
+                        let formatted_error_message = error_message.replace("\n", "\n\t");
+                        formatter.message(&format!("\t{}", formatted_error_message));
+                    }
 
                     if let Some(output) = output {
                         formatter.stage("Fetching file list...");
