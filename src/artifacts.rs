@@ -175,6 +175,7 @@ async fn patch_file(path: &Path) -> io::Result<()> {
     // Write the patched JSON back to the file
     let mut file = File::create(&path)?;
     file.write_all(serde_json::to_string_pretty(&json_value)?.as_bytes())?;
+    file.flush()?;
 
     Ok(())
 }
@@ -227,6 +228,7 @@ mod tests {
         let json_file_path = allure_results_path.join("sample.json");
         let mut file = File::create(&json_file_path).unwrap();
         file.write_all(original_json.as_bytes()).unwrap();
+        file.flush().unwrap();
 
         let result = patch_allure_paths(temp_dir.path()).await;
         assert!(result.is_ok());
@@ -253,6 +255,7 @@ mod tests {
         let json_file_path = allure_results_path.join("sample.json");
         let mut file = File::create(&json_file_path).unwrap();
         file.write_all(original_json.as_bytes()).unwrap();
+        file.flush().unwrap();
 
         let result = patch_allure_paths(temp_dir.path()).await;
         assert!(result.is_ok());

@@ -264,6 +264,7 @@ impl TriggerTestRunInteractor {
                 let mut file = File::create(&result_file).await?;
                 let data = serialize_event(&result_file, &event)?;
                 file.write_all(data.as_bytes()).await?;
+                file.flush().await?;
             }
 
             Ok(true)
