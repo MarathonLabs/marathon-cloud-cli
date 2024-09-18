@@ -285,6 +285,7 @@ If you provide any single or two of these parameters, the others will be inferre
             &api_args.api_key,
             common.name,
             common.link,
+            common.branch,
             present_wait,
             common.isolated,
             common.ignore_test_failures,

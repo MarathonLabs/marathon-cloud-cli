@@ -225,6 +225,12 @@ Please be aware that if you use the 'annotation' filter type on Android, you sho
 
     #[arg(
         long,
+        help = "Branch for run, for example it could be git branch like develop or feature/about-screen"
+    )]
+    branch: Option<String>,
+
+    #[arg(
+        long,
         help = "When tests fail and this option is true then cli will exit with code 0. By default, cli will exit with code 1 in case of test failures and 0 for passing tests"
     )]
     ignore_test_failures: Option<bool>,

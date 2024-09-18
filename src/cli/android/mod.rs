@@ -230,6 +230,7 @@ If you are interesting in library testing then please use advance mode with --li
             &api_args.api_key,
             common.name,
             common.link,
+            common.branch,
             present_wait,
             common.isolated,
             common.ignore_test_failures,
