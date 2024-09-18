@@ -34,6 +34,7 @@ pub trait RapiClient {
         test_app: Option<PathBuf>,
         name: Option<String>,
         link: Option<String>,
+        branch: Option<String>,
         platform: String,
         os_version: Option<String>,
         system_image: Option<String>,
@@ -129,6 +130,7 @@ impl RapiClient for RapiReqwestClient {
         test_app: Option<PathBuf>,
         name: Option<String>,
         link: Option<String>,
+        branch: Option<String>,
         platform: String,
         os_version: Option<String>,
         system_image: Option<String>,
@@ -261,6 +263,7 @@ impl RapiClient for RapiReqwestClient {
             language: None,
             link: link.clone(),
             name: name.clone(),
+            branch: branch.clone(),
             os_version: os_version.clone(),
             project: project.clone(),
             pull_file_config: pull_file_config
@@ -576,6 +579,8 @@ struct CreateRunRequest {
     link: Option<String>,
     #[serde(rename = "name", default)]
     name: Option<String>,
+    #[serde(rename = "branch", default)]
+    branch: Option<String>,
     #[serde(rename = "os_version", default)]
     os_version: Option<String>,
     #[serde(rename = "project", default)]
