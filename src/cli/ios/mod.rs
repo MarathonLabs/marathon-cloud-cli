@@ -46,8 +46,8 @@ pub enum OsVersion {
     Ios16_4,
     #[clap(name = "17.2")]
     Ios17_2,
-    #[clap(name = "17.4")]
-    Ios17_4,
+    #[clap(name = "17.5")]
+    Ios17_5,
 }
 
 impl Display for OsVersion {
@@ -55,7 +55,7 @@ impl Display for OsVersion {
         match self {
             OsVersion::Ios16_4 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-16-4"),
             OsVersion::Ios17_2 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-17-2"),
-            OsVersion::Ios17_4 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-17-4"),
+            OsVersion::Ios17_5 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-17-5"),
         }
     }
 }
@@ -66,8 +66,8 @@ pub enum XcodeVersion {
     Xcode14_3_1,
     #[clap(name = "15.2")]
     Xcode15_2,
-    #[clap(name = "15.3")]
-    Xcode15_3,
+    #[clap(name = "15.4")]
+    Xcode15_4,
 }
 
 impl Display for XcodeVersion {
@@ -75,7 +75,7 @@ impl Display for XcodeVersion {
         match self {
             XcodeVersion::Xcode14_3_1 => f.write_str("14.3.1"),
             XcodeVersion::Xcode15_2 => f.write_str("15.2"),
-            XcodeVersion::Xcode15_3 => f.write_str("15.3"),
+            XcodeVersion::Xcode15_4 => f.write_str("15.4"),
         }
     }
 }
@@ -144,8 +144,8 @@ pub(crate) fn get_supported_configs(
         ),
         (
             Some(IosDevice::IPhone15),
-            Some(XcodeVersion::Xcode15_3),
-            Some(OsVersion::Ios17_4),
+            Some(XcodeVersion::Xcode15_4),
+            Some(OsVersion::Ios17_5),
         ),
     ]
 }
@@ -220,7 +220,7 @@ Please set --xcode-version, --os-version, and --device correctly.
 Supported iOS settings combinations are:
     --xcode_version 14.3.1 --os-version 16.4 --device iPhone-14 => Default
     --xcode_version 15.2 --os-version 17.2 --device [iPhone-15, iPhone-15-Pro, iPhone-15-Pro-Max]
-    --xcode_version 15.3 --os-version 17.4 --device [iPhone-15]
+    --xcode_version 15.4 --os-version 17.5 --device [iPhone-15]
 If you provide any single or two of these parameters, the others will be inferred based on supported combinations."
                                         .into(),
                                 }
