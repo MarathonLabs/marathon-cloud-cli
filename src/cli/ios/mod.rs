@@ -15,8 +15,6 @@ use crate::{errors::InputError, filtering};
 
 #[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
 pub enum IosDevice {
-    #[clap(name = "iPhone-14")]
-    IPhone14,
     #[clap(name = "iPhone-15")]
     IPhone15,
     #[clap(name = "iPhone-15-Pro")]
@@ -28,7 +26,6 @@ pub enum IosDevice {
 impl Display for IosDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            IosDevice::IPhone14 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-14"),
             IosDevice::IPhone15 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-15"),
             IosDevice::IPhone15Pro => {
                 f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-15-Pro")
@@ -42,8 +39,6 @@ impl Display for IosDevice {
 
 #[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
 pub enum OsVersion {
-    #[clap(name = "16.4")]
-    Ios16_4,
     #[clap(name = "17.2")]
     Ios17_2,
     #[clap(name = "17.5")]
@@ -53,7 +48,6 @@ pub enum OsVersion {
 impl Display for OsVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OsVersion::Ios16_4 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-16-4"),
             OsVersion::Ios17_2 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-17-2"),
             OsVersion::Ios17_5 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-17-5"),
         }
@@ -62,8 +56,6 @@ impl Display for OsVersion {
 
 #[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
 pub enum XcodeVersion {
-    #[clap(name = "14.3.1")]
-    Xcode14_3_1,
     #[clap(name = "15.2")]
     Xcode15_2,
     #[clap(name = "15.4")]
@@ -73,7 +65,6 @@ pub enum XcodeVersion {
 impl Display for XcodeVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            XcodeVersion::Xcode14_3_1 => f.write_str("14.3.1"),
             XcodeVersion::Xcode15_2 => f.write_str("15.2"),
             XcodeVersion::Xcode15_4 => f.write_str("15.4"),
         }
@@ -122,11 +113,6 @@ pub(crate) async fn ensure_format(path: std::path::PathBuf) -> Result<std::path:
 pub(crate) fn get_supported_configs(
 ) -> Vec<(Option<IosDevice>, Option<XcodeVersion>, Option<OsVersion>)> {
     vec![
-        (
-            Some(IosDevice::IPhone14),
-            Some(XcodeVersion::Xcode14_3_1),
-            Some(OsVersion::Ios16_4),
-        ),
         (
             Some(IosDevice::IPhone15),
             Some(XcodeVersion::Xcode15_2),
@@ -233,10 +219,14 @@ pub(crate) async fn run(
                     message: "
 Please set --xcode-version, --os-version, and --device correctly.
 Supported iOS settings combinations are:
-    --xcode-version 14.3.1 --os-version 16.4 --device iPhone-14 => Default
-    --xcode-version 15.2 --os-version 17.2 --device [iPhone-15, iPhone-15-Pro, iPhone-15-Pro-Max]
-    --xcode-version 15.4 --os-version 17.5 --device [iPhone-15, iPhone-15-Pro, iPhone-15-Pro-Max]
-If you provide any single or two of these parameters, the others will be inferred based on supported combinations."
+    --xcode-version 15.2 --os-version 17.2 --device iPhone-15
+    --xcode-version 15.2 --os-version 17.2 --device iPhone-15-Pro
+    --xcode-version 15.2 --os-version 17.2 --device iPhone-15-Pro-Max
+    --xcode-version 15.4 --os-version 17.5 --device iPhone-15 => Default
+    --xcode-version 15.4 --os-version 17.5 --device iPhone-15-Pro
+    --xcode-version 15.4 --os-version 17.5 --device iPhone-15-Pro-Max
+First example: If you choose --xcode-version 15.4 --device iPhone-15-Pro then the --os-version will be inferred (17.5).
+Second example: If you choose --xcode-version 15.4 --os-version 17.5 then you will receive an error because --device param is ambiguous."
                         .into(),
                 }.into());
             }
@@ -339,22 +329,6 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_infer_parameters_device_provided() -> Result<()> {
-        let provided_device = Some(IosDevice::IPhone14);
-        let expected_xcode_version = XcodeVersion::Xcode14_3_1;
-        let expected_os_version = OsVersion::Ios16_4;
-
-        let (inferred_device, inferred_xcode_version, inferred_os_version) =
-            infer_parameters(provided_device, None, None).await?;
-
-        assert_eq!(inferred_device, IosDevice::IPhone14);
-        assert_eq!(inferred_xcode_version, expected_xcode_version);
-        assert_eq!(inferred_os_version, expected_os_version);
-
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_infer_parameters_ambiguous_device_should_error() {
         let provided_device = Some(IosDevice::IPhone15);
 
@@ -387,38 +361,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_infer_parameters_xcode_version_provided_single_config() -> Result<()> {
-        let provided_xcode_version = Some(XcodeVersion::Xcode14_3_1);
-        let expected_device = IosDevice::IPhone14;
-        let expected_os_version = OsVersion::Ios16_4;
-
-        let (inferred_device, inferred_xcode_version, inferred_os_version) =
-            infer_parameters(None, provided_xcode_version, None).await?;
-
-        assert_eq!(inferred_device, expected_device);
-        assert_eq!(inferred_xcode_version, XcodeVersion::Xcode14_3_1);
-        assert_eq!(inferred_os_version, expected_os_version);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_infer_parameters_os_version_provided_single_config() -> Result<()> {
-        let provided_os_version = Some(OsVersion::Ios16_4);
-        let expected_device = IosDevice::IPhone14;
-        let expected_xcode_version = XcodeVersion::Xcode14_3_1;
-
-        let (inferred_device, inferred_xcode_version, inferred_os_version) =
-            infer_parameters(None, None, provided_os_version).await?;
-
-        assert_eq!(inferred_device, expected_device);
-        assert_eq!(inferred_xcode_version, expected_xcode_version);
-        assert_eq!(inferred_os_version, OsVersion::Ios16_4);
-
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_infer_parameters_complete_input_valid() -> Result<()> {
         let provided_device = Some(IosDevice::IPhone15);
         let provided_xcode_version = Some(XcodeVersion::Xcode15_2);
@@ -436,10 +378,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_infer_parameters_invalid_device_and_xcode_combination_should_error() {
-        let provided_device = Some(IosDevice::IPhone14);
+        let provided_os_version = Some(OsVersion::Ios17_2);
         let provided_xcode_version = Some(XcodeVersion::Xcode15_4);
 
-        let result = infer_parameters(provided_device, provided_xcode_version, None).await;
+        let result = infer_parameters(None, provided_xcode_version, provided_os_version).await;
         assert!(result.is_err());
     }
 }
