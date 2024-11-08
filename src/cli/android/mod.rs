@@ -40,6 +40,8 @@ pub enum OsVersion {
     Android13,
     #[clap(name = "14")]
     Android14,
+    #[clap(name = "15")]
+    Android15,
 }
 
 impl Display for OsVersion {
@@ -50,6 +52,7 @@ impl Display for OsVersion {
             OsVersion::Android12 => f.write_str("12"),
             OsVersion::Android13 => f.write_str("13"),
             OsVersion::Android14 => f.write_str("14"),
+            OsVersion::Android15 => f.write_str("15"),
         }
     }
 }
@@ -139,7 +142,10 @@ If you are interesting in library testing then please use advance mode with --li
             Some("watch"),
             _,
             Some(_),
-            Some(OsVersion::Android10) | Some(OsVersion::Android12) | Some(OsVersion::Android14),
+            Some(OsVersion::Android10)
+            | Some(OsVersion::Android12)
+            | Some(OsVersion::Android14)
+            | Some(OsVersion::Android15),
         ) => {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
                 message:
@@ -151,6 +157,18 @@ If you are interesting in library testing then please use advance mode with --li
         (Some("tv"), _, Some(SystemImage::Default), Some(_) | None) => {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
                 message: "Android TV only supports google-apis system image".into(),
+            }
+            .into());
+        }
+        (Some("tv"), _, _, Some(OsVersion::Android15)) => {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "Android TV doesn't support os version 15".into(),
+            }
+            .into());
+        }
+        (Some("wear"), _, _, Some(OsVersion::Android15)) => {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "Android Wear doesn't support os version 15".into(),
             }
             .into());
         }
