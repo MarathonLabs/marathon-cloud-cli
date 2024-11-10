@@ -45,6 +45,7 @@ pub trait RapiClient {
         retry_quota_test_uncompleted: Option<u32>,
         retry_quota_test_preventive: Option<u32>,
         retry_quota_test_reactive: Option<u32>,
+        profiling: Option<bool>,
         analytics_read_only: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         no_progress_bar: bool,
@@ -142,6 +143,7 @@ impl RapiClient for RapiReqwestClient {
         retry_quota_test_preventive: Option<u32>,
         retry_quota_test_reactive: Option<u32>,
         analytics_read_only: Option<bool>,
+        profiling: Option<bool>,
         filtering_configuration: Option<SparseMarathonfile>,
         no_progress_bar: bool,
         flavor: Option<String>,
@@ -251,6 +253,7 @@ impl RapiClient for RapiReqwestClient {
             platform: platform.clone(),
             s3_app_path: s3_app_path.clone(),
             analytics_read_only: analytics_read_only.clone(),
+            profiling: profiling.clone(),
             code_coverage: code_coverage.clone(),
             concurrency_limit: concurrency_limit.clone(),
             country: None,
@@ -278,7 +281,7 @@ impl RapiClient for RapiReqwestClient {
             test_timeout_max: test_timeout_max.clone(),
             env_args: env_args_map,
             test_env_args: test_env_args_map,
-            bundles: bundles,
+            bundles,
         };
 
         let response = self.client.post(url).json(&create_request).send().await?;
@@ -559,6 +562,8 @@ struct CreateRunRequest {
     s3_app_path: Option<String>,
     #[serde(rename = "analytics_read_only", default)]
     analytics_read_only: Option<bool>,
+    #[serde(rename = "profiling", default)]
+    profiling: Option<bool>,
     #[serde(rename = "code_coverage", default)]
     code_coverage: Option<bool>,
     #[serde(rename = "concurrency_limit", default)]

@@ -56,6 +56,7 @@ impl Cli {
                         pull_files,
                         application_bundle,
                         library_bundle,
+                        profiling_args,
                     } => {
                         android::run(
                             application,
@@ -69,6 +70,7 @@ impl Cli {
                             instrumentation_arg,
                             retry_args,
                             analytics_args,
+                            profiling_args,
                             pull_files,
                             application_bundle,
                             library_bundle,
@@ -373,6 +375,13 @@ struct AnalyticsArgs {
     analytics_read_only: Option<bool>,
 }
 
+#[derive(Debug, Args)]
+#[command(args_conflicts_with_subcommands = true)]
+struct ProfilingArgs {
+    #[arg(long, help = "If true then each test will be profiled")]
+    profiling: Option<bool>,
+}
+
 #[derive(Debug, Args, Clone)]
 #[command(args_conflicts_with_subcommands = true)]
 struct ProgressArgs {
@@ -435,6 +444,9 @@ enum RunCommands {
 
         #[command(flatten)]
         analytics_args: AnalyticsArgs,
+
+        #[command(flatten)]
+        profiling_args: ProfilingArgs,
 
         #[arg(long, help = "Instrumentation arguments, example: FOO=BAR")]
         instrumentation_arg: Option<Vec<String>>,

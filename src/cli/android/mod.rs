@@ -11,6 +11,8 @@ use crate::{
     pull::PullFileConfig,
 };
 
+use super::ProfilingArgs;
+
 #[derive(Debug, clap::ValueEnum, Clone)]
 pub enum SystemImage {
     #[clap(name = "default")]
@@ -86,6 +88,7 @@ pub(crate) async fn run(
     instrumentation_arg: Option<Vec<String>>,
     retry_args: RetryArgs,
     analytics_args: AnalyticsArgs,
+    profiling_args: ProfilingArgs,
     pull_files: Option<Vec<String>>,
     application_bundle: Option<Vec<String>>,
     library_bundle: Option<Vec<PathBuf>>,
@@ -239,6 +242,7 @@ If you are interesting in library testing then please use advance mode with --li
             retry_args.retry_quota_test_preventive,
             retry_args.retry_quota_test_reactive,
             analytics_args.analytics_read_only,
+            profiling_args.profiling,
             filtering_configuration,
             &common.output,
             application,

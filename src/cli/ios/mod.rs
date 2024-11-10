@@ -299,6 +299,7 @@ Second example: If you choose --xcode-version 15.4 --os-version 17.5 then you wi
             retry_args.retry_quota_test_preventive,
             retry_args.retry_quota_test_reactive,
             analytics_args.analytics_read_only,
+            None,
             filtering_configuration,
             &common.output,
             Some(application),
