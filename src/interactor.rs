@@ -113,7 +113,7 @@ impl TriggerTestRunInteractor {
         retry_quota_test_preventive: Option<u32>,
         retry_quota_test_reactive: Option<u32>,
         analytics_read_only: Option<bool>,
-        profiling: Option<bool>,
+        profiling: bool,
         filtering_configuration: Option<SparseMarathonfile>,
         output: &Option<PathBuf>,
         application: Option<PathBuf>,

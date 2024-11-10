@@ -378,8 +378,8 @@ struct AnalyticsArgs {
 #[derive(Debug, Args)]
 #[command(args_conflicts_with_subcommands = true)]
 struct ProfilingArgs {
-    #[arg(long, help = "If true then each test will be profiled")]
-    profiling: Option<bool>,
+    #[arg(long, default_value_t = false, help = "Profile tests")]
+    profiling: bool,
 }
 
 #[derive(Debug, Args, Clone)]
