@@ -185,6 +185,12 @@ If you are interesting in library testing then please use advance mode with --li
             }
             .into());
         }
+        (_, _, Some(SystemImage::Default) | None, Some(OsVersion::Android15)) => {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "Android OS version 15 only supports google-apis system image".into(),
+            }
+            .into());
+        }
         _ => {}
     }
 
