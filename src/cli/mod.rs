@@ -91,6 +91,7 @@ impl Cli {
                         analytics_args,
                         test_timeout_default,
                         test_timeout_max,
+                        granted_permission,
                     } => {
                         ios::run(
                             application,
@@ -108,6 +109,7 @@ impl Cli {
                             analytics_args,
                             test_timeout_default,
                             test_timeout_max,
+                            granted_permission,
                         )
                         .await
                     }
@@ -535,5 +537,13 @@ Example: '--library-bundle apks/library1-debug-androidTest.apk --library-bundle 
             help = "Maximum test timeout in seconds, overriding all other test timeout settings"
         )]
         test_timeout_max: Option<u32>,
+
+        #[arg(
+            long,
+            help = "Grant permission to application.
+Important: Granting is conducted before each test batch (not each test). If you need to grant before each test, please use --isolated mode.
+Available permissions: calendar, contacts-limited, contacts, location, location-always, photos-add, photos, media-library, microphone, motion, reminders, siri."
+        )]
+        granted_permission: Option<Vec<String>>,
     },
 }

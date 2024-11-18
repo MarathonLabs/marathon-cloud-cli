@@ -284,6 +284,7 @@ If you are interesting in library testing then please use advance mode with --li
             common.project,
             transformed_application_bundle,
             library_bundle,
+            None,
         )
         .await
 }

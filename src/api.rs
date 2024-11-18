@@ -58,6 +58,7 @@ pub trait RapiClient {
         project: Option<String>,
         application_bundle: Option<Vec<ApplicationBundle>>,
         library_bundle: Option<Vec<PathBuf>>,
+        granted_permission: Option<Vec<String>>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -154,6 +155,7 @@ impl RapiClient for RapiReqwestClient {
         project: Option<String>,
         application_bundle: Option<Vec<ApplicationBundle>>,
         library_bundle: Option<Vec<PathBuf>>,
+        granted_permission: Option<Vec<String>>,
     ) -> Result<String> {
         let url = format!("{}/v2/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
@@ -279,6 +281,7 @@ impl RapiClient for RapiReqwestClient {
             env_args: env_args_map,
             test_env_args: test_env_args_map,
             bundles: bundles,
+            granted_permission: granted_permission.clone(),
         };
 
         let response = self.client.post(url).json(&create_request).send().await?;
@@ -607,6 +610,8 @@ struct CreateRunRequest {
     test_env_args: Option<HashMap<String, String>>,
     #[serde(rename = "bundles", default)]
     bundles: Option<Vec<CreateRunBundle>>,
+    #[serde(rename = "granted_permission", default)]
+    granted_permission: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
