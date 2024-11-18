@@ -135,6 +135,7 @@ impl TriggerTestRunInteractor {
         project: Option<String>,
         application_bundle: Option<Vec<ApplicationBundle>>,
         library_bundle: Option<Vec<PathBuf>>,
+        granted_permission: Option<Vec<String>>,
     ) -> Result<bool> {
         let client = RapiReqwestClient::new(base_url, api_key);
         let steps = match (wait, output) {
@@ -178,6 +179,7 @@ impl TriggerTestRunInteractor {
                 project,
                 application_bundle,
                 library_bundle,
+                granted_permission,
             )
             .await?;
 

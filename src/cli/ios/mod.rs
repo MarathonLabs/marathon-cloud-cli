@@ -2,6 +2,7 @@ use std::ffi::OsStr;
 use std::fmt::Display;
 
 use anyhow::Result;
+use std::collections::HashSet;
 use tokio::fs::File;
 use walkdir::WalkDir;
 
@@ -189,6 +190,23 @@ pub(crate) async fn infer_parameters(
     Ok((device.unwrap(), xcode_version.unwrap(), os_version.unwrap()))
 }
 
+fn get_allowed_permissions() -> HashSet<&'static str> {
+    HashSet::from([
+        "calendar",
+        "contacts-limited",
+        "contacts",
+        "location",
+        "location-always",
+        "photos-add",
+        "photos",
+        "media-library",
+        "microphone",
+        "motion",
+        "reminders",
+        "siri",
+    ])
+}
+
 pub(crate) async fn run(
     application: std::path::PathBuf,
     test_application: std::path::PathBuf,
@@ -205,6 +223,7 @@ pub(crate) async fn run(
     analytics_args: super::AnalyticsArgs,
     test_timeout_default: Option<u32>,
     test_timeout_max: Option<u32>,
+    granted_permission: Option<Vec<String>>,
 ) -> Result<bool> {
     let (device, xcode_version, os_version) = if device.is_none()
         && xcode_version.is_none()
@@ -278,6 +297,21 @@ Second example: If you choose --xcode-version 15.4 --os-version 17.5 then you wi
         }
     }
 
+    if let Some(granted_permission) = granted_permission.clone() {
+        let allowed_permissions = get_allowed_permissions();
+        let invalid_permissions: Vec<_> = granted_permission
+            .iter()
+            .filter(|perm| !allowed_permissions.contains(perm.as_str()))
+            .cloned()
+            .collect();
+
+        if !invalid_permissions.is_empty() {
+            return Err(InputError::IncorrectPermission {
+                permissions: invalid_permissions,
+            })?;
+        }
+    }
+
     let present_wait: bool = match common.wait {
         None => true,
         Some(true) => true,
@@ -321,6 +355,7 @@ Second example: If you choose --xcode-version 15.4 --os-version 17.5 then you wi
             common.project,
             None,
             None,
+            granted_permission,
         )
         .await
 }
