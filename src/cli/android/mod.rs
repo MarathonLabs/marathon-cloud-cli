@@ -149,6 +149,13 @@ If you are interesting in library testing then please use advance mode with --li
         }
     }
 
+    if application_bundle.is_none() && application.is_none() && mock_location {
+        return Err(ConfigurationError::UnsupportedRunConfiguration {
+            message: "There is no Application where mock location can be used".into(),
+        }
+        .into());
+    }
+
     match (device.as_deref(), &flavor, &system_image, &os_version) {
         (Some("watch"), _, Some(SystemImage::Default) | None, Some(_) | None)
         | (
