@@ -47,6 +47,7 @@ pub trait RapiClient {
         retry_quota_test_reactive: Option<u32>,
         analytics_read_only: Option<bool>,
         profiling: bool,
+        mock_location: bool,
         filtering_configuration: Option<SparseMarathonfile>,
         no_progress_bar: bool,
         flavor: Option<String>,
@@ -145,6 +146,7 @@ impl RapiClient for RapiReqwestClient {
         retry_quota_test_reactive: Option<u32>,
         analytics_read_only: Option<bool>,
         profiling: bool,
+        mock_location: bool,
         filtering_configuration: Option<SparseMarathonfile>,
         no_progress_bar: bool,
         flavor: Option<String>,
@@ -256,6 +258,7 @@ impl RapiClient for RapiReqwestClient {
             s3_app_path: s3_app_path.clone(),
             analytics_read_only: analytics_read_only.clone(),
             profiling: profiling,
+            mock_location: mock_location,
             code_coverage: code_coverage.clone(),
             concurrency_limit: concurrency_limit.clone(),
             country: None,
@@ -567,6 +570,8 @@ struct CreateRunRequest {
     analytics_read_only: Option<bool>,
     #[serde(rename = "profiling", default)]
     profiling: bool,
+    #[serde(rename = "mock_location", default)]
+    mock_location: bool,
     #[serde(rename = "code_coverage", default)]
     code_coverage: Option<bool>,
     #[serde(rename = "concurrency_limit", default)]

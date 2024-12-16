@@ -95,6 +95,7 @@ pub(crate) async fn run(
     pull_files: Option<Vec<String>>,
     application_bundle: Option<Vec<String>>,
     library_bundle: Option<Vec<PathBuf>>,
+    mock_location: bool,
 ) -> Result<bool> {
     if application.is_none()
         && test_application.is_none()
@@ -137,6 +138,15 @@ If you are interesting in library testing then please use advance mode with --li
                 .into(),
         }
         .into());
+    }
+
+    if let Some(bundles) = &application_bundle {
+        if bundles.len() > 1 && mock_location {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "Mock location access doesn't support multiple application bundles".into(),
+            }
+            .into());
+        }
     }
 
     match (device.as_deref(), &flavor, &system_image, &os_version) {
@@ -267,6 +277,7 @@ If you are interesting in library testing then please use advance mode with --li
             retry_args.retry_quota_test_reactive,
             analytics_args.analytics_read_only,
             profiling_args.profiling,
+            mock_location,
             filtering_configuration,
             &common.output,
             application,

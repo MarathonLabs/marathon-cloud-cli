@@ -57,6 +57,7 @@ impl Cli {
                         application_bundle,
                         library_bundle,
                         profiling_args,
+                        mock_location,
                     } => {
                         android::run(
                             application,
@@ -74,6 +75,7 @@ impl Cli {
                             pull_files,
                             application_bundle,
                             library_bundle,
+                            mock_location,
                         )
                         .await
                     }
@@ -479,6 +481,13 @@ The format is '<test_apk_path>'.
 Example: '--library-bundle apks/library1-debug-androidTest.apk --library-bundle apks/library2-debug-androidTest.apk'"
         )]
         library_bundle: Option<Vec<PathBuf>>,
+
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Allow mock location access for application"
+        )]
+        mock_location: bool,
     },
     #[allow(non_camel_case_types)]
     #[command(name = "ios")]
