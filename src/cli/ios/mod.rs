@@ -362,6 +362,7 @@ Second example: If you choose --device iPhone-11 then you will receive an error 
             retry_args.retry_quota_test_reactive,
             analytics_args.analytics_read_only,
             false,
+            false,
             filtering_configuration,
             &common.output,
             Some(application),
