@@ -1138,7 +1138,6 @@ dependencies = [
  "futures",
  "globset",
  "h2",
- "idna",
  "indicatif",
  "log",
  "num_cpus",
