@@ -104,7 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: cargo audit
+      - run: cargo install cargo-audit && cargo audit
 
   build:
     name: ${{ matrix.job.target }} (${{ matrix.job.os }})
