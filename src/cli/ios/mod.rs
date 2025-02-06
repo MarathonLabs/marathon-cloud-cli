@@ -165,11 +165,6 @@ pub(crate) fn get_supported_configs(
             Some(XcodeVersion::Xcode16_2),
             Some(OsVersion::Ios18_2),
         ),
-        (
-            Some(IosDevice::IPhone11),
-            Some(XcodeVersion::Xcode16_2),
-            Some(OsVersion::Ios18_2),
-        ),
     ]
 }
 
@@ -271,7 +266,6 @@ Supported iOS settings combinations are:
     --xcode-version 16.2 --os-version 18.2 --device iPhone-16
     --xcode-version 16.2 --os-version 18.2 --device iPhone-16-Pro
     --xcode-version 16.2 --os-version 18.2 --device iPhone-16-Pro-Max
-    --xcode-version 16.2 --os-version 18.2 --device iPhone-11
 First example: If you choose --xcode-version 15.4 --device iPhone-15-Pro then the --os-version will be inferred (17.5).
 Second example: If you choose --device iPhone-11 then you will receive an error because --os-version and --xcode-version params are ambiguous."
                         .into(),
@@ -392,14 +386,6 @@ Second example: If you choose --device iPhone-11 then you will receive an error 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[tokio::test]
-    async fn test_infer_parameters_ambiguous_device_should_error() {
-        let provided_device = Some(IosDevice::IPhone11);
-
-        let result = infer_parameters(provided_device, None, None).await;
-        assert!(result.is_err());
-    }
 
     #[tokio::test]
     async fn test_infer_parameters_device_and_xcode_version_provided() -> Result<()> {
