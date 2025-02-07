@@ -46,10 +46,9 @@ impl Display for IosDevice {
             IosDevice::IPhone16 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16"),
             IosDevice::IPhone16Pro => {
                 f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro")
-            }
-            // IosDevice::IPhone16ProMax => {
-            //     f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max")
-            // }
+            } // IosDevice::IPhone16ProMax => {
+              //     f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max")
+              // }
         }
     }
 }
