@@ -28,8 +28,8 @@ pub enum IosDevice {
     IPhone16,
     #[clap(name = "iPhone-16-Pro")]
     IPhone16Pro,
-    #[clap(name = "iPhone-16-Pro-Max")]
-    IPhone16ProMax,
+    // #[clap(name = "iPhone-16-Pro-Max")]
+    // IPhone16ProMax,
 }
 
 impl Display for IosDevice {
@@ -47,9 +47,9 @@ impl Display for IosDevice {
             IosDevice::IPhone16Pro => {
                 f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro")
             }
-            IosDevice::IPhone16ProMax => {
-                f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max")
-            }
+            // IosDevice::IPhone16ProMax => {
+            //     f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max")
+            // }
         }
     }
 }
@@ -160,11 +160,11 @@ pub(crate) fn get_supported_configs(
             Some(XcodeVersion::Xcode16_2),
             Some(OsVersion::Ios18_2),
         ),
-        (
-            Some(IosDevice::IPhone16ProMax),
-            Some(XcodeVersion::Xcode16_2),
-            Some(OsVersion::Ios18_2),
-        ),
+        // (
+        //     Some(IosDevice::IPhone16ProMax),
+        //     Some(XcodeVersion::Xcode16_2),
+        //     Some(OsVersion::Ios18_2),
+        // ),
     ]
 }
 
