@@ -21,7 +21,9 @@ pub enum ApiError {
         body: String,
     },
     #[error("Invalid authentication token. Did you supply correct API token?\nerror = {error}")]
-    InvalidAuthenticationToken { error: ReqwestError },
+    GenericInvalidAuthenticationToken { error: ReqwestError },
+    #[error("Invalid authentication token\ncode= {code}, message = {message}")]
+    InvalidAuthenticationToken { code: String, message: String },
 }
 
 #[derive(Error, Debug, PartialEq)]

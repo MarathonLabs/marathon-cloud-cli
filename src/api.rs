@@ -438,7 +438,15 @@ async fn api_error_adapter(response: reqwest::Response) -> Result<reqwest::Respo
             if let Some(status_code) = error.status() {
                 match status_code {
                     StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                        Err(ApiError::InvalidAuthenticationToken { error }.into())
+                        if let Some(rapi_error) = serde_json::from_str::<RapiError>(&body).ok() {
+                            Err(ApiError::InvalidAuthenticationToken {
+                                code: rapi_error.code,
+                                message: rapi_error.message,
+                            }
+                            .into())
+                        } else {
+                            Err(ApiError::GenericInvalidAuthenticationToken { error }.into())
+                        }
                     }
                     _ => Err(ApiError::RequestFailedWithCode {
                         status_code,
@@ -691,6 +699,14 @@ pub struct AndroidDevice {
     pub height: u32,
     #[serde(rename = "dpi")]
     pub dpi: u32,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct RapiError {
+    #[serde(rename = "code")]
+    pub code: String,
+    #[serde(rename = "message")]
+    pub message: String,
 }
 
 #[cfg(test)]
