@@ -7,5 +7,6 @@ mod errors;
 mod filtering;
 mod formatter;
 mod interactor;
+mod io;
 mod progress;
 mod pull;
