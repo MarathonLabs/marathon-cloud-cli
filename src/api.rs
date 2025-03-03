@@ -1,3 +1,4 @@
+use crate::io::HashingReader;
 use std::{
     cmp::min,
     path::{Path, PathBuf},
@@ -8,6 +9,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use md5::Md5;
 use reqwest::{Body, Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -217,8 +219,10 @@ impl RapiClient for RapiReqwestClient {
                 .await?;
 
                 let create_run_bundle = CreateRunBundle {
-                    s3_app_path: Some(s3_app_path),
-                    s3_test_app_path: s3_test_app_path.clone(),
+                    s3_app_path: Some(s3_app_path.url),
+                    app_md5: Some(s3_app_path.md5),
+                    s3_test_app_path: s3_test_app_path.url.clone(),
+                    test_app_md5: s3_test_app_path.md5,
                 };
                 create_run_bundles.push(create_run_bundle);
             }
@@ -237,7 +241,9 @@ impl RapiClient for RapiReqwestClient {
 
                 let create_run_bundle = CreateRunBundle {
                     s3_app_path: None,
-                    s3_test_app_path: s3_test_app_path.clone(),
+                    app_md5: None,
+                    s3_test_app_path: s3_test_app_path.url.clone(),
+                    test_app_md5: s3_test_app_path.md5,
                 };
                 create_run_bundles.push(create_run_bundle);
             }
@@ -253,9 +259,11 @@ impl RapiClient for RapiReqwestClient {
         let test_env_args_map = vec_to_hashmap(test_env_args)?;
 
         let create_request = CreateRunRequest {
-            s3_test_app_path: s3_test_app_path.clone(),
+            s3_test_app_path: s3_test_app_path.clone().map(|s| s.url),
+            test_app_md5: s3_test_app_path.clone().map(|s| s.md5),
             platform: platform.clone(),
-            s3_app_path: s3_app_path.clone(),
+            s3_app_path: s3_app_path.clone().map(|s| s.url),
+            app_md5: s3_app_path.clone().map(|s| s.md5),
             analytics_read_only: analytics_read_only.clone(),
             profiling: profiling,
             mock_location: mock_location,
@@ -462,13 +470,19 @@ async fn api_error_adapter(response: reqwest::Response) -> Result<reqwest::Respo
     }
 }
 
+#[derive(Clone)]
+struct FileReference {
+    pub url: String,
+    pub md5: String,
+}
+
 async fn upload_to_s3(
     client: &Client,
     base_url_with_params: String,
     api_key: String,
     file_path: PathBuf,
     no_progress_bar: bool,
-) -> Result<String> {
+) -> Result<FileReference> {
     // Open file
     let file = File::open(&file_path)
         .await
@@ -503,7 +517,9 @@ async fn upload_to_s3(
 
     // Progress stuff
     let file_total_size = file.metadata().await?.len();
-    let mut file_reader = ReaderStream::new(file);
+    let (hashing_reader, hash_sender, hash_receiver) =
+        HashingReader::<_, Md5>::new(file, file_total_size.try_into()?);
+    let mut file_reader = ReaderStream::new(hashing_reader);
     let mut multi_progress: Option<MultiProgress> = if !no_progress_bar {
         Some(MultiProgress::new())
     } else {
@@ -550,7 +566,18 @@ async fn upload_to_s3(
         .await?;
     api_error_adapter(s3_response).await?;
 
-    Ok(upload_url_response.file_path.clone())
+    let digest = hash_receiver.try_recv()?;
+    let hex_hash = match digest {
+        Some(x) => base16ct::lower::encode_string(&x),
+        None => "".to_owned(),
+    };
+    //Additional sender needs to be closed after we receive the hash
+    hash_sender.send(None)?;
+
+    Ok(FileReference {
+        url: upload_url_response.file_path.clone(),
+        md5: hex_hash,
+    })
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -572,8 +599,12 @@ struct CreateRunRequest {
 
     #[serde(rename = "s3_test_app_path", default)]
     s3_test_app_path: Option<String>,
+    #[serde(rename = "test_app_md5", default)]
+    test_app_md5: Option<String>,
     #[serde(rename = "s3_app_path", default)]
     s3_app_path: Option<String>,
+    #[serde(rename = "app_md5", default)]
+    app_md5: Option<String>,
     #[serde(rename = "analytics_read_only", default)]
     analytics_read_only: Option<bool>,
     #[serde(rename = "profiling", default)]
@@ -636,9 +667,13 @@ struct CreateRunRequest {
 struct CreateRunBundle {
     #[serde(rename = "s3_test_app_path")]
     s3_test_app_path: String,
+    #[serde(rename = "test_app_md5")]
+    test_app_md5: String,
 
     #[serde(rename = "s3_app_path", skip_serializing_if = "Option::is_none")]
     s3_app_path: Option<String>,
+    #[serde(rename = "app_md5", skip_serializing_if = "Option::is_none")]
+    app_md5: Option<String>,
 }
 
 #[derive(Deserialize)]
