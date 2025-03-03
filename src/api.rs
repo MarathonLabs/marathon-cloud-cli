@@ -572,7 +572,7 @@ async fn upload_to_s3(
         None => "".to_owned(),
     };
     //Additional sender needs to be closed after we receive the hash
-    hash_sender.send(None)?;
+    drop(hash_sender);
 
     Ok(FileReference {
         url: upload_url_response.file_path.clone(),

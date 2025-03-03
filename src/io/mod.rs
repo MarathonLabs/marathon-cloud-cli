@@ -105,7 +105,6 @@ where
             }
             Poll::Pending => Poll::Pending,
             Poll::Ready(Err(e)) => {
-                println!("Error");
                 this.chan.send(None).map_err(channel_error)?;
                 Poll::Ready(Err(e))
             }
