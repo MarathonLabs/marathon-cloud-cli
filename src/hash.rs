@@ -13,6 +13,7 @@ pub(crate) async fn md5_optional(path: Option<PathBuf>) -> Result<Option<LocalFi
     Ok(None)
 }
 
+// The file has to be a binary file, otherwise different OSes will produce different results
 pub(crate) async fn md5(path: PathBuf) -> Result<LocalFileReference> {
     if !path.exists() {
         return Err(InputError::InvalidFileName { path: path.clone() })?;
@@ -53,7 +54,6 @@ mod tests {
 
     use super::*;
     use anyhow::Result;
-    use base64::prelude::*;
 
     #[tokio::test]
     async fn test_valid() -> Result<()> {
@@ -61,15 +61,9 @@ mod tests {
         let fixture = Path::new(&manifest_dir)
             .join("fixture")
             .join("hashing")
-            .join("tests");
+            .join("example.gif");
         let result = md5(fixture.clone()).await?;
-        let text = std::fs::read_to_string(&fixture)?;
-        assert_eq!(
-            result.md5,
-            "6cd5e415d1077b0137c4ba7c868e41d7",
-            "on file contents: {}",
-            BASE64_STANDARD.encode(text)
-        );
+        assert_eq!(result.md5, "39993ccc6e0f49775c10aac512ade2a6");
         Ok(())
     }
 

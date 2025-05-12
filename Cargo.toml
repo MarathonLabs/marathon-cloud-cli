@@ -58,6 +58,5 @@ regex = "1.10.5"
 md-5 = "0.10.6"
 
 [dev-dependencies]
-base64 = "0.22"
 rstest = "0.18.2"
 tempfile = "3.10.1"

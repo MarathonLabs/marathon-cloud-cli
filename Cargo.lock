@@ -1172,7 +1172,6 @@ dependencies = [
  "async-stream",
  "async-trait",
  "async_zip",
- "base64 0.22.0",
  "clap",
  "clap-verbosity-flag",
  "clap_complete",
