@@ -10,6 +10,7 @@ use crate::{
     cli::{self},
     compression,
     errors::ConfigurationError,
+    hash,
     interactor::TriggerTestRunInteractor,
 };
 use crate::{errors::InputError, filtering};
@@ -290,6 +291,16 @@ Second example: If you choose --device iPhone-11 then you will receive an error 
     };
     let application = ensure_format(application).await?;
     let test_application = ensure_format(test_application).await?;
+
+    let application = hash::md5(application).await?;
+    let test_application = hash::md5(test_application).await?;
+
+    if application.md5 == test_application.md5 {
+        return Err(InputError::DuplicatedApplicationBundle {
+            app: application.path.clone(),
+            test: test_application.path.clone(),
+        })?;
+    }
 
     let retry_args = cli::validate::retry_args(retry_args);
     cli::validate::result_file_args(&common.result_file_args)?;

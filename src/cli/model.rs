@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, path::PathBuf};
 
 #[derive(Debug)]
 pub enum Platform {
@@ -14,4 +14,16 @@ impl Display for Platform {
             Platform::iOS => f.write_str("iOS"),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct FileReference {
+    pub url: String,
+    pub md5: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct LocalFileReference {
+    pub path: PathBuf,
+    pub md5: String,
 }

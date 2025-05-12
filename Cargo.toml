@@ -56,9 +56,6 @@ walkdir = "2.5.0"
 globset = "0.4"
 regex = "1.10.5"
 md-5 = "0.10.6"
-base16ct = { version = "0.2.0", features = ["alloc"] }
-digest = "0.10.7"
-pin-project = "1.1.9"
 
 [dev-dependencies]
 rstest = "0.18.2"

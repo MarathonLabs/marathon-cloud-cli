@@ -178,12 +178,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "base16ct"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
-
-[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1175,13 +1169,11 @@ dependencies = [
  "async-stream",
  "async-trait",
  "async_zip",
- "base16ct",
  "clap",
  "clap-verbosity-flag",
  "clap_complete",
  "clap_mangen",
  "console",
- "digest",
  "futures",
  "globset",
  "h2",
@@ -1189,7 +1181,6 @@ dependencies = [
  "log",
  "md-5",
  "num_cpus",
- "pin-project",
  "regex",
  "reqwest",
  "rstest",

@@ -1,5 +1,11 @@
-use crate::{errors::InputError, pull::parse_pull_args};
+use crate::{
+    bundle::{ApplicationBundle, ApplicationBundleReference, LibraryBundleReference},
+    errors::InputError,
+    hash,
+    pull::parse_pull_args,
+};
 use anyhow::Result;
+use futures::{future::try_join_all, try_join};
 use std::{fmt::Display, path::PathBuf};
 
 use crate::{
@@ -11,7 +17,7 @@ use crate::{
     pull::PullFileConfig,
 };
 
-use super::ProfilingArgs;
+use super::{model::LocalFileReference, ProfilingArgs};
 
 #[derive(Debug, clap::ValueEnum, Clone)]
 pub enum SystemImage {
@@ -214,32 +220,6 @@ If you are interesting in library testing then please use advance mode with --li
         _ => {}
     }
 
-    if let Some(app_path) = application.clone() {
-        if !app_path.exists() {
-            return Err(InputError::InvalidFileName { path: app_path })?;
-        }
-    }
-
-    if let Some(app_path) = test_application.clone() {
-        if !app_path.exists() {
-            return Err(InputError::InvalidFileName { path: app_path })?;
-        }
-    }
-
-    let mut transformed_application_bundle = None;
-    if let Some(application_bundle) = application_bundle {
-        transformed_application_bundle =
-            Some(bundle::transform_and_validate_bundle(application_bundle)?);
-    }
-
-    if let Some(lib_bundles) = library_bundle.clone() {
-        for bundle in lib_bundles {
-            if !bundle.exists() {
-                return Err(InputError::InvalidFileName { path: bundle })?;
-            }
-        }
-    }
-
     let filter_file = common.filter_file.map(filtering::convert::convert);
     let filtering_configuration = match filter_file {
         Some(future) => Some(future.await?),
@@ -267,6 +247,14 @@ If you are interesting in library testing then please use advance mode with --li
         Some(true) => true,
         Some(false) => false,
     };
+
+    let (application, test_application, application_bundle, library_bundle) = validate(
+        application,
+        test_application,
+        application_bundle,
+        library_bundle,
+    )
+    .await?;
 
     TriggerTestRunInteractor {}
         .execute(
@@ -304,9 +292,114 @@ If you are interesting in library testing then please use advance mode with --li
             None,
             None,
             common.project,
-            transformed_application_bundle,
+            application_bundle,
             library_bundle,
             None,
         )
         .await
+}
+
+pub(crate) async fn validate(
+    application: Option<PathBuf>,
+    test_application: Option<PathBuf>,
+    application_bundle: Option<Vec<String>>,
+    library_bundle: Option<Vec<PathBuf>>,
+) -> Result<(
+    Option<LocalFileReference>,
+    Option<LocalFileReference>,
+    Option<Vec<ApplicationBundleReference>>,
+    Option<Vec<LibraryBundleReference>>,
+)> {
+    let application = hash::md5_optional(application);
+    let test_application = hash::md5_optional(test_application);
+
+    let library_bundle = validate_library_bundle(library_bundle);
+    let application_bundle = validate_application_bundle(application_bundle);
+
+    let (application, test_application, application_bundle, library_bundle) = try_join!(
+        application,
+        test_application,
+        application_bundle,
+        library_bundle,
+    )?;
+    if let (Some(application), Some(test_application)) = (&application, &test_application) {
+        if application.md5 == test_application.md5 {
+            return Err(InputError::DuplicatedApplicationBundle {
+                app: application.path.clone(),
+                test: test_application.path.clone(),
+            })?;
+        }
+    }
+    if let Some(bundles) = &application_bundle {
+        for bundle in bundles {
+            if bundle.application.md5 == bundle.test_application.md5 {
+                return Err(InputError::DuplicatedApplicationBundle {
+                    app: bundle.application.path.clone(),
+                    test: bundle.test_application.path.clone(),
+                })?;
+            }
+        }
+    }
+
+    Ok((
+        application,
+        test_application,
+        application_bundle,
+        library_bundle,
+    ))
+}
+
+async fn validate_library_bundle(
+    library_bundle: Option<Vec<PathBuf>>,
+) -> Result<Option<Vec<LibraryBundleReference>>> {
+    if let Some(library_bundle) = library_bundle {
+        let mut result: Vec<LibraryBundleReference> = Vec::new();
+        let hashes_future = library_bundle
+            .iter()
+            .map(|library| hash::md5(library.clone()));
+        let hashes: Vec<LocalFileReference> = try_join_all(hashes_future).await?;
+        for test_application in hashes {
+            let bundle = LibraryBundleReference { test_application };
+            result.push(bundle);
+        }
+        Ok(Some(result))
+    } else {
+        Ok(None)
+    }
+}
+
+async fn validate_application_bundle(
+    application_bundle: Option<Vec<String>>,
+) -> Result<Option<Vec<ApplicationBundleReference>>> {
+    //There is currently no short way to invert Option<Result<>> into Result<Option<>>
+    if let Some(application_bundle) = application_bundle {
+        let mut bundles: Vec<ApplicationBundle> = Vec::new();
+        for bundle in application_bundle {
+            let bundle = bundle::transform(&bundle)?;
+            bundles.push(bundle);
+        }
+
+        let hashes_future = bundles.iter().map(|bundle| {
+            hash_application_bundle(bundle.application.clone(), bundle.test_application.clone())
+        });
+        let result: Vec<ApplicationBundleReference> = try_join_all(hashes_future).await?;
+        Ok(Some(result))
+    } else {
+        Ok(None)
+    }
+}
+
+async fn hash_application_bundle(
+    application: PathBuf,
+    test_application: PathBuf,
+) -> Result<ApplicationBundleReference> {
+    let application = hash::md5(application);
+    let test_application = hash::md5(test_application);
+
+    let (application, test_application) = try_join!(application, test_application)?;
+
+    Ok(ApplicationBundleReference {
+        application,
+        test_application,
+    })
 }

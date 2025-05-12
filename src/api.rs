@@ -1,4 +1,3 @@
-use crate::io::HashingReader;
 use std::{
     cmp::min,
     path::{Path, PathBuf},
@@ -9,7 +8,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use md5::Md5;
 use reqwest::{Body, Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -19,7 +17,8 @@ use tokio::fs::{create_dir_all, File};
 use tokio::io;
 
 use crate::{
-    bundle::ApplicationBundle,
+    bundle::{ApplicationBundleReference, LibraryBundleReference},
+    cli::model::LocalFileReference,
     errors::{ApiError, EnvArgError, InputError},
     filtering::model::SparseMarathonfile,
     pull::PullFileConfig,
@@ -32,8 +31,8 @@ pub trait RapiClient {
     async fn get_token(&self) -> Result<String>;
     async fn create_run(
         &self,
-        app: Option<PathBuf>,
-        test_app: Option<PathBuf>,
+        app: Option<LocalFileReference>,
+        test_app: Option<LocalFileReference>,
         name: Option<String>,
         link: Option<String>,
         branch: Option<String>,
@@ -60,8 +59,8 @@ pub trait RapiClient {
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
         project: Option<String>,
-        application_bundle: Option<Vec<ApplicationBundle>>,
-        library_bundle: Option<Vec<PathBuf>>,
+        application_bundle: Option<Vec<ApplicationBundleReference>>,
+        library_bundle: Option<Vec<LibraryBundleReference>>,
         granted_permission: Option<Vec<String>>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
@@ -131,8 +130,8 @@ impl RapiClient for RapiReqwestClient {
 
     async fn create_run(
         &self,
-        app: Option<PathBuf>,
-        test_app: Option<PathBuf>,
+        app: Option<LocalFileReference>,
+        test_app: Option<LocalFileReference>,
         name: Option<String>,
         link: Option<String>,
         branch: Option<String>,
@@ -159,8 +158,8 @@ impl RapiClient for RapiReqwestClient {
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
         project: Option<String>,
-        application_bundle: Option<Vec<ApplicationBundle>>,
-        library_bundle: Option<Vec<PathBuf>>,
+        application_bundle: Option<Vec<ApplicationBundleReference>>,
+        library_bundle: Option<Vec<LibraryBundleReference>>,
         granted_permission: Option<Vec<String>>,
     ) -> Result<String> {
         let url = format!("{}/v2/run", self.base_url);
@@ -169,13 +168,13 @@ impl RapiClient for RapiReqwestClient {
             .map_err(|error| ApiError::InvalidParameters { error })?;
 
         let mut s3_test_app_path = None;
-        if let Some(test_app) = test_app {
+        if let Some(test_app) = &test_app {
             s3_test_app_path = Some(
                 upload_to_s3(
                     &self.client,
                     self.base_url.clone(),
                     self.api_key.clone(),
-                    test_app.clone(),
+                    test_app.path.clone(),
                     no_progress_bar,
                 )
                 .await?,
@@ -183,13 +182,13 @@ impl RapiClient for RapiReqwestClient {
         }
 
         let mut s3_app_path = None;
-        if let Some(app) = app {
+        if let Some(app) = &app {
             s3_app_path = Some(
                 upload_to_s3(
                     &self.client,
                     self.base_url.clone(),
                     self.api_key.clone(),
-                    app.clone(),
+                    app.path.clone(),
                     no_progress_bar,
                 )
                 .await?,
@@ -204,7 +203,7 @@ impl RapiClient for RapiReqwestClient {
                     &self.client,
                     self.base_url.clone(),
                     self.api_key.clone(),
-                    app_bundle.app_path.clone(),
+                    app_bundle.application.path.clone(),
                     no_progress_bar,
                 )
                 .await?;
@@ -213,28 +212,28 @@ impl RapiClient for RapiReqwestClient {
                     &self.client,
                     self.base_url.clone(),
                     self.api_key.clone(),
-                    app_bundle.test_app_path.clone(),
+                    app_bundle.test_application.path.clone(),
                     no_progress_bar,
                 )
                 .await?;
 
                 let create_run_bundle = CreateRunBundle {
-                    s3_app_path: Some(s3_app_path.url),
-                    app_md5: Some(s3_app_path.md5),
-                    s3_test_app_path: s3_test_app_path.url.clone(),
-                    test_app_md5: s3_test_app_path.md5,
+                    s3_app_path: Some(s3_app_path),
+                    app_md5: Some(app_bundle.application.md5),
+                    s3_test_app_path: s3_test_app_path.clone(),
+                    test_app_md5: app_bundle.test_application.md5,
                 };
                 create_run_bundles.push(create_run_bundle);
             }
         }
 
-        if let Some(library_bundles) = library_bundle {
-            for lib_bundle in library_bundles {
+        if let Some(bundles) = library_bundle {
+            for bundle in bundles {
                 let s3_test_app_path = upload_to_s3(
                     &self.client,
                     self.base_url.clone(),
                     self.api_key.clone(),
-                    lib_bundle.clone(),
+                    bundle.test_application.path.clone(),
                     no_progress_bar,
                 )
                 .await?;
@@ -242,8 +241,8 @@ impl RapiClient for RapiReqwestClient {
                 let create_run_bundle = CreateRunBundle {
                     s3_app_path: None,
                     app_md5: None,
-                    s3_test_app_path: s3_test_app_path.url.clone(),
-                    test_app_md5: s3_test_app_path.md5,
+                    s3_test_app_path: s3_test_app_path.clone(),
+                    test_app_md5: bundle.test_application.md5,
                 };
                 create_run_bundles.push(create_run_bundle);
             }
@@ -259,14 +258,14 @@ impl RapiClient for RapiReqwestClient {
         let test_env_args_map = vec_to_hashmap(test_env_args)?;
 
         let create_request = CreateRunRequest {
-            s3_test_app_path: s3_test_app_path.clone().map(|s| s.url),
-            test_app_md5: s3_test_app_path.clone().map(|s| s.md5),
+            s3_test_app_path: s3_test_app_path.clone(),
+            test_app_md5: test_app.clone().map(|s| s.md5),
             platform: platform.clone(),
-            s3_app_path: s3_app_path.clone().map(|s| s.url),
-            app_md5: s3_app_path.clone().map(|s| s.md5),
+            s3_app_path: s3_app_path.clone(),
+            app_md5: app.clone().map(|s| s.md5),
             analytics_read_only: analytics_read_only.clone(),
-            profiling: profiling,
-            mock_location: mock_location,
+            profiling,
+            mock_location,
             code_coverage: code_coverage.clone(),
             concurrency_limit: concurrency_limit.clone(),
             country: None,
@@ -294,7 +293,7 @@ impl RapiClient for RapiReqwestClient {
             test_timeout_max: test_timeout_max.clone(),
             env_args: env_args_map,
             test_env_args: test_env_args_map,
-            bundles: bundles,
+            bundles,
             granted_permission: granted_permission.clone(),
         };
 
@@ -470,19 +469,13 @@ async fn api_error_adapter(response: reqwest::Response) -> Result<reqwest::Respo
     }
 }
 
-#[derive(Clone)]
-struct FileReference {
-    pub url: String,
-    pub md5: String,
-}
-
 async fn upload_to_s3(
     client: &Client,
     base_url_with_params: String,
     api_key: String,
     file_path: PathBuf,
     no_progress_bar: bool,
-) -> Result<FileReference> {
+) -> Result<String> {
     // Open file
     let file = File::open(&file_path)
         .await
@@ -517,9 +510,7 @@ async fn upload_to_s3(
 
     // Progress stuff
     let file_total_size = file.metadata().await?.len();
-    let (hashing_reader, hash_sender, hash_receiver) =
-        HashingReader::<_, Md5>::new(file, file_total_size.try_into()?);
-    let mut file_reader = ReaderStream::new(hashing_reader);
+    let mut file_reader = ReaderStream::new(file);
     let mut multi_progress: Option<MultiProgress> = if !no_progress_bar {
         Some(MultiProgress::new())
     } else {
@@ -566,18 +557,7 @@ async fn upload_to_s3(
         .await?;
     api_error_adapter(s3_response).await?;
 
-    let digest = hash_receiver.try_recv()?;
-    let hex_hash = match digest {
-        Some(x) => base16ct::lower::encode_string(&x),
-        None => "".to_owned(),
-    };
-    //Additional sender needs to be closed after we receive the hash
-    drop(hash_sender);
-
-    Ok(FileReference {
-        url: upload_url_response.file_path.clone(),
-        md5: hex_hash,
-    })
+    Ok(upload_url_response.file_path.clone())
 }
 
 #[derive(Serialize, Deserialize, Debug)]
