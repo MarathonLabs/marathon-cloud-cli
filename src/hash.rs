@@ -53,6 +53,7 @@ mod tests {
 
     use super::*;
     use anyhow::Result;
+    use base64::prelude::*;
 
     #[tokio::test]
     async fn test_valid() -> Result<()> {
@@ -60,13 +61,14 @@ mod tests {
         let fixture = Path::new(&manifest_dir)
             .join("fixture")
             .join("hashing")
-            .join("tests.txt");
+            .join("tests");
         let result = md5(fixture.clone()).await?;
         let text = std::fs::read_to_string(&fixture)?;
         assert_eq!(
-            result.md5, "6cd5e415d1077b0137c4ba7c868e41d7",
+            result.md5,
+            "6cd5e415d1077b0137c4ba7c868e41d7",
             "on file contents: {}",
-            text
+            BASE64_STANDARD.encode(text)
         );
         Ok(())
     }
