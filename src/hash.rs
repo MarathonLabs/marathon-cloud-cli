@@ -61,8 +61,13 @@ mod tests {
             .join("fixture")
             .join("hashing")
             .join("tests.txt");
-        let result = md5(fixture).await?;
-        assert_eq!(result.md5, "6cd5e415d1077b0137c4ba7c868e41d7");
+        let result = md5(fixture.clone()).await?;
+        let text = std::fs::read_to_string(&fixture)?;
+        assert_eq!(
+            result.md5, "6cd5e415d1077b0137c4ba7c868e41d7",
+            "on file contents: {}",
+            text
+        );
         Ok(())
     }
 
