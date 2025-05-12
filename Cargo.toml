@@ -8,7 +8,7 @@ name = "marathon-cloud"
 repository = "https://github.com/MarathonLabs/marathon-cloud-cli"
 version = "0.0.1"
 edition = "2021"
-rust-version = "1.74"
+rust-version = "1.84.1"
 default-run = "marathon-cloud"
 
 [[bin]]

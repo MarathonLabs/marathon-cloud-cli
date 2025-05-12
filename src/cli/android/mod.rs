@@ -25,6 +25,8 @@ pub enum SystemImage {
     Default,
     #[clap(name = "google_apis")]
     GoogleApis,
+    #[clap(name = "google_apis_playstore")]
+    GoogleApisPlaystore,
 }
 
 impl Display for SystemImage {
@@ -32,6 +34,7 @@ impl Display for SystemImage {
         match self {
             SystemImage::Default => f.write_str("default"),
             SystemImage::GoogleApis => f.write_str("google_apis"),
+            SystemImage::GoogleApisPlaystore => f.write_str("google_apis_playstore"),
         }
     }
 }
@@ -213,7 +216,7 @@ If you are interesting in library testing then please use advance mode with --li
         }
         (_, _, Some(SystemImage::Default) | None, Some(OsVersion::Android15)) => {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message: "Android OS version 15 only supports google-apis system image".into(),
+                message: "Android OS version 15 only supports google_apis or google_apis_playstore system image".into(),
             }
             .into());
         }
