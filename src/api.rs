@@ -17,7 +17,8 @@ use tokio::fs::{create_dir_all, File};
 use tokio::io;
 
 use crate::{
-    bundle::ApplicationBundle,
+    bundle::{ApplicationBundleReference, LibraryBundleReference},
+    cli::model::LocalFileReference,
     errors::{ApiError, EnvArgError, InputError},
     filtering::model::SparseMarathonfile,
     pull::PullFileConfig,
@@ -30,8 +31,8 @@ pub trait RapiClient {
     async fn get_token(&self) -> Result<String>;
     async fn create_run(
         &self,
-        app: Option<PathBuf>,
-        test_app: Option<PathBuf>,
+        app: Option<LocalFileReference>,
+        test_app: Option<LocalFileReference>,
         name: Option<String>,
         link: Option<String>,
         branch: Option<String>,
@@ -58,8 +59,8 @@ pub trait RapiClient {
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
         project: Option<String>,
-        application_bundle: Option<Vec<ApplicationBundle>>,
-        library_bundle: Option<Vec<PathBuf>>,
+        application_bundle: Option<Vec<ApplicationBundleReference>>,
+        library_bundle: Option<Vec<LibraryBundleReference>>,
         granted_permission: Option<Vec<String>>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
@@ -129,8 +130,8 @@ impl RapiClient for RapiReqwestClient {
 
     async fn create_run(
         &self,
-        app: Option<PathBuf>,
-        test_app: Option<PathBuf>,
+        app: Option<LocalFileReference>,
+        test_app: Option<LocalFileReference>,
         name: Option<String>,
         link: Option<String>,
         branch: Option<String>,
@@ -157,8 +158,8 @@ impl RapiClient for RapiReqwestClient {
         test_timeout_default: Option<u32>,
         test_timeout_max: Option<u32>,
         project: Option<String>,
-        application_bundle: Option<Vec<ApplicationBundle>>,
-        library_bundle: Option<Vec<PathBuf>>,
+        application_bundle: Option<Vec<ApplicationBundleReference>>,
+        library_bundle: Option<Vec<LibraryBundleReference>>,
         granted_permission: Option<Vec<String>>,
     ) -> Result<String> {
         let url = format!("{}/v2/run", self.base_url);
@@ -167,13 +168,13 @@ impl RapiClient for RapiReqwestClient {
             .map_err(|error| ApiError::InvalidParameters { error })?;
 
         let mut s3_test_app_path = None;
-        if let Some(test_app) = test_app {
+        if let Some(test_app) = &test_app {
             s3_test_app_path = Some(
                 upload_to_s3(
                     &self.client,
                     self.base_url.clone(),
                     self.api_key.clone(),
-                    test_app.clone(),
+                    test_app.path.clone(),
                     no_progress_bar,
                 )
                 .await?,
@@ -181,13 +182,13 @@ impl RapiClient for RapiReqwestClient {
         }
 
         let mut s3_app_path = None;
-        if let Some(app) = app {
+        if let Some(app) = &app {
             s3_app_path = Some(
                 upload_to_s3(
                     &self.client,
                     self.base_url.clone(),
                     self.api_key.clone(),
-                    app.clone(),
+                    app.path.clone(),
                     no_progress_bar,
                 )
                 .await?,
@@ -202,7 +203,7 @@ impl RapiClient for RapiReqwestClient {
                     &self.client,
                     self.base_url.clone(),
                     self.api_key.clone(),
-                    app_bundle.app_path.clone(),
+                    app_bundle.application.path.clone(),
                     no_progress_bar,
                 )
                 .await?;
@@ -211,33 +212,37 @@ impl RapiClient for RapiReqwestClient {
                     &self.client,
                     self.base_url.clone(),
                     self.api_key.clone(),
-                    app_bundle.test_app_path.clone(),
+                    app_bundle.test_application.path.clone(),
                     no_progress_bar,
                 )
                 .await?;
 
                 let create_run_bundle = CreateRunBundle {
                     s3_app_path: Some(s3_app_path),
+                    app_md5: Some(app_bundle.application.md5),
                     s3_test_app_path: s3_test_app_path.clone(),
+                    test_app_md5: app_bundle.test_application.md5,
                 };
                 create_run_bundles.push(create_run_bundle);
             }
         }
 
-        if let Some(library_bundles) = library_bundle {
-            for lib_bundle in library_bundles {
+        if let Some(bundles) = library_bundle {
+            for bundle in bundles {
                 let s3_test_app_path = upload_to_s3(
                     &self.client,
                     self.base_url.clone(),
                     self.api_key.clone(),
-                    lib_bundle.clone(),
+                    bundle.test_application.path.clone(),
                     no_progress_bar,
                 )
                 .await?;
 
                 let create_run_bundle = CreateRunBundle {
                     s3_app_path: None,
+                    app_md5: None,
                     s3_test_app_path: s3_test_app_path.clone(),
+                    test_app_md5: bundle.test_application.md5,
                 };
                 create_run_bundles.push(create_run_bundle);
             }
@@ -254,11 +259,13 @@ impl RapiClient for RapiReqwestClient {
 
         let create_request = CreateRunRequest {
             s3_test_app_path: s3_test_app_path.clone(),
+            test_app_md5: test_app.clone().map(|s| s.md5),
             platform: platform.clone(),
             s3_app_path: s3_app_path.clone(),
+            app_md5: app.clone().map(|s| s.md5),
             analytics_read_only: analytics_read_only.clone(),
-            profiling: profiling,
-            mock_location: mock_location,
+            profiling,
+            mock_location,
             code_coverage: code_coverage.clone(),
             concurrency_limit: concurrency_limit.clone(),
             country: None,
@@ -286,7 +293,7 @@ impl RapiClient for RapiReqwestClient {
             test_timeout_max: test_timeout_max.clone(),
             env_args: env_args_map,
             test_env_args: test_env_args_map,
-            bundles: bundles,
+            bundles,
             granted_permission: granted_permission.clone(),
         };
 
@@ -572,8 +579,12 @@ struct CreateRunRequest {
 
     #[serde(rename = "s3_test_app_path", default)]
     s3_test_app_path: Option<String>,
+    #[serde(rename = "test_app_md5", default)]
+    test_app_md5: Option<String>,
     #[serde(rename = "s3_app_path", default)]
     s3_app_path: Option<String>,
+    #[serde(rename = "app_md5", default)]
+    app_md5: Option<String>,
     #[serde(rename = "analytics_read_only", default)]
     analytics_read_only: Option<bool>,
     #[serde(rename = "profiling", default)]
@@ -636,9 +647,13 @@ struct CreateRunRequest {
 struct CreateRunBundle {
     #[serde(rename = "s3_test_app_path")]
     s3_test_app_path: String,
+    #[serde(rename = "test_app_md5")]
+    test_app_md5: String,
 
     #[serde(rename = "s3_app_path", skip_serializing_if = "Option::is_none")]
     s3_app_path: Option<String>,
+    #[serde(rename = "app_md5", skip_serializing_if = "Option::is_none")]
+    app_md5: Option<String>,
 }
 
 #[derive(Deserialize)]

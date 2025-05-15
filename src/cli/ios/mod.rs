@@ -1,15 +1,19 @@
-use std::ffi::OsStr;
 use std::fmt::Display;
+use std::{ffi::OsStr, time::Duration};
 
 use anyhow::Result;
+use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashSet;
 use tokio::fs::File;
 use walkdir::WalkDir;
 
+use crate::formatter::Formatter;
 use crate::{
     cli::{self},
     compression,
     errors::ConfigurationError,
+    formatter::StandardFormatter,
+    hash,
     interactor::TriggerTestRunInteractor,
 };
 use crate::{errors::InputError, filtering};
@@ -291,6 +295,47 @@ Second example: If you choose --device iPhone-11 then you will receive an error 
     let application = ensure_format(application).await?;
     let test_application = ensure_format(test_application).await?;
 
+    let present_wait: bool = match common.wait {
+        None => true,
+        Some(true) => true,
+        Some(false) => false,
+    };
+
+    let steps = match (&present_wait, &common.output) {
+        (true, Some(_)) => 6,
+        (true, None) => 3,
+        _ => 2,
+    };
+    let mut formatter = StandardFormatter::new(steps);
+    formatter.stage("Validating input...");
+    let spinner = if !common.progress_args.no_progress_bars {
+        let pb = ProgressBar::new_spinner();
+        pb.enable_steady_tick(Duration::from_millis(80));
+        pb.set_style(
+            ProgressStyle::with_template("{spinner:.blue} {msg}")
+                .unwrap()
+                .tick_strings(&["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]),
+        );
+        pb.set_message("Validating input...");
+        Some(pb)
+    } else {
+        None
+    };
+
+    let application = hash::md5(application).await?;
+    let test_application = hash::md5(test_application).await?;
+
+    if let Some(s) = spinner {
+        s.finish_and_clear()
+    }
+
+    if application.md5 == test_application.md5 {
+        return Err(InputError::DuplicatedApplicationBundle {
+            app: application.path.clone(),
+            test: test_application.path.clone(),
+        })?;
+    }
+
     let retry_args = cli::validate::retry_args(retry_args);
     cli::validate::result_file_args(&common.result_file_args)?;
 
@@ -333,12 +378,6 @@ Second example: If you choose --device iPhone-11 then you will receive an error 
         }
     }
 
-    let present_wait: bool = match common.wait {
-        None => true,
-        Some(true) => true,
-        Some(false) => false,
-    };
-
     TriggerTestRunInteractor {}
         .execute(
             &api_args.base_url,
@@ -378,6 +417,7 @@ Second example: If you choose --device iPhone-11 then you will receive an error 
             None,
             None,
             granted_permission,
+            formatter,
         )
         .await
 }
