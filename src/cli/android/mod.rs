@@ -1,12 +1,14 @@
 use crate::{
     bundle::{ApplicationBundle, ApplicationBundleReference, LibraryBundleReference},
     errors::InputError,
+    formatter::{Formatter, StandardFormatter},
     hash,
     pull::parse_pull_args,
 };
 use anyhow::Result;
 use futures::{future::try_join_all, try_join};
-use std::{fmt::Display, path::PathBuf};
+use indicatif::{ProgressBar, ProgressStyle};
+use std::{fmt::Display, path::PathBuf, time::Duration};
 
 use crate::{
     bundle,
@@ -251,6 +253,27 @@ If you are interesting in library testing then please use advance mode with --li
         Some(false) => false,
     };
 
+    let steps = match (&present_wait, &common.output) {
+        (true, Some(_)) => 6,
+        (true, None) => 3,
+        _ => 2,
+    };
+    let mut formatter = StandardFormatter::new(steps);
+    formatter.stage("Validating input...");
+    let spinner = if !common.progress_args.no_progress_bars {
+        let pb = ProgressBar::new_spinner();
+        pb.enable_steady_tick(Duration::from_millis(80));
+        pb.set_style(
+            ProgressStyle::with_template("{spinner:.blue} {msg}")
+                .unwrap()
+                .tick_strings(&["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]),
+        );
+        pb.set_message("Validating input...");
+        Some(pb)
+    } else {
+        None
+    };
+
     let (application, test_application, application_bundle, library_bundle) = validate(
         application,
         test_application,
@@ -258,6 +281,9 @@ If you are interesting in library testing then please use advance mode with --li
         library_bundle,
     )
     .await?;
+    if let Some(s) = spinner {
+        s.finish_and_clear()
+    }
 
     TriggerTestRunInteractor {}
         .execute(
@@ -298,6 +324,7 @@ If you are interesting in library testing then please use advance mode with --li
             application_bundle,
             library_bundle,
             None,
+            formatter,
         )
         .await
 }

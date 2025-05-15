@@ -141,15 +141,9 @@ impl TriggerTestRunInteractor {
         application_bundle: Option<Vec<ApplicationBundleReference>>,
         library_bundle: Option<Vec<LibraryBundleReference>>,
         granted_permission: Option<Vec<String>>,
+        mut formatter: StandardFormatter,
     ) -> Result<bool> {
         let client = RapiReqwestClient::new(base_url, api_key);
-        let steps = match (wait, output) {
-            (true, Some(_)) => 5,
-            (true, None) => 2,
-            _ => 1,
-        };
-        let mut formatter = StandardFormatter::new(steps);
-
         let token = client.get_token().await?;
 
         formatter.stage("Submitting new run...");
