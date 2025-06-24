@@ -55,6 +55,8 @@ pub enum OsVersion {
     Android14,
     #[clap(name = "15")]
     Android15,
+    #[clap(name = "16")]
+    Android16,
 }
 
 impl Display for OsVersion {
@@ -66,6 +68,7 @@ impl Display for OsVersion {
             OsVersion::Android13 => f.write_str("13"),
             OsVersion::Android14 => f.write_str("14"),
             OsVersion::Android15 => f.write_str("15"),
+            OsVersion::Android16 => f.write_str("16"),
         }
     }
 }
@@ -176,11 +179,11 @@ If you are interesting in library testing then please use advance mode with --li
             Some(OsVersion::Android10)
             | Some(OsVersion::Android12)
             | Some(OsVersion::Android14)
-            | Some(OsVersion::Android15),
+            | Some(OsVersion::Android16),
         ) => {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
                 message:
-                    "Android Watch only supports google-apis system image and os versions 11 and 13"
+                    "Android Watch only supports google-apis system image and os versions 11, 13 and 15"
                         .into(),
             }
             .into());
@@ -191,15 +194,9 @@ If you are interesting in library testing then please use advance mode with --li
             }
             .into());
         }
-        (Some("tv"), _, _, Some(OsVersion::Android15)) => {
+        (Some("tv"), _, _, Some(OsVersion::Android15) | Some(OsVersion::Android16)) => {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message: "Android TV doesn't support os version 15".into(),
-            }
-            .into());
-        }
-        (Some("wear"), _, _, Some(OsVersion::Android15)) => {
-            return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message: "Android Wear doesn't support os version 15".into(),
+                message: "Android TV doesn't support os versions 15 and 16".into(),
             }
             .into());
         }
@@ -216,9 +213,14 @@ If you are interesting in library testing then please use advance mode with --li
             }
             .into());
         }
-        (_, _, Some(SystemImage::Default) | None, Some(OsVersion::Android15)) => {
+        (
+            _,
+            _,
+            Some(SystemImage::Default) | None,
+            Some(OsVersion::Android15) | Some(OsVersion::Android16),
+        ) => {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message: "Android OS version 15 only supports google_apis or google_apis_playstore system image".into(),
+                message: "Android OS version 15, 16 only supports google_apis or google_apis_playstore system image".into(),
             }
             .into());
         }
