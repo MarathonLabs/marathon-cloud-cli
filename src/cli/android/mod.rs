@@ -185,7 +185,7 @@ If you are interesting in library testing then please use advance mode with --li
             Some("watch"),
             _,
             Some(_),
-            | Some(OsVersion::Android8)
+            Some(OsVersion::Android8)
             | Some(OsVersion::Android8_1)
             | Some(OsVersion::Android9)
             | Some(OsVersion::Android10)
@@ -206,7 +206,9 @@ If you are interesting in library testing then please use advance mode with --li
             }
             .into());
         }
-        (Some("tv"), _, _, Some(version)) if *version >= OsVersion::Android15 || *version < OsVersion::Android10 => {
+        (Some("tv"), _, _, Some(version))
+            if *version >= OsVersion::Android15 || *version < OsVersion::Android10 =>
+        {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
                 message: "Android TV supports versions [10, 11, 12, 13, 14]".into(),
             }
@@ -239,7 +241,7 @@ If you are interesting in library testing then please use advance mode with --li
         (
             _,
             _,
-            Some(SystemImage::Default) | Some(SystemImage::GoogleApisPlaystore) |  None,
+            Some(SystemImage::Default) | Some(SystemImage::GoogleApisPlaystore) | None,
             Some(version),
         ) if *version < OsVersion::Android10 => {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
