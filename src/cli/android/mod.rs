@@ -8,7 +8,7 @@ use crate::{
 use anyhow::Result;
 use futures::{future::try_join_all, try_join};
 use indicatif::{ProgressBar, ProgressStyle};
-use std::{fmt::Display, path::PathBuf, time::Duration};
+use std::{env::consts::OS, fmt::Display, path::PathBuf, time::Duration};
 
 use crate::{
     bundle,
@@ -41,8 +41,14 @@ impl Display for SystemImage {
     }
 }
 
-#[derive(Debug, clap::ValueEnum, Clone)]
+#[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OsVersion {
+    #[clap(name = "8")]
+    Android8,
+    #[clap(name = "8.1")]
+    Android8_1,
+    #[clap(name = "9")]
+    Android9,
     #[clap(name = "10")]
     Android10,
     #[clap(name = "11")]
@@ -62,6 +68,9 @@ pub enum OsVersion {
 impl Display for OsVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            OsVersion::Android8 => f.write_str("8"),
+            OsVersion::Android8_1 => f.write_str("8.1"),
+            OsVersion::Android9 => f.write_str("9"),
             OsVersion::Android10 => f.write_str("10"),
             OsVersion::Android11 => f.write_str("11"),
             OsVersion::Android12 => f.write_str("12"),
@@ -176,7 +185,10 @@ If you are interesting in library testing then please use advance mode with --li
             Some("watch"),
             _,
             Some(_),
-            Some(OsVersion::Android10)
+            | Some(OsVersion::Android8)
+            | Some(OsVersion::Android8_1)
+            | Some(OsVersion::Android9)
+            | Some(OsVersion::Android10)
             | Some(OsVersion::Android12)
             | Some(OsVersion::Android14)
             | Some(OsVersion::Android16),
@@ -194,9 +206,9 @@ If you are interesting in library testing then please use advance mode with --li
             }
             .into());
         }
-        (Some("tv"), _, _, Some(OsVersion::Android15) | Some(OsVersion::Android16)) => {
+        (Some("tv"), _, _, Some(version)) if *version >= OsVersion::Android15 || *version < OsVersion::Android10 => {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message: "Android TV doesn't support os versions 15 and 16".into(),
+                message: "Android TV supports versions [10, 11, 12, 13, 14]".into(),
             }
             .into());
         }
@@ -221,6 +233,17 @@ If you are interesting in library testing then please use advance mode with --li
         ) => {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
                 message: "Android OS version 15, 16 only supports google_apis or google_apis_playstore system image".into(),
+            }
+            .into());
+        }
+        (
+            _,
+            _,
+            Some(SystemImage::Default) | Some(SystemImage::GoogleApisPlaystore) |  None,
+            Some(version),
+        ) if *version < OsVersion::Android10 => {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "Android OS versions <10 only support google_apis system image".into(),
             }
             .into());
         }
