@@ -117,6 +117,36 @@ impl Cli {
                         )
                         .await
                     }
+                    RunCommands::Maestro { command } => match command {
+                        MaestroRunCommands::iOS {
+                            application,
+                            test_application,
+                            os_version,
+                            device,
+                            xcode_version,
+                            common,
+                            api_args,
+                            retry_args,
+                            analytics_args,
+                            maestro_env,
+                            flow,
+                        } => {
+                            ios::maestro::run(
+                                application,
+                                test_application,
+                                flow,
+                                os_version,
+                                device,
+                                xcode_version,
+                                common,
+                                api_args,
+                                maestro_env,
+                                retry_args,
+                                analytics_args,
+                            )
+                            .await
+                        }
+                    },
                 }
             }
             Some(Commands::Download(args)) => {
@@ -566,5 +596,62 @@ Important: Granting is conducted before each test batch (not each test). If you 
 Available permissions: calendar, contacts-limited, contacts, location, location-always, photos-add, photos, media-library, microphone, motion, reminders, siri."
         )]
         granted_permission: Option<Vec<String>>,
+    },
+
+    #[clap(about = "Run maestro tests")]
+    Maestro {
+        #[command(subcommand)]
+        command: MaestroRunCommands,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum MaestroRunCommands {
+    #[allow(non_camel_case_types)]
+    #[command(name = "ios")]
+    #[clap(about = "Run maestro tests using iOS")]
+    iOS {
+        #[arg(
+            short,
+            long,
+            help = "application filepath, example: /home/user/workspace/sample.zip"
+        )]
+        application: PathBuf,
+
+        #[arg(
+            short,
+            long,
+            help = "test application filepath (a folder with maestro flows), for example: /home/user/workspace/flows"
+        )]
+        test_application: PathBuf,
+
+        #[arg(value_enum, long, help = "iOS runtime version")]
+        os_version: Option<ios::OsVersion>,
+
+        #[arg(value_enum, long, help = "Device type")]
+        device: Option<ios::IosDevice>,
+
+        #[arg(value_enum, long, help = "Xcode version")]
+        xcode_version: Option<ios::XcodeVersion>,
+
+        #[command(flatten)]
+        common: CommonRunArgs,
+
+        #[command(flatten)]
+        api_args: ApiArgs,
+
+        #[command(flatten)]
+        retry_args: RetryArgs,
+
+        #[command(flatten)]
+        analytics_args: AnalyticsArgs,
+
+        #[arg(
+            long,
+            help = "maestro environment variable, example MAESTRO_APP_ID=com.example"
+        )]
+        maestro_env: Option<Vec<String>>,
+
+        flow: Vec<String>,
     },
 }

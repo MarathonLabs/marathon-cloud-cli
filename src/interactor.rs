@@ -123,6 +123,7 @@ impl TriggerTestRunInteractor {
         output: &Option<PathBuf>,
         application: Option<LocalFileReference>,
         test_application: Option<LocalFileReference>,
+        flows: Option<Vec<String>>,
         os_version: Option<String>,
         system_image: Option<String>,
         device: Option<String>,
@@ -151,6 +152,7 @@ impl TriggerTestRunInteractor {
             .create_run(
                 application,
                 test_application,
+                flows,
                 name,
                 link,
                 branch,

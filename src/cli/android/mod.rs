@@ -8,7 +8,7 @@ use crate::{
 use anyhow::Result;
 use futures::{future::try_join_all, try_join};
 use indicatif::{ProgressBar, ProgressStyle};
-use std::{env::consts::OS, fmt::Display, path::PathBuf, time::Duration};
+use std::{fmt::Display, path::PathBuf, time::Duration};
 
 use crate::{
     bundle,
@@ -333,6 +333,7 @@ If you are interesting in library testing then please use advance mode with --li
             &common.output,
             application,
             test_application,
+            None,
             os_version.map(|x| x.to_string()),
             system_image.map(|x| x.to_string()),
             device,

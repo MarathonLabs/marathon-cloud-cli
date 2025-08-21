@@ -33,6 +33,7 @@ pub trait RapiClient {
         &self,
         app: Option<LocalFileReference>,
         test_app: Option<LocalFileReference>,
+        flows: Option<Vec<String>>,
         name: Option<String>,
         link: Option<String>,
         branch: Option<String>,
@@ -132,6 +133,7 @@ impl RapiClient for RapiReqwestClient {
         &self,
         app: Option<LocalFileReference>,
         test_app: Option<LocalFileReference>,
+        flows: Option<Vec<String>>,
         name: Option<String>,
         link: Option<String>,
         branch: Option<String>,
@@ -260,6 +262,7 @@ impl RapiClient for RapiReqwestClient {
         let create_request = CreateRunRequest {
             s3_test_app_path: s3_test_app_path.clone(),
             test_app_md5: test_app.clone().map(|s| s.md5),
+            flows,
             platform: platform.clone(),
             s3_app_path: s3_app_path.clone(),
             app_md5: app.clone().map(|s| s.md5),
@@ -585,6 +588,8 @@ struct CreateRunRequest {
     s3_app_path: Option<String>,
     #[serde(rename = "app_md5", default)]
     app_md5: Option<String>,
+    #[serde(rename = "flows", default)]
+    flows: Option<Vec<String>>,
     #[serde(rename = "analytics_read_only", default)]
     analytics_read_only: Option<bool>,
     #[serde(rename = "profiling", default)]
