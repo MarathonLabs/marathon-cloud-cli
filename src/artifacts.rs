@@ -2,7 +2,6 @@ use serde_json::Value;
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
-use std::path::PathBuf;
 
 use ::futures::{stream, StreamExt, TryStreamExt};
 use anyhow::Result;
@@ -53,7 +52,7 @@ pub async fn download_artifacts(
     client: &RapiReqwestClient,
     run_id: &str,
     artifacts: Vec<Artifact>,
-    path: &PathBuf,
+    path: &Path,
     token: &str,
     no_progress_bar: bool,
 ) -> Result<()> {
@@ -70,7 +69,7 @@ pub async fn download_artifacts(
         .map(|artifact| {
             let client = client.clone();
             let token = token.to_owned();
-            let base_path = path.clone();
+            let base_path = path.to_owned();
             let run_id = run_id.to_owned().clone();
             let progress_bar = progress_bar.clone();
             tokio::spawn(async move {
@@ -101,7 +100,7 @@ pub async fn download_artifacts(
             })
         })
         .buffer_unordered(num_cpus::get())
-        .try_collect()
+        .try_collect::<()>()
         .await
         .map_err(|error| ArtifactError::DownloadFailed { error })?;
 
@@ -124,13 +123,11 @@ pub async fn patch_allure_paths(output: &Path) -> Result<()> {
     // Iterate over each file in the required path
     match fs::read_dir(&required_path) {
         Ok(entries) => {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
-                        if let Err(e) = patch_file(&path).await {
-                            panic!("Failed to patch file {:?}: {}", path, e);
-                        }
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
+                    if let Err(e) = patch_file(&path).await {
+                        panic!("Failed to patch file {:?}: {}", path, e);
                     }
                 }
             }
@@ -144,7 +141,7 @@ pub async fn patch_allure_paths(output: &Path) -> Result<()> {
 
 async fn patch_file(path: &Path) -> io::Result<()> {
     // Read the JSON file
-    let mut file = File::open(&path)?;
+    let mut file = File::open(path)?;
     let mut content = String::new();
     file.read_to_string(&mut content)?;
 
@@ -173,7 +170,7 @@ async fn patch_file(path: &Path) -> io::Result<()> {
     }
 
     // Write the patched JSON back to the file
-    let mut file = File::create(&path)?;
+    let mut file = File::create(path)?;
     file.write_all(serde_json::to_string_pretty(&json_value)?.as_bytes())?;
     file.flush()?;
 

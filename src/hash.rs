@@ -70,7 +70,7 @@ mod tests {
     #[tokio::test]
     async fn test_missing() -> Result<()> {
         let result = md5_optional(None).await?;
-        assert_eq!(result.is_none(), true);
+        assert!(result.is_none());
         Ok(())
     }
 }

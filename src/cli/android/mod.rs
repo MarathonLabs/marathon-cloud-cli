@@ -1,3 +1,5 @@
+pub mod maestro;
+
 use crate::{
     bundle::{ApplicationBundle, ApplicationBundleReference, LibraryBundleReference},
     errors::InputError,
@@ -102,6 +104,7 @@ impl Display for Flavor {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn run(
     application: Option<std::path::PathBuf>,
     test_application: Option<std::path::PathBuf>,
@@ -179,78 +182,7 @@ If you are interesting in library testing then please use advance mode with --li
         .into());
     }
 
-    match (device.as_deref(), &flavor, &system_image, &os_version) {
-        (Some("watch"), _, Some(SystemImage::Default) | None, Some(_) | None)
-        | (
-            Some("watch"),
-            _,
-            Some(_),
-            Some(OsVersion::Android8)
-            | Some(OsVersion::Android8_1)
-            | Some(OsVersion::Android9)
-            | Some(OsVersion::Android10)
-            | Some(OsVersion::Android12)
-            | Some(OsVersion::Android14)
-            | Some(OsVersion::Android16),
-        ) => {
-            return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message:
-                    "Android Watch only supports google-apis system image and os versions 11, 13 and 15"
-                        .into(),
-            }
-            .into());
-        }
-        (Some("tv"), _, Some(SystemImage::Default), Some(_) | None) => {
-            return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message: "Android TV only supports google-apis system image".into(),
-            }
-            .into());
-        }
-        (Some("tv"), _, _, Some(version))
-            if *version >= OsVersion::Android15 || *version < OsVersion::Android10 =>
-        {
-            return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message: "Android TV supports versions [10, 11, 12, 13, 14]".into(),
-            }
-            .into());
-        }
-        (
-            Some("tv") | Some("watch"),
-            Some(Flavor::JsJestAppium) | Some(Flavor::PythonRobotFrameworkAppium),
-            _,
-            _,
-        ) => {
-            return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message:
-                    "js-jest-appium and python-robotframework-appium only support 'phone' devices"
-                        .into(),
-            }
-            .into());
-        }
-        (
-            _,
-            _,
-            Some(SystemImage::Default) | None,
-            Some(OsVersion::Android15) | Some(OsVersion::Android16),
-        ) => {
-            return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message: "Android OS version 15, 16 only supports google_apis or google_apis_playstore system image".into(),
-            }
-            .into());
-        }
-        (
-            _,
-            _,
-            Some(SystemImage::Default) | Some(SystemImage::GoogleApisPlaystore) | None,
-            Some(version),
-        ) if *version < OsVersion::Android10 => {
-            return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message: "Android OS versions <10 only support google_apis system image".into(),
-            }
-            .into());
-        }
-        _ => {}
-    }
+    validate_device_configuration(&os_version, &system_image, &device, &flavor)?;
 
     let filter_file = common.filter_file.map(filtering::convert::convert);
     let filtering_configuration = match filter_file {
@@ -355,6 +287,87 @@ If you are interesting in library testing then please use advance mode with --li
             formatter,
         )
         .await
+}
+
+pub(crate) fn validate_device_configuration(
+    os_version: &Option<OsVersion>,
+    system_image: &Option<SystemImage>,
+    device: &Option<String>,
+    flavor: &Option<Flavor>,
+) -> Result<()> {
+    match (device.as_deref(), flavor, system_image, os_version) {
+        (Some("watch"), _, Some(SystemImage::Default) | None, Some(_) | None)
+        | (
+            Some("watch"),
+            _,
+            Some(_),
+            Some(OsVersion::Android8)
+            | Some(OsVersion::Android8_1)
+            | Some(OsVersion::Android9)
+            | Some(OsVersion::Android10)
+            | Some(OsVersion::Android12)
+            | Some(OsVersion::Android14)
+            | Some(OsVersion::Android16),
+        ) => {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message:
+                    "Android Watch only supports google-apis system image and os versions 11, 13 and 15"
+                        .into(),
+            }
+            .into());
+        }
+        (Some("tv"), _, Some(SystemImage::Default), Some(_) | None) => {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "Android TV only supports google-apis system image".into(),
+            }
+            .into());
+        }
+        (Some("tv"), _, _, Some(version))
+            if *version >= OsVersion::Android15 || *version < OsVersion::Android10 =>
+        {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "Android TV supports versions [10, 11, 12, 13, 14]".into(),
+            }
+            .into());
+        }
+        (
+            Some("tv") | Some("watch"),
+            Some(Flavor::JsJestAppium) | Some(Flavor::PythonRobotFrameworkAppium),
+            _,
+            _,
+        ) => {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message:
+                    "js-jest-appium and python-robotframework-appium only support 'phone' devices"
+                        .into(),
+            }
+            .into());
+        }
+        (
+            _,
+            _,
+            Some(SystemImage::Default) | None,
+            Some(OsVersion::Android15) | Some(OsVersion::Android16),
+        ) => {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "Android OS version 15, 16 only supports google_apis or google_apis_playstore system image".into(),
+            }
+            .into());
+        }
+        (
+            _,
+            _,
+            Some(SystemImage::Default) | Some(SystemImage::GoogleApisPlaystore) | None,
+            Some(version),
+        ) if *version < OsVersion::Android10 => {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "Android OS versions <10 only support google_apis system image".into(),
+            }
+            .into());
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 pub(crate) async fn validate(

@@ -1,10 +1,9 @@
-use std::{path::PathBuf, time::Duration};
-
 use crate::{
     cli::{
-        self,
-        ios::{validate_device_configuration, IosDevice, OsVersion, XcodeVersion},
-        maestro, validate, AnalyticsArgs, ApiArgs, CommonRunArgs, RetryArgs,
+        android::{validate_device_configuration, OsVersion, SystemImage},
+        maestro,
+        model::LocalFileReference,
+        validate, AnalyticsArgs, ApiArgs, CommonRunArgs, RetryArgs,
     },
     errors::InputError,
     filtering,
@@ -13,29 +12,34 @@ use crate::{
     interactor::TriggerTestRunInteractor,
 };
 
+use futures::try_join;
+use log::debug;
+
+use std::path::PathBuf;
+use std::time::Duration;
+
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
-use log::debug;
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn run(
     application: std::path::PathBuf,
-    test_application_arg: std::path::PathBuf,
+    test_application: std::path::PathBuf,
     flows: Vec<String>,
     os_version: Option<OsVersion>,
-    device: Option<IosDevice>,
-    xcode_version: Option<XcodeVersion>,
+    device: Option<String>,
     common: CommonRunArgs,
     api_args: ApiArgs,
     maestro_env: Option<Vec<String>>,
     retry_args: RetryArgs,
     analytics_args: AnalyticsArgs,
 ) -> Result<bool> {
-    let (device, xcode_version, os_version) =
-        match validate_device_configuration(os_version, device, xcode_version).await {
-            Ok(value) => value,
-            Err(value) => return value,
-        };
+    validate_device_configuration(
+        &os_version,
+        &Some(super::SystemImage::GoogleApis),
+        &device,
+        &Some(super::Flavor::Native),
+    )?;
 
     let filter_file = common.filter_file.map(filtering::convert::convert);
     let filtering_configuration = match filter_file {
@@ -43,15 +47,15 @@ pub(crate) async fn run(
         None => None,
     };
 
-    let application = validate::ensure_format(&application, &["zip", "ipa"], &["app"]).await?;
-    let test_application = validate::ensure_format(&test_application_arg, &[], &[]).await?;
+    let retry_args = validate::retry_args(retry_args);
+    validate::result_file_args(&common.result_file_args)?;
 
-    let mut validated_flows: Vec<PathBuf> = Vec::new();
-    for flow in &flows {
-        debug!("Validating flow: {}", &flow);
-        let validated_flow = maestro::validate_flow(&test_application_arg, flow)?;
-        debug!("Validated flow: {}", &validated_flow.to_string_lossy());
-        validated_flows.push(validated_flow);
+    if let Some(limit) = common.concurrency_limit {
+        if limit == 0 {
+            return Err(InputError::NonPositiveValue {
+                arg: "--concurrency-limit".to_owned(),
+            })?;
+        }
     }
 
     let present_wait: bool = match common.wait {
@@ -81,29 +85,10 @@ pub(crate) async fn run(
         None
     };
 
-    let application = hash::md5(application).await?;
-    let test_application = hash::md5(test_application).await?;
-
+    let (application, test_application, _) =
+        validate(application, test_application, &flows).await?;
     if let Some(s) = spinner {
         s.finish_and_clear()
-    }
-
-    if application.md5 == test_application.md5 {
-        return Err(InputError::DuplicatedApplicationBundle {
-            app: application.path.clone(),
-            test: test_application.path.clone(),
-        })?;
-    }
-
-    let retry_args = cli::validate::retry_args(retry_args);
-    cli::validate::result_file_args(&common.result_file_args)?;
-
-    if let Some(limit) = common.concurrency_limit {
-        if limit == 0 {
-            return Err(InputError::NonPositiveValue {
-                arg: "--concurrency-limit".to_owned(),
-            })?;
-        }
     }
 
     TriggerTestRunInteractor {}
@@ -129,11 +114,11 @@ pub(crate) async fn run(
             Some(test_application),
             Some(flows),
             os_version.map(|x| x.to_string()),
+            Some(SystemImage::GoogleApis.to_string()),
+            device,
             None,
-            device.map(|x| x.to_string()),
-            xcode_version.map(|x| x.to_string()),
             Some("maestro".to_owned()),
-            "iOS".to_owned(),
+            "Android".to_owned(),
             common.progress_args.no_progress_bars,
             common.result_file_args.result_file,
             None,
@@ -149,4 +134,34 @@ pub(crate) async fn run(
             formatter,
         )
         .await
+}
+
+pub(crate) async fn validate(
+    application: PathBuf,
+    test_application: PathBuf,
+    flows: &[String],
+) -> Result<(LocalFileReference, LocalFileReference, Vec<PathBuf>)> {
+    let mut validated_flows: Vec<PathBuf> = Vec::new();
+    for flow in flows {
+        debug!("Validating flow: {}", &flow);
+        let validated_flow = maestro::validate_flow(&test_application, flow)?;
+        debug!("Validated flow: {}", &validated_flow.to_string_lossy());
+        validated_flows.push(validated_flow);
+    }
+
+    let application = validate::ensure_format(&application, &["apk"], &[]).await?;
+    let test_application = validate::ensure_format(&test_application, &[], &[]).await?;
+
+    let application = hash::md5(application);
+    let test_application = hash::md5(test_application);
+
+    let (application, test_application) = try_join!(application, test_application,)?;
+    if application.md5 == test_application.md5 {
+        return Err(InputError::DuplicatedApplicationBundle {
+            app: application.path.clone(),
+            test: test_application.path.clone(),
+        })?;
+    }
+
+    Ok((application, test_application, validated_flows))
 }

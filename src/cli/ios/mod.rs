@@ -1,19 +1,16 @@
 pub mod maestro;
 
 use std::fmt::Display;
-use std::path::Path;
-use std::{ffi::OsStr, time::Duration};
+use std::time::Duration;
 
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashSet;
-use tokio::fs::File;
-use walkdir::WalkDir;
 
+use crate::cli::validate;
 use crate::formatter::Formatter;
 use crate::{
     cli::{self},
-    compression,
     errors::ConfigurationError,
     formatter::StandardFormatter,
     hash,
@@ -103,50 +100,6 @@ impl Display for XcodeVersion {
             XcodeVersion::Xcode16_2 => f.write_str("16.2"),
             XcodeVersion::Xcode16_3 => f.write_str("16.3"),
         }
-    }
-}
-
-pub(crate) async fn ensure_format(
-    path: &Path,
-    supported_extensions_file: &[&str],
-    supported_extensions_dir: &[&str],
-) -> Result<std::path::PathBuf> {
-    if path.is_file()
-        && path
-            .extension()
-            .and_then(OsStr::to_str)
-            .is_some_and(|ext| supported_extensions_file.contains(&ext))
-    {
-        Ok(path.to_path_buf())
-    } else if path.is_dir()
-        && (supported_extensions_dir.is_empty()
-            || path
-                .extension()
-                .and_then(OsStr::to_str)
-                .is_some_and(|ext| supported_extensions_dir.contains(&ext)))
-    {
-        let dst = &path.with_extension("zip");
-        let dst_file = File::create(dst).await?;
-
-        let walkdir = WalkDir::new(&path);
-        let it = walkdir.into_iter();
-        let prefix = &path
-            .parent()
-            .unwrap_or(&path)
-            .to_str()
-            .ok_or(InputError::NonUTF8Path {
-                path: path.to_path_buf(),
-            })?;
-
-        compression::zip_dir(&mut it.filter_map(|e| e.ok()), prefix, dst_file).await?;
-        Ok(dst.to_owned())
-    } else {
-        Err(InputError::UnsupportedArtifact {
-            path: path.to_path_buf(),
-            supported_files: "[ipa,zip]".into(),
-            supported_folders: "[app,xctest]".into(),
-        }
-        .into())
     }
 }
 
@@ -286,6 +239,7 @@ fn get_allowed_permissions() -> HashSet<&'static str> {
     ])
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn run(
     application: std::path::PathBuf,
     test_application: std::path::PathBuf,
@@ -326,9 +280,9 @@ pub(crate) async fn run(
         }
     };
 
-    let application = ensure_format(&application, &["zip", "ipa"], &["app"]).await?;
+    let application = validate::ensure_format(&application, &["zip", "ipa"], &["app"]).await?;
     let test_application =
-        ensure_format(&test_application, &["zip", "ipa"], &["app", "xctest"]).await?;
+        validate::ensure_format(&test_application, &["zip", "ipa"], &["app", "xctest"]).await?;
 
     let present_wait: bool = match common.wait {
         None => true,
