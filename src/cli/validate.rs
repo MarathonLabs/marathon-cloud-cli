@@ -72,8 +72,8 @@ pub(crate) async fn ensure_format(
     } else {
         Err(InputError::UnsupportedArtifact {
             path: path.to_path_buf(),
-            supported_files: "[ipa,zip]".into(),
-            supported_folders: "[app,xctest]".into(),
+            supported_files: supported_extensions_file.join(","),
+            supported_folders: supported_extensions_dir.join(","),
         }
         .into())
     }
