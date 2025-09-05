@@ -280,9 +280,11 @@ pub(crate) async fn run(
         }
     };
 
-    let application = validate::ensure_format(&application, &["zip", "ipa"], &["app"]).await?;
+    let application =
+        validate::ensure_format(&application, &["zip", "ipa"], &["app"], true).await?;
     let test_application =
-        validate::ensure_format(&test_application, &["zip", "ipa"], &["app", "xctest"]).await?;
+        validate::ensure_format(&test_application, &["zip", "ipa"], &["app", "xctest"], true)
+            .await?;
 
     let present_wait: bool = match common.wait {
         None => true,

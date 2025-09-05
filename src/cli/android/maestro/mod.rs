@@ -85,7 +85,7 @@ pub(crate) async fn run(
         None
     };
 
-    let (application, test_application, _) =
+    let (application, test_application, flows) =
         validate(application, test_application, &flows).await?;
     if let Some(s) = spinner {
         s.finish_and_clear()
@@ -140,17 +140,17 @@ pub(crate) async fn validate(
     application: PathBuf,
     test_application: PathBuf,
     flows: &[String],
-) -> Result<(LocalFileReference, LocalFileReference, Vec<PathBuf>)> {
-    let mut validated_flows: Vec<PathBuf> = Vec::new();
+) -> Result<(LocalFileReference, LocalFileReference, Vec<String>)> {
+    let mut validated_flows: Vec<String> = Vec::new();
     for flow in flows {
         debug!("Validating flow: {}", &flow);
         let validated_flow = maestro::validate_flow(&test_application, flow)?;
         debug!("Validated flow: {}", &validated_flow.to_string_lossy());
-        validated_flows.push(validated_flow);
+        validated_flows.push(validated_flow.to_string_lossy().to_string());
     }
 
-    let application = validate::ensure_format(&application, &["apk"], &[]).await?;
-    let test_application = validate::ensure_format(&test_application, &[], &[]).await?;
+    let application = validate::ensure_format(&application, &["apk"], &[], false).await?;
+    let test_application = validate::ensure_format(&test_application, &[], &[], false).await?;
 
     let application = hash::md5(application);
     let test_application = hash::md5(test_application);

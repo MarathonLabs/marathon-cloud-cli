@@ -39,7 +39,15 @@ pub(crate) async fn ensure_format(
     path: &Path,
     supported_extensions_file: &[&str],
     supported_extensions_dir: &[&str],
+    compress_use_dir_root: bool,
 ) -> Result<std::path::PathBuf> {
+    if !path.exists() {
+        return Err(InputError::InvalidFileName {
+            path: path.to_path_buf(),
+        }
+        .into());
+    }
+
     if path.is_file()
         && path
             .extension()
@@ -59,13 +67,19 @@ pub(crate) async fn ensure_format(
 
         let walkdir = WalkDir::new(path);
         let it = walkdir.into_iter();
-        let prefix = &path
-            .parent()
-            .unwrap_or(path)
-            .to_str()
-            .ok_or(InputError::NonUTF8Path {
+        let prefix = if compress_use_dir_root {
+            &path
+                .parent()
+                .unwrap_or(path)
+                .to_str()
+                .ok_or(InputError::NonUTF8Path {
+                    path: path.to_path_buf(),
+                })?
+        } else {
+            &path.to_str().ok_or(InputError::NonUTF8Path {
                 path: path.to_path_buf(),
-            })?;
+            })?
+        };
 
         compression::zip_dir(&mut it.filter_map(|e| e.ok()), prefix, dst_file).await?;
         Ok(dst.to_owned())

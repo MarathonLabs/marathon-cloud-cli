@@ -43,15 +43,16 @@ pub(crate) async fn run(
         None => None,
     };
 
-    let application = validate::ensure_format(&application, &["zip", "ipa"], &["app"]).await?;
-    let test_application = validate::ensure_format(&test_application_arg, &[], &[]).await?;
+    let application =
+        validate::ensure_format(&application, &["zip", "ipa"], &["app"], true).await?;
+    let test_application = validate::ensure_format(&test_application_arg, &[], &[], false).await?;
 
-    let mut validated_flows: Vec<PathBuf> = Vec::new();
+    let mut validated_flows: Vec<String> = Vec::new();
     for flow in &flows {
         debug!("Validating flow: {}", &flow);
         let validated_flow = maestro::validate_flow(&test_application_arg, flow)?;
         debug!("Validated flow: {}", &validated_flow.to_string_lossy());
-        validated_flows.push(validated_flow);
+        validated_flows.push(validated_flow.to_string_lossy().to_string());
     }
 
     let present_wait: bool = match common.wait {
@@ -127,7 +128,7 @@ pub(crate) async fn run(
             &common.output,
             Some(application),
             Some(test_application),
-            Some(flows),
+            Some(validated_flows),
             os_version.map(|x| x.to_string()),
             None,
             device.map(|x| x.to_string()),

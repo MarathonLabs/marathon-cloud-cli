@@ -11,12 +11,12 @@ pub(crate) fn validate_flow(test_application: &Path, flow: &str) -> Result<PathB
     let absolute_flow = if flow.is_absolute() {
         flow.to_path_buf()
     } else {
-        test_application.join(flow)
+        std::path::absolute(flow)?
     };
     // Flows are either regular files or a directory
     if !absolute_flow.exists() || (!absolute_flow.is_dir() && !absolute_flow.is_file()) {
         return Err(InputError::InvalidFileName {
-            path: flow.to_path_buf(),
+            path: absolute_flow.to_path_buf(),
         }
         .into());
     }
@@ -27,7 +27,8 @@ pub(crate) fn validate_flow(test_application: &Path, flow: &str) -> Result<PathB
         canonical_test_application.to_string_lossy(),
         flow.to_string_lossy()
     );
-    let relative_flow = flow.strip_prefix(canonical_test_application)?;
+    let relative_flow = absolute_flow.strip_prefix(canonical_test_application)?;
+    debug!("Relative flow path is {}", relative_flow.to_string_lossy());
 
     Ok(relative_flow.to_path_buf())
 }
