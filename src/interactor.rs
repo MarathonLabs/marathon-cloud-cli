@@ -32,13 +32,14 @@ use crate::{
 pub struct DownloadArtifactsInteractor {}
 
 impl DownloadArtifactsInteractor {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn execute(
         &self,
         base_url: &str,
         api_key: &str,
         id: &str,
         wait: bool,
-        output: &PathBuf,
+        output: &Path,
         glob: Option<String>,
         no_progress_bars: bool,
     ) -> Result<()> {
@@ -102,6 +103,7 @@ fn filter_artifact_list(
 pub struct TriggerTestRunInteractor {}
 
 impl TriggerTestRunInteractor {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn execute(
         &self,
         base_url: &str,
@@ -123,6 +125,7 @@ impl TriggerTestRunInteractor {
         output: &Option<PathBuf>,
         application: Option<LocalFileReference>,
         test_application: Option<LocalFileReference>,
+        flows: Option<Vec<String>>,
         os_version: Option<String>,
         system_image: Option<String>,
         device: Option<String>,
@@ -151,6 +154,7 @@ impl TriggerTestRunInteractor {
             .create_run(
                 application,
                 test_application,
+                flows,
                 name,
                 link,
                 branch,
@@ -215,7 +219,7 @@ impl TriggerTestRunInteractor {
                     let ignored = stat.ignored;
                     let billable_time = stat
                         .total_run_time_seconds
-                        .map(|t| Duration::from_secs_f64(t))
+                        .map(Duration::from_secs_f64)
                         .unwrap_or(Duration::from_secs(0));
 
                     let event = TestRunFinished {
@@ -235,7 +239,7 @@ impl TriggerTestRunInteractor {
                         file.flush().await?;
                     }
                     if let Some(error_message) = stat.error_message {
-                        formatter.message(&format!("Error message:"));
+                        formatter.message("Error message:");
                         let formatted_error_message = error_message.replace("\n", "\n\t");
                         formatter.message(&format!("\t{}", formatted_error_message));
                     }

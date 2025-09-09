@@ -29,10 +29,12 @@ use tokio_util::io::ReaderStream;
 #[async_trait]
 pub trait RapiClient {
     async fn get_token(&self) -> Result<String>;
+    #[allow(clippy::too_many_arguments)]
     async fn create_run(
         &self,
         app: Option<LocalFileReference>,
         test_app: Option<LocalFileReference>,
+        flows: Option<Vec<String>>,
         name: Option<String>,
         link: Option<String>,
         branch: Option<String>,
@@ -132,6 +134,7 @@ impl RapiClient for RapiReqwestClient {
         &self,
         app: Option<LocalFileReference>,
         test_app: Option<LocalFileReference>,
+        flows: Option<Vec<String>>,
         name: Option<String>,
         link: Option<String>,
         branch: Option<String>,
@@ -260,21 +263,21 @@ impl RapiClient for RapiReqwestClient {
         let create_request = CreateRunRequest {
             s3_test_app_path: s3_test_app_path.clone(),
             test_app_md5: test_app.clone().map(|s| s.md5),
+            flows,
             platform: platform.clone(),
             s3_app_path: s3_app_path.clone(),
             app_md5: app.clone().map(|s| s.md5),
-            analytics_read_only: analytics_read_only.clone(),
+            analytics_read_only,
             profiling,
             mock_location,
-            code_coverage: code_coverage.clone(),
-            concurrency_limit: concurrency_limit.clone(),
+            code_coverage,
+            concurrency_limit,
             country: None,
             device: device.clone(),
             filtering_configuration: filtering_configuration
-                .map(|config| serde_json::to_string(&config).ok())
-                .flatten(),
+                .and_then(|config| serde_json::to_string(&config).ok()),
             flavor: flavor.clone(),
-            isolated: isolated.clone(),
+            isolated,
             language: None,
             link: link.clone(),
             name: name.clone(),
@@ -282,15 +285,14 @@ impl RapiClient for RapiReqwestClient {
             os_version: os_version.clone(),
             project: project.clone(),
             pull_file_config: pull_file_config
-                .map(|config| serde_json::to_string(&config).ok())
-                .flatten(),
-            retry_quota_test_preventive: retry_quota_test_preventive.clone(),
-            retry_quota_test_reactive: retry_quota_test_reactive.clone(),
-            retry_quota_test_uncompleted: retry_quota_test_uncompleted.clone(),
-            system_image: system_image.clone(),
-            xcode_version: xcode_version.clone(),
-            test_timeout_default: test_timeout_default.clone(),
-            test_timeout_max: test_timeout_max.clone(),
+                .and_then(|config| serde_json::to_string(&config).ok()),
+            retry_quota_test_preventive,
+            retry_quota_test_reactive,
+            retry_quota_test_uncompleted,
+            system_image,
+            xcode_version,
+            test_timeout_default,
+            test_timeout_max,
             env_args: env_args_map,
             test_env_args: test_env_args_map,
             bundles,
@@ -416,7 +418,7 @@ fn vec_to_hashmap(
                     let value = key_value
                         .get(1)
                         .map(|val| val.to_string())
-                        .unwrap_or_else(|| "".to_string());
+                        .unwrap_or("".to_string());
                     if value.is_empty() {
                         return Err(EnvArgError::MissingValue {
                             env_arg: arg.clone(),
@@ -445,7 +447,7 @@ async fn api_error_adapter(response: reqwest::Response) -> Result<reqwest::Respo
             if let Some(status_code) = error.status() {
                 match status_code {
                     StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                        if let Some(rapi_error) = serde_json::from_str::<RapiError>(&body).ok() {
+                        if let Ok(rapi_error) = serde_json::from_str::<RapiError>(&body) {
                             Err(ApiError::InvalidAuthenticationToken {
                                 code: rapi_error.code,
                                 message: rapi_error.message,
@@ -585,6 +587,8 @@ struct CreateRunRequest {
     s3_app_path: Option<String>,
     #[serde(rename = "app_md5", default)]
     app_md5: Option<String>,
+    #[serde(rename = "flows", default)]
+    flows: Option<Vec<String>>,
     #[serde(rename = "analytics_read_only", default)]
     analytics_read_only: Option<bool>,
     #[serde(rename = "profiling", default)]
@@ -660,12 +664,14 @@ struct CreateRunBundle {
 pub struct CreateRunResponse {
     #[serde(rename = "run_id")]
     pub run_id: String,
+    #[allow(dead_code)]
     #[serde(rename = "status")]
     pub status: String,
 }
 
 #[derive(Deserialize)]
 pub struct TestRun {
+    #[allow(dead_code)]
     #[serde(rename = "id")]
     pub id: String,
     #[serde(rename = "state")]
@@ -694,6 +700,7 @@ pub struct GetTokenResponse {
 pub struct Artifact {
     #[serde(rename = "id")]
     pub id: String,
+    #[allow(dead_code)]
     #[serde(rename = "name")]
     pub name: String,
     #[serde(rename = "is_file")]

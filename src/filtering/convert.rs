@@ -154,7 +154,7 @@ fn xctestplan_ids_to_filter(ids: &[String]) -> Filter {
 }
 
 pub async fn validate(
-    original_content: &String,
+    original_content: &str,
     cnf: &mut FilteringConfiguration,
     workdir: &Path,
 ) -> Result<()> {

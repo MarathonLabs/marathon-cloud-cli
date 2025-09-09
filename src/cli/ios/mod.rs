@@ -1,16 +1,16 @@
+pub mod maestro;
+
 use std::fmt::Display;
-use std::{ffi::OsStr, time::Duration};
+use std::time::Duration;
 
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashSet;
-use tokio::fs::File;
-use walkdir::WalkDir;
 
+use crate::cli::validate;
 use crate::formatter::Formatter;
 use crate::{
     cli::{self},
-    compression,
     errors::ConfigurationError,
     formatter::StandardFormatter,
     hash,
@@ -100,45 +100,6 @@ impl Display for XcodeVersion {
             XcodeVersion::Xcode16_2 => f.write_str("16.2"),
             XcodeVersion::Xcode16_3 => f.write_str("16.3"),
         }
-    }
-}
-
-pub(crate) async fn ensure_format(path: std::path::PathBuf) -> Result<std::path::PathBuf> {
-    let supported_extensions_file = vec!["zip", "ipa"];
-    let supported_extensions_dir = vec!["app", "xctest"];
-    if path.is_file()
-        && path
-            .extension()
-            .and_then(OsStr::to_str)
-            .is_some_and(|ext| supported_extensions_file.contains(&ext))
-    {
-        Ok(path)
-    } else if path.is_dir()
-        && path
-            .extension()
-            .and_then(OsStr::to_str)
-            .is_some_and(|ext| supported_extensions_dir.contains(&ext))
-    {
-        let dst = &path.with_extension("zip");
-        let dst_file = File::create(dst).await?;
-
-        let walkdir = WalkDir::new(&path);
-        let it = walkdir.into_iter();
-        let prefix = &path
-            .parent()
-            .unwrap_or(&path)
-            .to_str()
-            .ok_or(InputError::NonUTF8Path { path: path.clone() })?;
-
-        compression::zip_dir(&mut it.filter_map(|e| e.ok()), prefix, dst_file).await?;
-        Ok(dst.to_owned())
-    } else {
-        Err(InputError::UnsupportedArtifact {
-            path,
-            supported_files: "[ipa,zip]".into(),
-            supported_folders: "[app,xctest]".into(),
-        }
-        .into())
     }
 }
 
@@ -278,6 +239,7 @@ fn get_allowed_permissions() -> HashSet<&'static str> {
     ])
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn run(
     application: std::path::PathBuf,
     test_application: std::path::PathBuf,
@@ -296,40 +258,11 @@ pub(crate) async fn run(
     test_timeout_max: Option<u32>,
     granted_permission: Option<Vec<String>>,
 ) -> Result<bool> {
-    let (device, xcode_version, os_version) = if device.is_none()
-        && xcode_version.is_none()
-        && os_version.is_none()
-    {
-        (None, None, None)
-    } else {
-        match infer_parameters(device, xcode_version, os_version).await {
-            Ok((dev, xcode, os)) => (Some(dev), Some(xcode), Some(os)),
-            Err(_) => {
-                return Err(ConfigurationError::UnsupportedRunConfiguration {
-                    message: "
-Please set --xcode-version, --os-version, and --device correctly.
-Supported iOS settings combinations are:
-    --xcode-version 15.4 --os-version 17.5 --device iPhone-15 => Default
-    --xcode-version 15.4 --os-version 17.5 --device iPhone-15-Pro
-    --xcode-version 15.4 --os-version 17.5 --device iPhone-15-Pro-Max
-    --xcode-version 15.4 --os-version 17.5 --device iPhone-11
-    --xcode-version 16.2 --os-version 18.2 --device iPhone-16
-    --xcode-version 16.2 --os-version 18.2 --device iPhone-16-Pro
-    --xcode-version 16.2 --os-version 18.2 --device iPhone-16-Pro-Max
-    --xcode-version 16.2 --os-version 18.2 --device iPhone-16-Plus
-    --xcode-version 16.2 --os-version 18.2 --device iPhone-11
-    --xcode-version 16.3 --os-version 18.4 --device iPhone-16
-    --xcode-version 16.3 --os-version 18.4 --device iPhone-16-Pro
-    --xcode-version 16.3 --os-version 18.4 --device iPhone-16-Pro-Max
-    --xcode-version 16.3 --os-version 18.4 --device iPhone-16-Plus
-    --xcode-version 16.3 --os-version 18.4 --device iPhone-11
-First example: If you choose --xcode-version 15.4 --device iPhone-15-Pro then the --os-version will be inferred (17.5).
-Second example: If you choose --device iPhone-11 then you will receive an error because --os-version and --xcode-version params are ambiguous."
-                        .into(),
-                }.into());
-            }
-        }
-    };
+    let (device, xcode_version, os_version) =
+        match validate_device_configuration(os_version, device, xcode_version).await {
+            Ok(value) => value,
+            Err(value) => return value,
+        };
 
     let filtering_configuration = if xctestplan_filter_file.is_some() {
         Some(
@@ -346,8 +279,12 @@ Second example: If you choose --device iPhone-11 then you will receive an error 
             None => None,
         }
     };
-    let application = ensure_format(application).await?;
-    let test_application = ensure_format(test_application).await?;
+
+    let application =
+        validate::ensure_format(&application, &["zip", "ipa"], &["app"], true).await?;
+    let test_application =
+        validate::ensure_format(&test_application, &["zip", "ipa"], &["app", "xctest"], true)
+            .await?;
 
     let present_wait: bool = match common.wait {
         None => true,
@@ -453,6 +390,7 @@ Second example: If you choose --device iPhone-11 then you will receive an error 
             &common.output,
             Some(application),
             Some(test_application),
+            None,
             os_version.map(|x| x.to_string()),
             None,
             device.map(|x| x.to_string()),
@@ -474,6 +412,51 @@ Second example: If you choose --device iPhone-11 then you will receive an error 
             formatter,
         )
         .await
+}
+
+async fn validate_device_configuration(
+    os_version: Option<OsVersion>,
+    device: Option<IosDevice>,
+    xcode_version: Option<XcodeVersion>,
+) -> Result<
+    (Option<IosDevice>, Option<XcodeVersion>, Option<OsVersion>),
+    std::result::Result<bool, anyhow::Error>,
+> {
+    let (device, xcode_version, os_version) = if device.is_none()
+        && xcode_version.is_none()
+        && os_version.is_none()
+    {
+        (None, None, None)
+    } else {
+        match infer_parameters(device, xcode_version, os_version).await {
+            Ok((dev, xcode, os)) => (Some(dev), Some(xcode), Some(os)),
+            Err(_) => {
+                return Err(Err(ConfigurationError::UnsupportedRunConfiguration {
+                    message: "
+Please set --xcode-version, --os-version, and --device correctly.
+Supported iOS settings combinations are:
+    --xcode-version 15.4 --os-version 17.5 --device iPhone-15 => Default
+    --xcode-version 15.4 --os-version 17.5 --device iPhone-15-Pro
+    --xcode-version 15.4 --os-version 17.5 --device iPhone-15-Pro-Max
+    --xcode-version 15.4 --os-version 17.5 --device iPhone-11
+    --xcode-version 16.2 --os-version 18.2 --device iPhone-16
+    --xcode-version 16.2 --os-version 18.2 --device iPhone-16-Pro
+    --xcode-version 16.2 --os-version 18.2 --device iPhone-16-Pro-Max
+    --xcode-version 16.2 --os-version 18.2 --device iPhone-16-Plus
+    --xcode-version 16.2 --os-version 18.2 --device iPhone-11
+    --xcode-version 16.3 --os-version 18.4 --device iPhone-16
+    --xcode-version 16.3 --os-version 18.4 --device iPhone-16-Pro
+    --xcode-version 16.3 --os-version 18.4 --device iPhone-16-Pro-Max
+    --xcode-version 16.3 --os-version 18.4 --device iPhone-16-Plus
+    --xcode-version 16.3 --os-version 18.4 --device iPhone-11
+First example: If you choose --xcode-version 15.4 --device iPhone-15-Pro then the --os-version will be inferred (17.5).
+Second example: If you choose --device iPhone-11 then you will receive an error because --os-version and --xcode-version params are ambiguous."
+                        .into(),
+                }.into()));
+            }
+        }
+    };
+    Ok((device, xcode_version, os_version))
 }
 
 #[cfg(test)]
