@@ -71,6 +71,8 @@ pub enum OsVersion {
     Ios18_2,
     #[clap(name = "18.4")]
     Ios18_4,
+    #[clap(name = "26.1")]
+    Ios26_1,
 }
 
 impl Display for OsVersion {
@@ -79,6 +81,7 @@ impl Display for OsVersion {
             OsVersion::Ios17_5 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-17-5"),
             OsVersion::Ios18_2 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-18-2"),
             OsVersion::Ios18_4 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-18-4"),
+            OsVersion::Ios26_1 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-26-1"),
         }
     }
 }
@@ -91,6 +94,8 @@ pub enum XcodeVersion {
     Xcode16_2,
     #[clap(name = "16.3")]
     Xcode16_3,
+    #[clap(name = "26.1")]
+    Xcode26_1,
 }
 
 impl Display for XcodeVersion {
@@ -99,6 +104,7 @@ impl Display for XcodeVersion {
             XcodeVersion::Xcode15_4 => f.write_str("15.4"),
             XcodeVersion::Xcode16_2 => f.write_str("16.2"),
             XcodeVersion::Xcode16_3 => f.write_str("16.3"),
+            XcodeVersion::Xcode26_1 => f.write_str("26.1"),
         }
     }
 }
@@ -175,6 +181,26 @@ pub(crate) fn get_supported_configs(
             Some(IosDevice::IPhone11),
             Some(XcodeVersion::Xcode16_3),
             Some(OsVersion::Ios18_4),
+        ),
+        (
+            Some(IosDevice::IPhone16Pro),
+            Some(XcodeVersion::Xcode26_1),
+            Some(OsVersion::Ios26_1),
+        ),
+        (
+            Some(IosDevice::IPhone16Pro),
+            Some(XcodeVersion::Xcode26_1),
+            Some(OsVersion::Ios18_4),
+        ),
+        (
+            Some(IosDevice::IPhone16Pro),
+            Some(XcodeVersion::Xcode26_1),
+            Some(OsVersion::Ios18_2),
+        ),
+        (
+            Some(IosDevice::IPhone16Pro),
+            Some(XcodeVersion::Xcode26_1),
+            Some(OsVersion::Ios17_5),
         ),
     ]
 }
