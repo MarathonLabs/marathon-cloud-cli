@@ -42,7 +42,6 @@ pub trait RapiClient {
         os_version: Option<String>,
         system_image: Option<String>,
         device: Option<String>,
-        xcode_version: Option<String>,
         isolated: Option<bool>,
         collect_code_coverage: Option<bool>,
         retry_quota_test_uncompleted: Option<u32>,
@@ -142,7 +141,6 @@ impl RapiClient for RapiReqwestClient {
         os_version: Option<String>,
         system_image: Option<String>,
         device: Option<String>,
-        xcode_version: Option<String>,
         isolated: Option<bool>,
         code_coverage: Option<bool>,
         retry_quota_test_uncompleted: Option<u32>,
@@ -290,7 +288,6 @@ impl RapiClient for RapiReqwestClient {
             retry_quota_test_reactive,
             retry_quota_test_uncompleted,
             system_image,
-            xcode_version,
             test_timeout_default,
             test_timeout_max,
             env_args: env_args_map,
@@ -631,8 +628,6 @@ struct CreateRunRequest {
     retry_quota_test_uncompleted: Option<u32>,
     #[serde(rename = "system_image", default)]
     system_image: Option<String>,
-    #[serde(rename = "xcode_version", default)]
-    xcode_version: Option<String>,
     #[serde(rename = "test_timeout_default", default)]
     test_timeout_default: Option<u32>,
     #[serde(rename = "test_timeout_max", default)]

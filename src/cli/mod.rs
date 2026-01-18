@@ -571,7 +571,7 @@ Example: '--library-bundle apks/library1-debug-androidTest.apk --library-bundle 
         #[arg(value_enum, long, help = "Device type")]
         device: Option<ios::IosDevice>,
 
-        #[arg(value_enum, long, help = "Xcode version")]
+        #[arg(value_enum, long, hide = true, help = "Xcode version")]
         xcode_version: Option<ios::XcodeVersion>,
 
         #[command(flatten)]
@@ -659,7 +659,7 @@ enum MaestroRunCommands {
         #[arg(value_enum, long, help = "Device type")]
         device: Option<ios::IosDevice>,
 
-        #[arg(value_enum, long, help = "Xcode version")]
+        #[arg(value_enum, long, hide = true, help = "Xcode version")]
         xcode_version: Option<ios::XcodeVersion>,
 
         #[command(flatten)]

@@ -116,7 +116,6 @@ pub(crate) async fn run(
             os_version.map(|x| x.to_string()),
             Some(SystemImage::GoogleApis.to_string()),
             device,
-            None,
             Some("maestro".to_owned()),
             "Android".to_owned(),
             common.progress_args.no_progress_bars,

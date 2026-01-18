@@ -15,7 +15,7 @@ use crate::{
 
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
-use log::debug;
+use log::{debug, warn};
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn run(
@@ -31,11 +31,10 @@ pub(crate) async fn run(
     retry_args: RetryArgs,
     analytics_args: AnalyticsArgs,
 ) -> Result<bool> {
-    let (device, xcode_version, os_version) =
-        match validate_device_configuration(os_version, device, xcode_version).await {
-            Ok(value) => value,
-            Err(value) => return value,
-        };
+    let (device, os_version) = match validate_device_configuration(os_version, device).await {
+        Ok(value) => value,
+        Err(value) => return value,
+    };
 
     let filter_file = common.filter_file.map(filtering::convert::convert);
     let filtering_configuration = match filter_file {
@@ -81,6 +80,10 @@ pub(crate) async fn run(
     } else {
         None
     };
+
+    if xcode_version.is_some() {
+        warn!("Specifying xcode version has been deprecated")
+    }
 
     let application = hash::md5(application).await?;
     let test_application = hash::md5(test_application).await?;
@@ -132,7 +135,6 @@ pub(crate) async fn run(
             os_version.map(|x| x.to_string()),
             None,
             device.map(|x| x.to_string()),
-            xcode_version.map(|x| x.to_string()),
             Some("maestro".to_owned()),
             "iOS".to_owned(),
             common.progress_args.no_progress_bars,

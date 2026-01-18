@@ -269,7 +269,6 @@ If you are interesting in library testing then please use advance mode with --li
             os_version.map(|x| x.to_string()),
             system_image.map(|x| x.to_string()),
             device,
-            None,
             flavor.map(|x| x.to_string()),
             "Android".to_owned(),
             common.progress_args.no_progress_bars,
