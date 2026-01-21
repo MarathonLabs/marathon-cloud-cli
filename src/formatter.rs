@@ -3,6 +3,7 @@ use console::style;
 pub trait Formatter {
     fn stage(&mut self, message: &str);
     fn message(&self, message: &str);
+    fn warn(&self, message: &str);
 }
 
 pub struct StandardFormatter {
@@ -30,6 +31,12 @@ impl Formatter for StandardFormatter {
     }
 
     fn message(&self, message: &str) {
+        println!("{}", &message);
+    }
+
+    fn warn(&self, message: &str) {
+        let prefix = style("Warning:").bold().dim();
+        let message = format!("{} {}", prefix, message);
         println!("{}", &message);
     }
 }

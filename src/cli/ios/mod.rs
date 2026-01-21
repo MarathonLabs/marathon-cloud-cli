@@ -5,7 +5,6 @@ use std::time::Duration;
 
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
-use log::warn;
 use std::collections::HashSet;
 
 use crate::cli::validate;
@@ -257,15 +256,24 @@ pub(crate) async fn run(
     } else {
         None
     };
+
+    let mut warnings = vec![];
     if xcode_version.is_some() {
-        warn!("Specifying xcode version has been deprecated")
+        warnings.push("Specifying xcode version has been deprecated");
     }
 
     let application = hash::md5(application).await?;
     let test_application = hash::md5(test_application).await?;
 
-    if let Some(s) = spinner {
-        s.finish_and_clear()
+    let warning_message = warnings.join("\r\n");
+    if let Some(s) = &spinner {
+        if !warning_message.is_empty() {
+            s.finish_with_message(warning_message);
+        } else {
+            s.finish_and_clear();
+        }
+    } else if !warning_message.is_empty() {
+        formatter.warn(&warning_message);
     }
 
     if application.md5 == test_application.md5 {
