@@ -43,7 +43,7 @@ jobs:
           --push \
           --platform linux/arm64/v8,linux/amd64 \
           --build-arg=VERSION=3.18 \
-          --build-arg=RUST_VERSION=1.84.1 \
+          --build-arg=RUST_VERSION=1.92.0 \
           --tag marathonlabs/marathon-cloud:${{ steps.determine-version.outputs.VERSION }} \
           --tag marathonlabs/marathon-cloud:latest \
           .
