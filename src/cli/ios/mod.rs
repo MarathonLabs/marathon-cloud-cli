@@ -36,6 +36,12 @@ pub enum IosDevice {
     IPhone16ProMax,
     #[clap(name = "iPhone-16-Plus")]
     IPhone16Plus,
+    #[clap(name = "iPhone-17")]
+    IPhone17,
+    #[clap(name = "iPhone-17-Pro")]
+    IPhone17Pro,
+    #[clap(name = "iPhone-17-Pro-Max")]
+    IPhone17ProMax,
 }
 
 impl Display for IosDevice {
@@ -58,6 +64,13 @@ impl Display for IosDevice {
             }
             IosDevice::IPhone16Plus => {
                 f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16-Plus")
+            }
+            IosDevice::IPhone17 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-17"),
+            IosDevice::IPhone17Pro => {
+                f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro")
+            }
+            IosDevice::IPhone17ProMax => {
+                f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max")
             }
         }
     }
@@ -129,6 +142,9 @@ pub(crate) fn get_supported_configs() -> Vec<(Option<IosDevice>, Option<OsVersio
         (Some(IosDevice::IPhone16Pro), Some(OsVersion::Ios18_4)),
         (Some(IosDevice::IPhone16Pro), Some(OsVersion::Ios18_2)),
         (Some(IosDevice::IPhone16Pro), Some(OsVersion::Ios17_5)),
+        (Some(IosDevice::IPhone17), Some(OsVersion::Ios26_1)),
+        (Some(IosDevice::IPhone17Pro), Some(OsVersion::Ios26_1)),
+        (Some(IosDevice::IPhone17ProMax), Some(OsVersion::Ios26_1)),
     ]
 }
 
