@@ -186,7 +186,7 @@ impl TriggerTestRunInteractor {
             .await?;
 
         if wait {
-            formatter.stage("Waiting for test run to finish...");
+            formatter.stage(&format!("Waiting for test run {} to finish...", &id));
             let spinner = if !no_progress_bars {
                 let pb = ProgressBar::new_spinner();
                 pb.enable_steady_tick(Duration::from_millis(80));
