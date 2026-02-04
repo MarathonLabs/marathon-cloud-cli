@@ -188,6 +188,7 @@ jobs:
           case ${{ matrix.job.target }} in
             arm-unknown-linux-*) sudo apt-get -y update ; sudo apt-get -y install gcc-arm-linux-gnueabihf ;;
             aarch64-unknown-linux-gnu) sudo apt-get -y update ; sudo apt-get -y install gcc-aarch64-linux-gnu ;;
+            i686-pc-windows-msvc) choco install nasm -y; echo "c:\Program Files\NASM" >> $GITHUB_PATH ;;
           esac
 
       - name: Install Rust toolchain
