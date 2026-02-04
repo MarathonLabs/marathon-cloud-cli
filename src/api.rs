@@ -9,6 +9,8 @@ use async_trait::async_trait;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::{Body, Client, StatusCode};
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
@@ -83,6 +85,7 @@ pub struct RapiReqwestClient {
     base_url: String,
     api_key: String,
     client: Client,
+    s3_client: ClientWithMiddleware,
 }
 
 impl RapiReqwestClient {
@@ -101,6 +104,11 @@ impl RapiReqwestClient {
 
 impl Default for RapiReqwestClient {
     fn default() -> Self {
+        let reqwest_s3_client = Client::builder()
+            .pool_idle_timeout(Some(Duration::from_secs(20)))
+            .pool_max_idle_per_host(16)
+            .build()
+            .unwrap();
         Self {
             base_url: String::from("https:://cloud.marathonlabs.io/api"),
             api_key: "".into(),
@@ -109,6 +117,11 @@ impl Default for RapiReqwestClient {
                 .pool_max_idle_per_host(16)
                 .build()
                 .unwrap(),
+            s3_client: ClientBuilder::new(reqwest_s3_client)
+                .with(RetryTransientMiddleware::new_with_policy(
+                    ExponentialBackoff::builder().build_with_max_retries(3),
+                ))
+                .build(),
         }
     }
 }
@@ -173,6 +186,7 @@ impl RapiClient for RapiReqwestClient {
             s3_test_app_path = Some(
                 upload_to_s3(
                     &self.client,
+                    &self.s3_client,
                     self.base_url.clone(),
                     self.api_key.clone(),
                     test_app.path.clone(),
@@ -187,6 +201,7 @@ impl RapiClient for RapiReqwestClient {
             s3_app_path = Some(
                 upload_to_s3(
                     &self.client,
+                    &self.s3_client,
                     self.base_url.clone(),
                     self.api_key.clone(),
                     app.path.clone(),
@@ -202,6 +217,7 @@ impl RapiClient for RapiReqwestClient {
             for app_bundle in app_bundles {
                 let s3_app_path = upload_to_s3(
                     &self.client,
+                    &self.s3_client,
                     self.base_url.clone(),
                     self.api_key.clone(),
                     app_bundle.application.path.clone(),
@@ -211,6 +227,7 @@ impl RapiClient for RapiReqwestClient {
 
                 let s3_test_app_path = upload_to_s3(
                     &self.client,
+                    &self.s3_client,
                     self.base_url.clone(),
                     self.api_key.clone(),
                     app_bundle.test_application.path.clone(),
@@ -232,6 +249,7 @@ impl RapiClient for RapiReqwestClient {
             for bundle in bundles {
                 let s3_test_app_path = upload_to_s3(
                     &self.client,
+                    &self.s3_client,
                     self.base_url.clone(),
                     self.api_key.clone(),
                     bundle.test_application.path.clone(),
@@ -470,6 +488,7 @@ async fn api_error_adapter(response: reqwest::Response) -> Result<reqwest::Respo
 
 async fn upload_to_s3(
     client: &Client,
+    s3_client: &ClientWithMiddleware,
     base_url_with_params: String,
     api_key: String,
     file_path: PathBuf,
@@ -548,7 +567,7 @@ async fn upload_to_s3(
         file_body = Body::wrap_stream(file_reader);
     }
 
-    let s3_response = client
+    let s3_response = s3_client
         .put(upload_url_response.url.clone())
         .header("Content-Length", file_total_size)
         .body(file_body)

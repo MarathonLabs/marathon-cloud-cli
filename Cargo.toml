@@ -31,12 +31,14 @@ simple_logger = "4.3.3"
 shellexpand = "3.1.0"
 tempfile = "3.9.0"
 # Reqwest pulls in dependency on openssl which we replace with rustls, hence disabling default features
-reqwest = { version = "0.12.9", default-features = false, features = [
+reqwest = { version = "0.13", default-features = false, features = [
   "json",
   "multipart",
   "stream",
-  "rustls-tls",
+  "rustls",
 ] }
+reqwest-middleware = "0.5"
+reqwest-retry = "0.9"
 time = { version = "0.3.36", features = ["serde-well-known"] }
 tokio = { version = "1.40.0", features = ["full"] }
 tokio-util = "0.7.11"
