@@ -9,8 +9,6 @@ use async_trait::async_trait;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::{Body, Client, StatusCode};
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
@@ -85,7 +83,6 @@ pub struct RapiReqwestClient {
     base_url: String,
     api_key: String,
     client: Client,
-    s3_client: ClientWithMiddleware,
 }
 
 impl RapiReqwestClient {
@@ -104,11 +101,6 @@ impl RapiReqwestClient {
 
 impl Default for RapiReqwestClient {
     fn default() -> Self {
-        let reqwest_s3_client = Client::builder()
-            .pool_idle_timeout(Some(Duration::from_secs(20)))
-            .pool_max_idle_per_host(16)
-            .build()
-            .unwrap();
         Self {
             base_url: String::from("https:://cloud.marathonlabs.io/api"),
             api_key: "".into(),
@@ -117,11 +109,6 @@ impl Default for RapiReqwestClient {
                 .pool_max_idle_per_host(16)
                 .build()
                 .unwrap(),
-            s3_client: ClientBuilder::new(reqwest_s3_client)
-                .with(RetryTransientMiddleware::new_with_policy(
-                    ExponentialBackoff::builder().build_with_max_retries(3),
-                ))
-                .build(),
         }
     }
 }
@@ -186,7 +173,6 @@ impl RapiClient for RapiReqwestClient {
             s3_test_app_path = Some(
                 upload_to_s3(
                     &self.client,
-                    &self.s3_client,
                     self.base_url.clone(),
                     self.api_key.clone(),
                     test_app.path.clone(),
@@ -201,7 +187,6 @@ impl RapiClient for RapiReqwestClient {
             s3_app_path = Some(
                 upload_to_s3(
                     &self.client,
-                    &self.s3_client,
                     self.base_url.clone(),
                     self.api_key.clone(),
                     app.path.clone(),
@@ -217,7 +202,6 @@ impl RapiClient for RapiReqwestClient {
             for app_bundle in app_bundles {
                 let s3_app_path = upload_to_s3(
                     &self.client,
-                    &self.s3_client,
                     self.base_url.clone(),
                     self.api_key.clone(),
                     app_bundle.application.path.clone(),
@@ -227,7 +211,6 @@ impl RapiClient for RapiReqwestClient {
 
                 let s3_test_app_path = upload_to_s3(
                     &self.client,
-                    &self.s3_client,
                     self.base_url.clone(),
                     self.api_key.clone(),
                     app_bundle.test_application.path.clone(),
@@ -249,7 +232,6 @@ impl RapiClient for RapiReqwestClient {
             for bundle in bundles {
                 let s3_test_app_path = upload_to_s3(
                     &self.client,
-                    &self.s3_client,
                     self.base_url.clone(),
                     self.api_key.clone(),
                     bundle.test_application.path.clone(),
@@ -486,22 +468,35 @@ async fn api_error_adapter(response: reqwest::Response) -> Result<reqwest::Respo
     }
 }
 
+fn retryable_io_error(error: &std::io::Error) -> bool {
+    match error.kind() {
+        std::io::ErrorKind::ConnectionReset | std::io::ErrorKind::ConnectionAborted => true,
+        _ => false,
+    }
+}
+
+fn get_source_error_type<T: std::error::Error + 'static>(
+    err: &dyn std::error::Error,
+) -> Option<&T> {
+    let mut source = err.source();
+
+    while let Some(err) = source {
+        if let Some(err) = err.downcast_ref::<T>() {
+            return Some(err);
+        }
+
+        source = err.source();
+    }
+    None
+}
+
 async fn upload_to_s3(
     client: &Client,
-    s3_client: &ClientWithMiddleware,
     base_url_with_params: String,
     api_key: String,
     file_path: PathBuf,
     no_progress_bar: bool,
 ) -> Result<String> {
-    // Open file
-    let file = File::open(&file_path)
-        .await
-        .map_err(|error| InputError::OpenFileFailure {
-            path: file_path.clone(),
-            error,
-        })?;
-
     // Extract filename from PathBuf
     let file_name = file_path
         .file_name()
@@ -527,53 +522,74 @@ async fn upload_to_s3(
         .map_err(|error| ApiError::DeserializationFailure { error })?;
 
     // Progress stuff
-    let file_total_size = file.metadata().await?.len();
-    let mut file_reader = ReaderStream::new(file);
     let mut multi_progress: Option<MultiProgress> = if !no_progress_bar {
         Some(MultiProgress::new())
     } else {
         None
     };
-    let file_progress_bar;
-    let file_body;
-    if !no_progress_bar {
-        let sty = ProgressStyle::with_template(
+
+    let mut retries = 3;
+    while retries > 0 {
+        let file = File::open(&file_path)
+            .await
+            .map_err(|error| InputError::OpenFileFailure {
+                path: file_path.clone(),
+                error,
+            })?;
+        let file_total_size = file.metadata().await?.len();
+        let mut file_reader = ReaderStream::new(file);
+        let file_progress_bar;
+        let file_body;
+        if !no_progress_bar {
+            let sty = ProgressStyle::with_template(
             "{spinner:.blue} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})"
-        )
-        .unwrap()
-        .progress_chars("#>-");
+            )
+                .unwrap()
+                .progress_chars("#>-");
 
-        let pb = ProgressBar::new(file_total_size);
-        pb.enable_steady_tick(Duration::from_millis(80));
-        file_progress_bar = multi_progress.as_mut().unwrap().add(pb);
-        file_progress_bar.set_style(sty.clone());
-        let mut file_progress = 0u64;
-        let file_stream = async_stream::stream! {
-            while let Some(chunk) = file_reader.next().await {
-                let file_progress_bar = file_progress_bar.clone();
-                if let Ok(chunk) = &chunk {
-                    let new = min(file_progress + (chunk.len() as u64), file_total_size);
-                    file_progress = new;
-                    file_progress_bar.set_position(new);
-                    if file_progress >= file_total_size {
-                        file_progress_bar.finish_and_clear();
+            let pb = ProgressBar::new(file_total_size);
+            pb.enable_steady_tick(Duration::from_millis(80));
+            file_progress_bar = multi_progress.as_mut().unwrap().add(pb);
+            file_progress_bar.set_style(sty.clone());
+            let mut file_progress = 0u64;
+            let file_stream = async_stream::stream! {
+                while let Some(chunk) = file_reader.next().await {
+                    let file_progress_bar = file_progress_bar.clone();
+                    if let Ok(chunk) = &chunk {
+                        let new = min(file_progress + (chunk.len() as u64), file_total_size);
+                        file_progress = new;
+                        file_progress_bar.set_position(new);
+                        if file_progress >= file_total_size {
+                            file_progress_bar.finish_and_clear();
+                        }
                     }
+                    yield chunk;
                 }
-                yield chunk;
-            }
-        };
-        file_body = Body::wrap_stream(file_stream);
-    } else {
-        file_body = Body::wrap_stream(file_reader);
-    }
+            };
+            file_body = Body::wrap_stream(file_stream);
+        } else {
+            file_body = Body::wrap_stream(file_reader);
+        }
+        let s3_response = client
+            .put(upload_url_response.url.clone())
+            .header("Content-Length", file_total_size)
+            .body(file_body)
+            .send()
+            .await;
 
-    let s3_response = s3_client
-        .put(upload_url_response.url.clone())
-        .header("Content-Length", file_total_size)
-        .body(file_body)
-        .send()
-        .await?;
-    api_error_adapter(s3_response).await?;
+        //Check if it's a retriable IO error
+        if let Err(err) = &s3_response {
+            if let Some(io_error) = get_source_error_type::<std::io::Error>(err) {
+                if retryable_io_error(io_error) {
+                    retries -= 1;
+                    continue;
+                }
+            }
+        }
+
+        api_error_adapter(s3_response?).await?;
+        break;
+    }
 
     Ok(upload_url_response.file_path.clone())
 }
