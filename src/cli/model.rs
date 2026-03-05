@@ -27,3 +27,11 @@ pub struct LocalFileReference {
     pub path: PathBuf,
     pub md5: String,
 }
+
+#[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
+pub enum BatchIsolation {
+    #[clap(name = "default")]
+    Default,
+    #[clap(name = "uninstall_app")]
+    UninstallApp,
+}

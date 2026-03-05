@@ -1,6 +1,6 @@
 use crate::{
     bundle::{ApplicationBundleReference, LibraryBundleReference},
-    cli::model::{LocalFileReference, Platform},
+    cli::model::{BatchIsolation, LocalFileReference, Platform},
     pull::PullFileConfig,
 };
 use anyhow::Result;
@@ -143,6 +143,7 @@ impl TriggerTestRunInteractor {
         application_bundle: Option<Vec<ApplicationBundleReference>>,
         library_bundle: Option<Vec<LibraryBundleReference>>,
         granted_permission: Option<Vec<String>>,
+        batch_isolation: Option<BatchIsolation>,
         mut formatter: StandardFormatter,
     ) -> Result<bool> {
         let client = RapiReqwestClient::new(base_url, api_key);
@@ -182,6 +183,7 @@ impl TriggerTestRunInteractor {
                 application_bundle,
                 library_bundle,
                 granted_permission,
+                batch_isolation,
             )
             .await?;
 

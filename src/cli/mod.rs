@@ -9,6 +9,7 @@ use clap::CommandFactory;
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
+use crate::cli::model::BatchIsolation;
 use crate::errors::default_error_handler;
 use crate::interactor::{DownloadArtifactsInteractor, GetDeviceCatalogInteractor};
 
@@ -97,6 +98,7 @@ impl Cli {
                         test_timeout_default,
                         test_timeout_max,
                         granted_permission,
+                        batch_isolation,
                     } => {
                         ios::run(
                             application,
@@ -115,6 +117,7 @@ impl Cli {
                             test_timeout_default,
                             test_timeout_max,
                             granted_permission,
+                            batch_isolation,
                         )
                         .await
                     }
@@ -585,6 +588,13 @@ Example: '--library-bundle apks/library1-debug-androidTest.apk --library-bundle 
 
         #[command(flatten)]
         analytics_args: AnalyticsArgs,
+
+        #[arg(
+            value_enum,
+            long,
+            help = "Batch isolation mode. Use app uninstall if you want to uninstall app between test batches"
+        )]
+        batch_isolation: Option<BatchIsolation>,
 
         #[arg(
             long,
