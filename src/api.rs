@@ -18,7 +18,7 @@ use tokio::io;
 
 use crate::{
     bundle::{ApplicationBundleReference, LibraryBundleReference},
-    cli::model::LocalFileReference,
+    cli::model::{BatchIsolation, LocalFileReference},
     errors::{ApiError, EnvArgError, InputError},
     filtering::model::SparseMarathonfile,
     pull::PullFileConfig,
@@ -63,6 +63,7 @@ pub trait RapiClient {
         application_bundle: Option<Vec<ApplicationBundleReference>>,
         library_bundle: Option<Vec<LibraryBundleReference>>,
         granted_permission: Option<Vec<String>>,
+        batch_isolation: Option<BatchIsolation>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -162,6 +163,7 @@ impl RapiClient for RapiReqwestClient {
         application_bundle: Option<Vec<ApplicationBundleReference>>,
         library_bundle: Option<Vec<LibraryBundleReference>>,
         granted_permission: Option<Vec<String>>,
+        batch_isolation: Option<BatchIsolation>,
     ) -> Result<String> {
         let url = format!("{}/v2/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
@@ -258,6 +260,8 @@ impl RapiClient for RapiReqwestClient {
         let env_args_map = vec_to_hashmap(env_args)?;
         let test_env_args_map = vec_to_hashmap(test_env_args)?;
 
+        let app_uninstall = batch_isolation.map(|x| x == BatchIsolation::UninstallApp);
+
         let create_request = CreateRunRequest {
             s3_test_app_path: s3_test_app_path.clone(),
             test_app_md5: test_app.clone().map(|s| s.md5),
@@ -294,6 +298,7 @@ impl RapiClient for RapiReqwestClient {
             test_env_args: test_env_args_map,
             bundles,
             granted_permission: granted_permission.clone(),
+            app_uninstall,
         };
 
         let response = self.client.post(url).json(&create_request).send().await?;
@@ -675,6 +680,8 @@ struct CreateRunRequest {
     bundles: Option<Vec<CreateRunBundle>>,
     #[serde(rename = "granted_permission", default)]
     granted_permission: Option<Vec<String>>,
+    #[serde(rename = "app_uninstall", default)]
+    app_uninstall: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

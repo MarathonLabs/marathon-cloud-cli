@@ -7,6 +7,7 @@ use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashSet;
 
+use crate::cli::model::BatchIsolation;
 use crate::cli::validate;
 use crate::formatter::Formatter;
 use crate::{
@@ -218,6 +219,7 @@ pub(crate) async fn run(
     test_timeout_default: Option<u32>,
     test_timeout_max: Option<u32>,
     granted_permission: Option<Vec<String>>,
+    batch_isolation: Option<BatchIsolation>,
 ) -> Result<bool> {
     let (device, os_version) = match validate_device_configuration(os_version, device).await {
         Ok(value) => value,
@@ -380,6 +382,7 @@ pub(crate) async fn run(
             None,
             None,
             granted_permission,
+            batch_isolation,
             formatter,
         )
         .await
