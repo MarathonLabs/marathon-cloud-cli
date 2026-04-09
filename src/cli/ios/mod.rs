@@ -192,6 +192,7 @@ fn get_allowed_permissions() -> HashSet<&'static str> {
         "media-library",
         "microphone",
         "motion",
+        "notifications",
         "reminders",
         "siri",
     ])
