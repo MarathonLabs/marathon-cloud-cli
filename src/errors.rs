@@ -94,7 +94,7 @@ pub enum InputError {
     NonPositiveValue { arg: String },
 
     #[error("The following permissions could not be granted: [{permissions:?}].
-Available permissions: calendar, contacts-limited, contacts, location, location-always, photos-add, photos, media-library, microphone, motion, reminders, siri.")]
+Available permissions: calendar, contacts-limited, contacts, location, location-always, photos-add, photos, media-library, microphone, motion, notifications, reminders, siri.")]
     IncorrectPermission { permissions: Vec<String> },
 }
 
