@@ -158,6 +158,8 @@ pub(crate) async fn run(
             None,
             None,
             None,
+            None,
+            None,
             formatter,
         )
         .await

@@ -64,6 +64,8 @@ pub trait RapiClient {
         library_bundle: Option<Vec<LibraryBundleReference>>,
         granted_permission: Option<Vec<String>>,
         batch_isolation: Option<BatchIsolation>,
+        front_camera: Option<String>,
+        back_camera: Option<String>,
     ) -> Result<String>;
     async fn get_run(&self, id: &str) -> Result<TestRun>;
 
@@ -164,6 +166,8 @@ impl RapiClient for RapiReqwestClient {
         library_bundle: Option<Vec<LibraryBundleReference>>,
         granted_permission: Option<Vec<String>>,
         batch_isolation: Option<BatchIsolation>,
+        front_camera: Option<String>,
+        back_camera: Option<String>,
     ) -> Result<String> {
         let url = format!("{}/v2/run", self.base_url);
         let params = [("api_key", self.api_key.clone())];
@@ -299,6 +303,8 @@ impl RapiClient for RapiReqwestClient {
             bundles,
             granted_permission: granted_permission.clone(),
             app_uninstall,
+            front_camera,
+            back_camera,
         };
 
         let response = self.client.post(url).json(&create_request).send().await?;
@@ -682,6 +688,10 @@ struct CreateRunRequest {
     granted_permission: Option<Vec<String>>,
     #[serde(rename = "app_uninstall", default)]
     app_uninstall: Option<bool>,
+    #[serde(rename = "front_camera", default)]
+    front_camera: Option<String>,
+    #[serde(rename = "back_camera", default)]
+    back_camera: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

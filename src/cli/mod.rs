@@ -60,6 +60,8 @@ impl Cli {
                         library_bundle,
                         profiling_args,
                         mock_location,
+                        front_camera,
+                        back_camera,
                     } => {
                         android::run(
                             application,
@@ -78,6 +80,8 @@ impl Cli {
                             application_bundle,
                             library_bundle,
                             mock_location,
+                            front_camera,
+                            back_camera,
                         )
                         .await
                     }
@@ -549,6 +553,20 @@ Example: '--library-bundle apks/library1-debug-androidTest.apk --library-bundle 
             help = "Allow mock location access for application"
         )]
         mock_location: bool,
+
+        #[arg(
+            value_enum,
+            long,
+            help = "Front camera mode. Only supported with google_apis or google_apis_playstore system images"
+        )]
+        front_camera: Option<android::FrontCamera>,
+
+        #[arg(
+            value_enum,
+            long,
+            help = "Back camera mode. Only supported with google_apis or google_apis_playstore system images"
+        )]
+        back_camera: Option<android::BackCamera>,
     },
     #[allow(non_camel_case_types)]
     #[command(name = "ios")]

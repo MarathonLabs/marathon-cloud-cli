@@ -104,6 +104,43 @@ impl Display for Flavor {
     }
 }
 
+#[derive(Debug, clap::ValueEnum, Clone)]
+pub enum FrontCamera {
+    #[clap(name = "none")]
+    None,
+    #[clap(name = "emulated")]
+    Emulated,
+}
+
+impl Display for FrontCamera {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FrontCamera::None => f.write_str("none"),
+            FrontCamera::Emulated => f.write_str("emulated"),
+        }
+    }
+}
+
+#[derive(Debug, clap::ValueEnum, Clone)]
+pub enum BackCamera {
+    #[clap(name = "none")]
+    None,
+    #[clap(name = "virtualscene")]
+    VirtualScene,
+    #[clap(name = "emulated")]
+    Emulated,
+}
+
+impl Display for BackCamera {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BackCamera::None => f.write_str("none"),
+            BackCamera::VirtualScene => f.write_str("virtualscene"),
+            BackCamera::Emulated => f.write_str("emulated"),
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn run(
     application: Option<std::path::PathBuf>,
@@ -122,6 +159,8 @@ pub(crate) async fn run(
     application_bundle: Option<Vec<String>>,
     library_bundle: Option<Vec<PathBuf>>,
     mock_location: bool,
+    front_camera: Option<FrontCamera>,
+    back_camera: Option<BackCamera>,
 ) -> Result<bool> {
     if application.is_none()
         && test_application.is_none()
@@ -183,6 +222,7 @@ If you are interesting in library testing then please use advance mode with --li
     }
 
     validate_device_configuration(&os_version, &system_image, &device, &flavor)?;
+    validate_camera_configuration(&system_image, &front_camera, &back_camera)?;
 
     let filter_file = common.filter_file.map(filtering::convert::convert);
     let filtering_configuration = match filter_file {
@@ -284,6 +324,8 @@ If you are interesting in library testing then please use advance mode with --li
             library_bundle,
             None,
             None,
+            front_camera.map(|x| x.to_string()),
+            back_camera.map(|x| x.to_string()),
             formatter,
         )
         .await
@@ -368,6 +410,26 @@ pub(crate) fn validate_device_configuration(
         _ => {}
     }
     Ok(())
+}
+
+pub(crate) fn validate_camera_configuration(
+    system_image: &Option<SystemImage>,
+    front_camera: &Option<FrontCamera>,
+    back_camera: &Option<BackCamera>,
+) -> Result<()> {
+    if front_camera.is_none() && back_camera.is_none() {
+        return Ok(());
+    }
+
+    match system_image {
+        Some(SystemImage::GoogleApis) | Some(SystemImage::GoogleApisPlaystore) => Ok(()),
+        _ => Err(ConfigurationError::UnsupportedRunConfiguration {
+            message:
+                "Camera options (--front-camera, --back-camera) are only supported with google_apis or google_apis_playstore system images"
+                    .into(),
+        }
+        .into()),
+    }
 }
 
 pub(crate) async fn validate(

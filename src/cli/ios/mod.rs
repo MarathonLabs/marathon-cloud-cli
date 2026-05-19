@@ -380,6 +380,8 @@ pub(crate) async fn run(
             None,
             granted_permission,
             batch_isolation,
+            None,
+            None,
             formatter,
         )
         .await
