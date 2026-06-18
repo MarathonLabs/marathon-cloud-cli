@@ -65,6 +65,8 @@ pub enum OsVersion {
     Android15,
     #[clap(name = "16")]
     Android16,
+    #[clap(name = "17")]
+    Android17,
 }
 
 impl Display for OsVersion {
@@ -80,6 +82,7 @@ impl Display for OsVersion {
             OsVersion::Android14 => f.write_str("14"),
             OsVersion::Android15 => f.write_str("15"),
             OsVersion::Android16 => f.write_str("16"),
+            OsVersion::Android17 => f.write_str("17"),
         }
     }
 }
@@ -349,7 +352,8 @@ pub(crate) fn validate_device_configuration(
             | Some(OsVersion::Android10)
             | Some(OsVersion::Android12)
             | Some(OsVersion::Android14)
-            | Some(OsVersion::Android16),
+            | Some(OsVersion::Android16)
+            | Some(OsVersion::Android17),
         ) => {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
                 message:
@@ -389,10 +393,10 @@ pub(crate) fn validate_device_configuration(
             _,
             _,
             Some(SystemImage::Default) | None,
-            Some(OsVersion::Android15) | Some(OsVersion::Android16),
+            Some(OsVersion::Android15) | Some(OsVersion::Android16) | Some(OsVersion::Android17),
         ) => {
             return Err(ConfigurationError::UnsupportedRunConfiguration {
-                message: "Android OS version 15, 16 only supports google_apis or google_apis_playstore system image".into(),
+                message: "Android OS version 15, 16, 17 only supports google_apis or google_apis_playstore system image".into(),
             }
             .into());
         }
