@@ -6,6 +6,7 @@ use std::{
 
 use anyhow::Result;
 use async_trait::async_trait;
+use flate2::read::GzDecoder;
 use futures::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::{Body, Client, StatusCode};
@@ -13,7 +14,6 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 use time::OffsetDateTime;
-use flate2::read::GzDecoder;
 use tokio::fs::{create_dir_all, File};
 use tokio::io;
 
@@ -874,7 +874,6 @@ mod tests {
 
     #[test]
     fn test_vec_to_hashmap_empty_vector() {
-
         let input = Some(vec![]);
 
         let result = vec_to_hashmap(input);
