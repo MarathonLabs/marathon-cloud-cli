@@ -156,12 +156,13 @@ async fn patch_file(path: &Path) -> io::Result<()> {
         for attachment in attachments {
             if let Some(source) = attachment.get_mut("source") {
                 if let Some(source_str) = source.as_str() {
-                    // touch only logs and video
-                    if let Some(index) = source_str
+                    let stripped = source_str.strip_suffix(".gz").unwrap_or(source_str);
+                    if let Some(index) = stripped
                         .find("logs/omni")
-                        .or_else(|| source_str.find("video/omni"))
+                        .or_else(|| stripped.find("device-logs/omni"))
+                        .or_else(|| stripped.find("video/omni"))
                     {
-                        let new_path = format!("../../{}", &source_str[index..]);
+                        let new_path = format!("../../{}", &stripped[index..]);
                         *source = Value::String(new_path);
                     }
                 }
