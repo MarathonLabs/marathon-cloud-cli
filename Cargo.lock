@@ -1248,6 +1248,7 @@ dependencies = [
  "clap_complete",
  "clap_mangen",
  "console",
+ "flate2",
  "futures",
  "globset",
  "h2",

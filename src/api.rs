@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 use time::OffsetDateTime;
+use flate2::read::GzDecoder;
 use tokio::fs::{create_dir_all, File};
 use tokio::io;
 
@@ -377,7 +378,14 @@ impl RapiClient for RapiReqwestClient {
             .send()
             .await?;
 
-        let mut src = api_error_adapter(src).await?.bytes_stream();
+        let response = api_error_adapter(src).await?;
+        let is_gzip = response
+            .headers()
+            .get(reqwest::header::CONTENT_ENCODING)
+            .and_then(|v| v.to_str().ok())
+            .map(|v| v == "gzip")
+            .unwrap_or(false);
+        let mut src = response.bytes_stream();
 
         let dst_dir = absolute_path.parent();
         if let Some(dst_dir) = dst_dir {
@@ -385,10 +393,16 @@ impl RapiClient for RapiReqwestClient {
                 create_dir_all(dst_dir).await?;
             }
         }
-        let mut dst = File::create(absolute_path).await?;
+        let mut dst = File::create(&absolute_path).await?;
 
         while let Some(chunk) = src.next().await {
             io::copy(&mut chunk?.as_ref(), &mut dst).await?;
+        }
+        drop(dst);
+
+        if is_gzip {
+            let path = absolute_path.clone();
+            tokio::task::spawn_blocking(move || decompress_gz_in_place(&path)).await??;
         }
 
         Ok(())
@@ -778,6 +792,27 @@ pub struct RapiError {
     pub message: String,
 }
 
+fn decompress_gz_in_place(path: &Path) -> Result<()> {
+    let gz_file = std::fs::File::open(path)?;
+    let mut decoder = GzDecoder::new(std::io::BufReader::new(gz_file));
+
+    let has_gz_ext = path.extension().and_then(|e| e.to_str()) == Some("gz");
+    if has_gz_ext {
+        let decompressed_path = path.with_extension("");
+        let mut out_file = std::fs::File::create(&decompressed_path)?;
+        std::io::copy(&mut decoder, &mut out_file)?;
+        std::fs::remove_file(path)?;
+    } else {
+        let tmp_path = path.with_extension("tmp");
+        let mut out_file = std::fs::File::create(&tmp_path)?;
+        std::io::copy(&mut decoder, &mut out_file)?;
+        drop(out_file);
+        std::fs::rename(&tmp_path, path)?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -839,6 +874,7 @@ mod tests {
 
     #[test]
     fn test_vec_to_hashmap_empty_vector() {
+
         let input = Some(vec![]);
 
         let result = vec_to_hashmap(input);
