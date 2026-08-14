@@ -23,12 +23,6 @@ use crate::{errors::InputError, filtering};
 pub enum IosDevice {
     #[clap(name = "iPhone-11")]
     IPhone11,
-    #[clap(name = "iPhone-15")]
-    IPhone15,
-    #[clap(name = "iPhone-15-Pro")]
-    IPhone15Pro,
-    #[clap(name = "iPhone-15-Pro-Max")]
-    IPhone15ProMax,
     #[clap(name = "iPhone-16")]
     IPhone16,
     #[clap(name = "iPhone-16-Pro")]
@@ -49,13 +43,6 @@ impl Display for IosDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             IosDevice::IPhone11 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-11"),
-            IosDevice::IPhone15 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-15"),
-            IosDevice::IPhone15Pro => {
-                f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-15-Pro")
-            }
-            IosDevice::IPhone15ProMax => {
-                f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-15-Pro-Max")
-            }
             IosDevice::IPhone16 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16"),
             IosDevice::IPhone16Pro => {
                 f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro")
@@ -79,8 +66,6 @@ impl Display for IosDevice {
 
 #[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
 pub enum OsVersion {
-    #[clap(name = "17.5")]
-    Ios17_5,
     #[clap(name = "18.2")]
     Ios18_2,
     #[clap(name = "18.4")]
@@ -92,7 +77,6 @@ pub enum OsVersion {
 impl Display for OsVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OsVersion::Ios17_5 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-17-5"),
             OsVersion::Ios18_2 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-18-2"),
             OsVersion::Ios18_4 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-18-4"),
             OsVersion::Ios26_1 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-26-1"),
