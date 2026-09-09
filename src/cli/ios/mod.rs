@@ -348,6 +348,7 @@ pub(crate) async fn run(
             None,
             os_version.map(|x| x.to_string()),
             None,
+            None,
             device.map(|x| x.to_string()),
             None,
             "iOS".to_owned(),
