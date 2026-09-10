@@ -33,12 +33,29 @@ pub enum SystemImage {
     GoogleApisPlaystore,
 }
 
+#[derive(Debug, clap::ValueEnum, Clone)]
+pub enum Arch {
+    #[clap(name = "amd64")]
+    Amd64,
+    #[clap(name = "arm64")]
+    Arm64,
+}
+
 impl Display for SystemImage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SystemImage::Default => f.write_str("default"),
             SystemImage::GoogleApis => f.write_str("google_apis"),
             SystemImage::GoogleApisPlaystore => f.write_str("google_apis_playstore"),
+        }
+    }
+}
+
+impl Display for Arch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Arch::Amd64 => f.write_str("amd64"),
+            Arch::Arm64 => f.write_str("arm64"),
         }
     }
 }
@@ -150,6 +167,7 @@ pub(crate) async fn run(
     test_application: Option<std::path::PathBuf>,
     os_version: Option<OsVersion>,
     system_image: Option<SystemImage>,
+    arch: Option<Arch>,
     device: Option<String>,
     common: CommonRunArgs,
     api_args: ApiArgs,
@@ -225,6 +243,7 @@ If you are interesting in library testing then please use advance mode with --li
     }
 
     validate_device_configuration(&os_version, &system_image, &device, &flavor)?;
+    validate_arch_configuration(&system_image, &arch)?;
     validate_camera_configuration(&system_image, &front_camera, &back_camera)?;
 
     let filter_file = common.filter_file.map(filtering::convert::convert);
@@ -311,6 +330,7 @@ If you are interesting in library testing then please use advance mode with --li
             None,
             os_version.map(|x| x.to_string()),
             system_image.map(|x| x.to_string()),
+            arch.map(|x| x.to_string()),
             device,
             flavor.map(|x| x.to_string()),
             "Android".to_owned(),
@@ -414,6 +434,25 @@ pub(crate) fn validate_device_configuration(
         _ => {}
     }
     Ok(())
+}
+
+pub(crate) fn validate_arch_configuration(
+    system_image: &Option<SystemImage>,
+    arch: &Option<Arch>,
+) -> Result<()> {
+    match (system_image, arch) {
+        (Some(SystemImage::Default), Some(Arch::Amd64)) => {
+            Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "'default' system image only supports arm64 architecture".into(),
+            }
+            .into())
+        }
+        (None, Some(Arch::Amd64)) => Err(ConfigurationError::UnsupportedRunConfiguration {
+            message: "'default' system image only supports arm64 architecture".into(),
+        }
+        .into()),
+        _ => Ok(()),
+    }
 }
 
 pub(crate) fn validate_camera_configuration(

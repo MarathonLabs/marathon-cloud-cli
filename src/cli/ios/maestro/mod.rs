@@ -142,6 +142,7 @@ pub(crate) async fn run(
             Some(validated_flows),
             os_version.map(|x| x.to_string()),
             None,
+            None,
             device.map(|x| x.to_string()),
             Some("maestro".to_owned()),
             "iOS".to_owned(),
