@@ -80,6 +80,11 @@ pub trait RapiClient {
     ) -> Result<()>;
 
     async fn get_devices_android(&self, jwt_token: &str) -> Result<Vec<AndroidDevice>>;
+    async fn get_download_config(
+        &self,
+        jwt_token: &str,
+        run_id: &str,
+    ) -> Result<Option<DownloadConfig>>;
 }
 
 #[derive(Clone)]
@@ -425,6 +430,29 @@ impl RapiClient for RapiReqwestClient {
 
         Ok(response)
     }
+
+    async fn get_download_config(
+        &self,
+        jwt_token: &str,
+        run_id: &str,
+    ) -> Result<Option<DownloadConfig>> {
+        let url = format!("{}/v2/artifact/{}/download-config", self.base_url, run_id);
+        let response = self
+            .client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", jwt_token))
+            .send()
+            .await?;
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        let response = api_error_adapter(response).await?;
+        let config = response
+            .json::<DownloadConfig>()
+            .await
+            .map_err(|error| ApiError::DeserializationFailure { error })?;
+        Ok(Some(config))
+    }
 }
 
 fn vec_to_hashmap(
@@ -766,6 +794,50 @@ pub struct Artifact {
     pub name: String,
     #[serde(rename = "is_file")]
     pub is_file: bool,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct DownloadConfig {
+    pub credentials: TempCredentials,
+    pub bucket: String,
+    pub endpoint: String,
+    pub region: String,
+    pub prefix: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Manifest {
+    #[allow(dead_code)]
+    pub version: u32,
+    pub files: Vec<ManifestFile>,
+    #[serde(default)]
+    pub links: Vec<ManifestLink>,
+    pub file_count: u64,
+    pub link_count: Option<u64>,
+    #[allow(dead_code)]
+    pub total_size: u64,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct ManifestFile {
+    pub key: String,
+    #[allow(dead_code)]
+    pub size: u64,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct ManifestLink {
+    pub key: String,
+    pub target: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct TempCredentials {
+    pub access_key_id: String,
+    pub secret_access_key: String,
+    pub session_token: String,
+    #[allow(dead_code)]
+    pub expiration: String,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]

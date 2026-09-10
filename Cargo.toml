@@ -57,6 +57,8 @@ walkdir = "2.5.0"
 globset = "0.4"
 regex = "1.12.3"
 md-5 = "0.10.6"
+pathdiff = "0.2"
+rust-s3 = { version = "0.37", default-features = false, features = ["tokio-rustls-tls"] }
 
 [dev-dependencies]
 rstest = "0.18.2"

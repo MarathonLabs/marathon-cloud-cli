@@ -21,8 +21,9 @@ use tokio::{
 };
 
 use crate::{
-    api::{Artifact, RapiClient, RapiReqwestClient},
+    api::{Artifact, ManifestFile, ManifestLink, RapiClient, RapiReqwestClient},
     artifacts::{download_artifacts, fetch_artifact_list, patch_allure_paths},
+    download_v2::{self, download_via_manifest},
     errors::InputError,
     filtering::model::SparseMarathonfile,
     formatter::{Formatter, StandardFormatter},
@@ -60,14 +61,34 @@ impl DownloadArtifactsInteractor {
             debug!("Test run {} finished", &id);
         }
 
-        formatter.stage("Fetching file list...");
         let token = client.get_token().await?;
-        let artifacts = fetch_artifact_list(&client, id, &token).await?;
-        let test_run_id_prefix = format!("{}/", id);
-        let artifacts = filter_artifact_list(artifacts, glob, &test_run_id_prefix)?;
 
-        formatter.stage("Downloading files...");
-        download_artifacts(&client, id, artifacts, output, &token, no_progress_bars).await?;
+        let download_config = client.get_download_config(&token, id).await?;
+        if let Some(config) = download_config {
+            formatter.stage("Fetching file list...");
+            let manifest = download_v2::fetch_manifest(&config).await?;
+            debug!("v2 direct download: {} files, {} links",
+                manifest.file_count, manifest.link_count.unwrap_or(0));
+            let (files, links) = filter_manifest(
+                manifest.files,
+                manifest.links,
+                &glob,
+            )?;
+
+            formatter.stage("Downloading files...");
+            download_via_manifest(&config, output, files, links, no_progress_bars).await?;
+        } else {
+            debug!("download-config not available, falling back to legacy path");
+
+            formatter.stage("Fetching file list...");
+            let artifacts = fetch_artifact_list(&client, id, &token).await?;
+            let test_run_id_prefix = format!("{}/", id);
+            let artifacts = filter_artifact_list(artifacts, glob, &test_run_id_prefix)?;
+
+            formatter.stage("Downloading files...");
+            download_artifacts(&client, id, artifacts, output, &token, no_progress_bars).await?;
+        }
+
         formatter.stage("Patching local relative paths...");
         patch_allure_paths(output).await?;
 
@@ -97,6 +118,47 @@ fn filter_artifact_list(
                 .collect())
         }
         None => Ok(artifacts),
+    }
+}
+
+fn filter_manifest(
+    files: Vec<ManifestFile>,
+    links: Vec<ManifestLink>,
+    glob: &Option<String>,
+) -> Result<(Vec<ManifestFile>, Vec<ManifestLink>)> {
+    match glob {
+        Some(glob) => {
+            let matcher = Glob::new(glob)?.compile_matcher();
+
+            let filtered_links: Vec<ManifestLink> = links
+                .into_iter()
+                .filter(|l| {
+                    let matches = matcher.is_match(&l.key);
+                    if !matches {
+                        debug!("Filtered out link {}", &l.key);
+                    }
+                    matches
+                })
+                .collect();
+
+            let mut needed_targets: std::collections::HashSet<String> =
+                filtered_links.iter().map(|l| l.target.clone()).collect();
+
+            let filtered_files: Vec<ManifestFile> = files
+                .into_iter()
+                .filter(|f| {
+                    let key_matches = matcher.is_match(&f.key);
+                    let is_link_target = needed_targets.remove(&f.key);
+                    if !key_matches && !is_link_target {
+                        debug!("Filtered out file {}", &f.key);
+                    }
+                    key_matches || is_link_target
+                })
+                .collect();
+
+            Ok((filtered_files, filtered_links))
+        }
+        None => Ok((files, links)),
     }
 }
 
@@ -249,18 +311,33 @@ impl TriggerTestRunInteractor {
                     }
 
                     if let Some(output) = output {
-                        formatter.stage("Fetching file list...");
-                        let artifacts = fetch_artifact_list(&client, &id, &token).await?;
-                        formatter.stage("Downloading files...");
-                        download_artifacts(
-                            &client,
-                            &id,
-                            artifacts,
-                            output,
-                            &token,
-                            no_progress_bars,
-                        )
-                        .await?;
+                        let download_config = client.get_download_config(&token, &id).await?;
+                        if let Some(config) = download_config {
+                            formatter.stage("Fetching file list...");
+                            let manifest = download_v2::fetch_manifest(&config).await?;
+                            debug!("v2 direct download: {} files, {} links",
+                                manifest.file_count, manifest.link_count.unwrap_or(0));
+                            let (files, links) = filter_manifest(
+                                manifest.files,
+                                manifest.links,
+                                &None,
+                            )?;
+                            formatter.stage("Downloading files...");
+                            download_via_manifest(&config, output, files, links, no_progress_bars).await?;
+                        } else {
+                            formatter.stage("Fetching file list...");
+                            let artifacts = fetch_artifact_list(&client, &id, &token).await?;
+                            formatter.stage("Downloading files...");
+                            download_artifacts(
+                                &client,
+                                &id,
+                                artifacts,
+                                output,
+                                &token,
+                                no_progress_bars,
+                            )
+                            .await?;
+                        }
                         formatter.stage("Patching local relative paths...");
                         patch_allure_paths(output).await?;
                     }
