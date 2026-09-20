@@ -1,6 +1,9 @@
 use crate::{
     cli::{
-        android::{validate_device_configuration, Arch, OsVersion, SystemImage},
+        android::{
+            validate_arch_configuration, validate_device_configuration, Arch, OsVersion,
+            SystemImage,
+        },
         maestro,
         model::LocalFileReference,
         validate, AnalyticsArgs, ApiArgs, CommonRunArgs, RetryArgs,
@@ -41,6 +44,7 @@ pub(crate) async fn run(
         &device,
         &Some(super::Flavor::Native),
     )?;
+    validate_arch_configuration(&Some(super::SystemImage::GoogleApis), &arch, &os_version)?;
 
     let filter_file = common.filter_file.map(filtering::convert::convert);
     let filtering_configuration = match filter_file {

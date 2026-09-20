@@ -243,7 +243,7 @@ If you are interesting in library testing then please use advance mode with --li
     }
 
     validate_device_configuration(&os_version, &system_image, &device, &flavor)?;
-    validate_arch_configuration(&system_image, &arch)?;
+    validate_arch_configuration(&system_image, &arch, &os_version)?;
     validate_camera_configuration(&system_image, &front_camera, &back_camera)?;
 
     let filter_file = common.filter_file.map(filtering::convert::convert);
@@ -439,20 +439,32 @@ pub(crate) fn validate_device_configuration(
 pub(crate) fn validate_arch_configuration(
     system_image: &Option<SystemImage>,
     arch: &Option<Arch>,
+    os_version: &Option<OsVersion>,
 ) -> Result<()> {
     match (system_image, arch) {
         (Some(SystemImage::Default), Some(Arch::Amd64)) => {
-            Err(ConfigurationError::UnsupportedRunConfiguration {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
                 message: "'default' system image only supports arm64 architecture".into(),
             }
             .into())
         }
-        (None, Some(Arch::Amd64)) => Err(ConfigurationError::UnsupportedRunConfiguration {
-            message: "'default' system image only supports arm64 architecture".into(),
+        (None, Some(Arch::Amd64)) => {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "'default' system image only supports arm64 architecture".into(),
+            }
+            .into())
         }
-        .into()),
-        _ => Ok(()),
+        _ => {}
     }
+    if let (Some(Arch::Arm64), Some(version)) = (arch, os_version) {
+        if *version < OsVersion::Android9 {
+            return Err(ConfigurationError::UnsupportedRunConfiguration {
+                message: "arm64 architecture requires Android OS version 9 or higher".into(),
+            }
+            .into());
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn validate_camera_configuration(
