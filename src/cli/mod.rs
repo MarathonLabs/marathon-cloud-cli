@@ -48,6 +48,7 @@ impl Cli {
                         test_application,
                         os_version,
                         system_image,
+                        arch,
                         device,
                         common,
                         api_args,
@@ -68,6 +69,7 @@ impl Cli {
                             test_application,
                             os_version,
                             system_image,
+                            arch,
                             device,
                             common,
                             api_args,
@@ -158,6 +160,7 @@ impl Cli {
                             application,
                             test_application,
                             os_version,
+                            arch,
                             device,
                             common,
                             api_args,
@@ -171,6 +174,7 @@ impl Cli {
                                 test_application,
                                 flow,
                                 os_version,
+                                arch,
                                 device,
                                 common,
                                 api_args,
@@ -492,6 +496,9 @@ enum RunCommands {
         #[arg(value_enum, long, help = "Runtime system image")]
         system_image: Option<android::SystemImage>,
 
+        #[arg(value_enum, long, help = "Target architecture: amd64 or arm64")]
+        arch: Option<android::Arch>,
+
         #[arg(
             value_enum,
             long,
@@ -730,6 +737,9 @@ enum MaestroRunCommands {
 
         #[arg(value_enum, long, help = "OS version")]
         os_version: Option<android::OsVersion>,
+
+        #[arg(value_enum, long, help = "Target architecture: amd64 or arm64")]
+        arch: Option<android::Arch>,
 
         #[arg(
             value_enum,
