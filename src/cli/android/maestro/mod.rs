@@ -1,6 +1,9 @@
 use crate::{
     cli::{
-        android::{validate_device_configuration, OsVersion, SystemImage},
+        android::{
+            validate_arch_configuration, validate_device_configuration, Arch, OsVersion,
+            SystemImage,
+        },
         maestro,
         model::LocalFileReference,
         validate, AnalyticsArgs, ApiArgs, CommonRunArgs, RetryArgs,
@@ -27,6 +30,7 @@ pub(crate) async fn run(
     test_application: std::path::PathBuf,
     flows: Vec<String>,
     os_version: Option<OsVersion>,
+    arch: Option<Arch>,
     device: Option<String>,
     common: CommonRunArgs,
     api_args: ApiArgs,
@@ -40,6 +44,7 @@ pub(crate) async fn run(
         &device,
         &Some(super::Flavor::Native),
     )?;
+    validate_arch_configuration(&Some(super::SystemImage::GoogleApis), &arch, &os_version)?;
 
     let filter_file = common.filter_file.map(filtering::convert::convert);
     let filtering_configuration = match filter_file {
@@ -115,6 +120,7 @@ pub(crate) async fn run(
             Some(flows),
             os_version.map(|x| x.to_string()),
             Some(SystemImage::GoogleApis.to_string()),
+            arch.map(|x| x.to_string()),
             device,
             Some("maestro".to_owned()),
             "Android".to_owned(),
