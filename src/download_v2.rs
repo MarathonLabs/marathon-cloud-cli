@@ -46,7 +46,9 @@ fn create_bucket(config: &DownloadConfig) -> Result<Box<Bucket>> {
 pub async fn fetch_manifest(config: &DownloadConfig) -> Result<Manifest> {
     let bucket = create_bucket(config)?;
     let manifest_key = format!("{}manifest.json", config.prefix);
-    let response = bucket.get_object(&manifest_key).await
+    let response = bucket
+        .get_object(&manifest_key)
+        .await
         .map_err(|e| anyhow::anyhow!("Failed to fetch manifest from R2: {}", e))?;
     let manifest: Manifest = serde_json::from_slice(response.bytes())
         .map_err(|e| anyhow::anyhow!("Failed to parse manifest: {}", e))?;
@@ -103,9 +105,12 @@ pub async fn download_via_manifest(
             for attempt in 1..=3 {
                 let result = async {
                     let mut dst = fs::File::create(&local_path).await?;
-                    bucket.get_object_to_writer(&s3_key, &mut dst).await
+                    bucket
+                        .get_object_to_writer(&s3_key, &mut dst)
+                        .await
                         .map_err(|e| anyhow::anyhow!("{}", e))
-                }.await;
+                }
+                .await;
                 match result {
                     Ok(_) => {
                         if let Some(pb) = &pb {
@@ -147,7 +152,8 @@ pub async fn download_via_manifest(
         } else {
             log::warn!(
                 "Link target not found, skipping: {} -> {}",
-                link.key, link.target
+                link.key,
+                link.target
             );
         }
     }

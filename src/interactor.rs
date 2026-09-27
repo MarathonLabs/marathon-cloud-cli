@@ -67,13 +67,12 @@ impl DownloadArtifactsInteractor {
         if let Some(config) = download_config {
             formatter.stage("Fetching file list...");
             let manifest = download_v2::fetch_manifest(&config).await?;
-            debug!("v2 direct download: {} files, {} links",
-                manifest.file_count, manifest.link_count.unwrap_or(0));
-            let (files, links) = filter_manifest(
-                manifest.files,
-                manifest.links,
-                &glob,
-            )?;
+            debug!(
+                "v2 direct download: {} files, {} links",
+                manifest.file_count,
+                manifest.link_count.unwrap_or(0)
+            );
+            let (files, links) = filter_manifest(manifest.files, manifest.links, &glob)?;
 
             formatter.stage("Downloading files...");
             download_via_manifest(&config, output, files, links, no_progress_bars).await?;
@@ -317,15 +316,16 @@ impl TriggerTestRunInteractor {
                         if let Some(config) = download_config {
                             formatter.stage("Fetching file list...");
                             let manifest = download_v2::fetch_manifest(&config).await?;
-                            debug!("v2 direct download: {} files, {} links",
-                                manifest.file_count, manifest.link_count.unwrap_or(0));
-                            let (files, links) = filter_manifest(
-                                manifest.files,
-                                manifest.links,
-                                &None,
-                            )?;
+                            debug!(
+                                "v2 direct download: {} files, {} links",
+                                manifest.file_count,
+                                manifest.link_count.unwrap_or(0)
+                            );
+                            let (files, links) =
+                                filter_manifest(manifest.files, manifest.links, &None)?;
                             formatter.stage("Downloading files...");
-                            download_via_manifest(&config, output, files, links, no_progress_bars).await?;
+                            download_via_manifest(&config, output, files, links, no_progress_bars)
+                                .await?;
                         } else {
                             formatter.stage("Fetching file list...");
                             let artifacts = fetch_artifact_list(&client, &id, &token).await?;
