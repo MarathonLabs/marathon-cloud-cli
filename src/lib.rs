@@ -3,6 +3,7 @@ mod artifacts;
 mod bundle;
 pub mod cli;
 mod compression;
+mod download_v2;
 mod errors;
 mod filtering;
 mod formatter;

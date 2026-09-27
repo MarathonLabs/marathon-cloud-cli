@@ -1,0 +1,9 @@
+[advisories]
+# quick-xml DoS advisories via rust-s3 transitive dependency.
+# rust-s3 0.37.x pins quick-xml ^0.38; fix requires >=0.41 with no upstream release yet.
+# Exposure is limited: quick-xml only parses S3 error responses from R2 (trusted origin,
+# small payloads). We do not parse attacker-controlled XML.
+ignore = [
+    "RUSTSEC-2026-0194", # Quadratic run time checking duplicate attribute names
+    "RUSTSEC-2026-0195", # Unbounded namespace-declaration allocation in NsReader
+]
