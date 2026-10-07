@@ -10,7 +10,7 @@ use s3::Bucket;
 use s3::Region;
 use tokio::fs::{self, create_dir_all};
 
-use crate::api::{DownloadConfig, Manifest, ManifestFile, ManifestLink};
+use crate::api::{decompress_gz_in_place, DownloadConfig, Manifest, ManifestFile, ManifestLink};
 
 #[cfg(unix)]
 async fn create_link(target: &Path, link: &Path) -> Result<()> {
@@ -27,6 +27,37 @@ async fn create_link(target: &Path, link: &Path) -> Result<()> {
 }
 
 const DOWNLOAD_CONCURRENCY: usize = 64;
+
+/// Decompresses a downloaded `*.gz` file next to itself (`foo.log.gz` -> `foo.log`).
+/// Returns the original key when decompression happened. On failure the `.gz` file is kept.
+async fn decompress_if_gz(key: &str, local_path: &Path) -> Option<String> {
+    key.strip_suffix(".gz")?;
+    let path = local_path.to_path_buf();
+    let result = tokio::task::spawn_blocking(move || decompress_gz_in_place(&path))
+        .await
+        .map_err(anyhow::Error::from)
+        .and_then(|r| r);
+    match result {
+        Ok(()) => Some(key.to_string()),
+        Err(e) => {
+            log::warn!("Failed to decompress {}, keeping it as is: {}", key, e);
+            let _ = fs::remove_file(local_path.with_extension("")).await;
+            None
+        }
+    }
+}
+
+/// Rewrites a link whose target was decompressed so it points at the decompressed file,
+/// dropping the `.gz` suffix from the link name as well.
+fn resolve_link<'a>(link: &'a ManifestLink, decompressed: &HashSet<String>) -> (&'a str, &'a str) {
+    match link.target.strip_suffix(".gz") {
+        Some(target) if decompressed.contains(&link.target) => {
+            let key = link.key.strip_suffix(".gz").unwrap_or(&link.key);
+            (key, target)
+        }
+        _ => (&link.key, &link.target),
+    }
+}
 
 fn create_bucket(config: &DownloadConfig) -> Result<Box<Bucket>> {
     let region = Region::Custom {
@@ -92,58 +123,66 @@ pub async fn download_via_manifest(
         create_dir_all(&full).await?;
     }
 
-    let download_results: Vec<Result<()>> = stream::iter(files.into_iter().map(|file| {
-        let bucket = bucket.clone();
-        let prefix = config.prefix.clone();
-        let output = output.to_path_buf();
-        let pb = progress_bar.clone();
-        async move {
-            let s3_key = format!("{}{}", prefix, file.key);
-            let local_path = output.join(&file.key);
+    let download_results: Vec<Result<Option<String>>> =
+        stream::iter(files.into_iter().map(|file| {
+            let bucket = bucket.clone();
+            let prefix = config.prefix.clone();
+            let output = output.to_path_buf();
+            let pb = progress_bar.clone();
+            async move {
+                let s3_key = format!("{}{}", prefix, file.key);
+                let local_path = output.join(&file.key);
 
-            let mut last_err = None;
-            for attempt in 1..=3 {
-                let result = async {
-                    let mut dst = fs::File::create(&local_path).await?;
-                    bucket
-                        .get_object_to_writer(&s3_key, &mut dst)
-                        .await
-                        .map_err(|e| anyhow::anyhow!("{}", e))
-                }
-                .await;
-                match result {
-                    Ok(_) => {
-                        if let Some(pb) = &pb {
-                            pb.inc(1);
+                let mut last_err = None;
+                for attempt in 1..=3 {
+                    let result = async {
+                        let mut dst = fs::File::create(&local_path).await?;
+                        bucket
+                            .get_object_to_writer(&s3_key, &mut dst)
+                            .await
+                            .map_err(|e| anyhow::anyhow!("{}", e))
+                    }
+                    .await;
+                    match result {
+                        Ok(_) => {
+                            let decompressed = decompress_if_gz(&file.key, &local_path).await;
+                            if let Some(pb) = &pb {
+                                pb.inc(1);
+                            }
+                            return Ok(decompressed);
                         }
-                        return Ok(());
-                    }
-                    Err(e) => {
-                        debug!("Attempt {}/3 failed for {}: {}", attempt, file.key, e);
-                        last_err = Some(e);
+                        Err(e) => {
+                            debug!("Attempt {}/3 failed for {}: {}", attempt, file.key, e);
+                            last_err = Some(e);
+                        }
                     }
                 }
+                Err(anyhow::anyhow!(
+                    "Failed to download {} after 3 attempts: {}",
+                    file.key,
+                    last_err.unwrap()
+                ))
             }
-            Err(anyhow::anyhow!(
-                "Failed to download {} after 3 attempts: {}",
-                file.key,
-                last_err.unwrap()
-            ))
-        }
-    }))
-    .buffer_unordered(DOWNLOAD_CONCURRENCY)
-    .collect()
-    .await;
+        }))
+        .buffer_unordered(DOWNLOAD_CONCURRENCY)
+        .collect()
+        .await;
 
-    for result in &download_results {
-        if let Err(e) = result {
-            return Err(anyhow::anyhow!("Download failed: {}", e));
+    let mut decompressed: HashSet<String> = HashSet::new();
+    for result in download_results {
+        match result {
+            Ok(Some(key)) => {
+                decompressed.insert(key);
+            }
+            Ok(None) => {}
+            Err(e) => return Err(anyhow::anyhow!("Download failed: {}", e)),
         }
     }
 
     for link in &links {
-        let target_path = output.join(&link.target);
-        let link_path = output.join(&link.key);
+        let (link_key, link_target) = resolve_link(link, &decompressed);
+        let target_path = output.join(link_target);
+        let link_path = output.join(link_key);
         if target_path.exists() {
             create_link(&target_path, &link_path).await?;
             if let Some(pb) = &progress_bar {
@@ -163,4 +202,83 @@ pub async fn download_via_manifest(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+    use std::io::Write;
+    use tempfile::tempdir;
+
+    fn link(key: &str, target: &str) -> ManifestLink {
+        ManifestLink {
+            key: key.to_string(),
+            target: target.to_string(),
+        }
+    }
+
+    #[tokio::test]
+    async fn decompresses_gz_file_in_place() {
+        let dir = tempdir().unwrap();
+        let gz_path = dir.path().join("test.log.gz");
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(b"hello log").unwrap();
+        std::fs::write(&gz_path, encoder.finish().unwrap()).unwrap();
+
+        let result = decompress_if_gz("logs/test.log.gz", &gz_path).await;
+
+        assert_eq!(result.as_deref(), Some("logs/test.log.gz"));
+        assert!(!gz_path.exists());
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join("test.log")).unwrap(),
+            "hello log"
+        );
+    }
+
+    #[tokio::test]
+    async fn keeps_invalid_gz_file() {
+        let dir = tempdir().unwrap();
+        let gz_path = dir.path().join("broken.log.gz");
+        std::fs::write(&gz_path, b"not gzip").unwrap();
+
+        let result = decompress_if_gz("broken.log.gz", &gz_path).await;
+
+        assert_eq!(result, None);
+        assert!(gz_path.exists());
+        assert!(!dir.path().join("broken.log").exists());
+    }
+
+    #[tokio::test]
+    async fn skips_non_gz_file() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("video.mp4");
+        std::fs::write(&path, b"data").unwrap();
+
+        assert_eq!(decompress_if_gz("video.mp4", &path).await, None);
+        assert_eq!(std::fs::read(&path).unwrap(), b"data");
+    }
+
+    #[test]
+    fn rewrites_link_to_decompressed_target() {
+        let decompressed = HashSet::from(["logs/omni/a.log.gz".to_string()]);
+        let l = link("report/data/attachments/abc.gz", "logs/omni/a.log.gz");
+
+        assert_eq!(
+            resolve_link(&l, &decompressed),
+            ("report/data/attachments/abc", "logs/omni/a.log")
+        );
+    }
+
+    #[test]
+    fn keeps_link_when_target_not_decompressed() {
+        let decompressed = HashSet::new();
+        let l = link("report/data/attachments/abc.gz", "logs/omni/a.log.gz");
+
+        assert_eq!(
+            resolve_link(&l, &decompressed),
+            ("report/data/attachments/abc.gz", "logs/omni/a.log.gz")
+        );
+    }
 }
