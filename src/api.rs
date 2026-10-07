@@ -869,7 +869,7 @@ pub struct RapiError {
     pub message: String,
 }
 
-fn decompress_gz_in_place(path: &Path) -> Result<()> {
+pub(crate) fn decompress_gz_in_place(path: &Path) -> Result<()> {
     let gz_file = std::fs::File::open(path)?;
     let mut decoder = GzDecoder::new(std::io::BufReader::new(gz_file));
 
