@@ -135,16 +135,27 @@ pub async fn download_via_manifest(
 
                 let mut last_err = None;
                 for attempt in 1..=3 {
-                    let result = async {
+                    let result: Result<()> = async {
                         let mut dst = fs::File::create(&local_path).await?;
-                        bucket
+                        let status = bucket
                             .get_object_to_writer(&s3_key, &mut dst)
                             .await
-                            .map_err(|e| anyhow::anyhow!("{}", e))
+                            .map_err(|e| anyhow::anyhow!("{}", e))?;
+                        if !(200..300).contains(&status) {
+                            anyhow::bail!("HTTP status {}", status);
+                        }
+
+                        tokio::io::AsyncWriteExt::flush(&mut dst).await?;
+                        let downloaded_size = fs::metadata(&local_path).await?.len();
+                        if downloaded_size != file.size {
+                            anyhow::bail!("expected {} bytes, got {}", file.size, downloaded_size);
+                        }
+
+                        Ok(())
                     }
                     .await;
                     match result {
-                        Ok(_) => {
+                        Ok(()) => {
                             let decompressed = decompress_if_gz(&file.key, &local_path).await;
                             if let Some(pb) = &pb {
                                 pb.inc(1);
@@ -207,16 +218,63 @@ pub async fn download_via_manifest(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::TempCredentials;
     use flate2::write::GzEncoder;
     use flate2::Compression;
     use std::io::Write;
     use tempfile::tempdir;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+    use tokio::task::JoinHandle;
 
     fn link(key: &str, target: &str) -> ManifestLink {
         ManifestLink {
             key: key.to_string(),
             target: target.to_string(),
         }
+    }
+
+    fn file(key: &str, size: u64) -> ManifestFile {
+        ManifestFile {
+            key: key.to_string(),
+            size,
+        }
+    }
+
+    fn download_config(endpoint: String) -> DownloadConfig {
+        DownloadConfig {
+            credentials: TempCredentials {
+                access_key_id: "access-key".to_string(),
+                secret_access_key: "secret-key".to_string(),
+                session_token: "session-token".to_string(),
+                expiration: "2100-01-01T00:00:00Z".to_string(),
+            },
+            bucket: "test-bucket".to_string(),
+            endpoint,
+            region: "us-east-1".to_string(),
+            prefix: "run-id/".to_string(),
+        }
+    }
+
+    async fn serve_response(status: &'static str, body: &'static [u8]) -> (String, JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            loop {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut request = [0; 4096];
+                let _ = socket.read(&mut request).await;
+                let headers = format!(
+                    "HTTP/1.1 {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    status,
+                    body.len()
+                );
+                socket.write_all(headers.as_bytes()).await.unwrap();
+                socket.write_all(body).await.unwrap();
+            }
+        });
+
+        (format!("http://{}", address), server)
     }
 
     #[tokio::test]
@@ -258,6 +316,69 @@ mod tests {
 
         assert_eq!(decompress_if_gz("video.mp4", &path).await, None);
         assert_eq!(std::fs::read(&path).unwrap(), b"data");
+    }
+
+    #[tokio::test]
+    async fn rejects_empty_error_response() {
+        let (endpoint, server) = serve_response("404 Not Found", b"").await;
+        let dir = tempdir().unwrap();
+        let key = "report/allure-results/result.json";
+
+        let result = download_via_manifest(
+            &download_config(endpoint),
+            dir.path(),
+            vec![file(key, 0)],
+            vec![],
+            true,
+        )
+        .await;
+        server.abort();
+
+        let error = result.expect_err("an empty 404 response must not be a successful download");
+        assert!(error.to_string().contains("404"), "{error}");
+    }
+
+    #[tokio::test]
+    async fn rejects_response_with_unexpected_size() {
+        let (endpoint, server) = serve_response("200 OK", b"{}").await;
+        let dir = tempdir().unwrap();
+        let key = "report/allure-results/result.json";
+
+        let result = download_via_manifest(
+            &download_config(endpoint),
+            dir.path(),
+            vec![file(key, 3)],
+            vec![],
+            true,
+        )
+        .await;
+        server.abort();
+
+        let error = result.expect_err("a short response must not be a successful download");
+        assert!(
+            error.to_string().contains("expected 3 bytes, got 2"),
+            "{error}"
+        );
+    }
+
+    #[tokio::test]
+    async fn downloads_response_with_expected_size() {
+        let (endpoint, server) = serve_response("200 OK", b"{}").await;
+        let dir = tempdir().unwrap();
+        let key = "report/allure-results/result.json";
+
+        download_via_manifest(
+            &download_config(endpoint),
+            dir.path(),
+            vec![file(key, 2)],
+            vec![],
+            true,
+        )
+        .await
+        .unwrap();
+        server.abort();
+
+        assert_eq!(std::fs::read(dir.path().join(key)).unwrap(), b"{}");
     }
 
     #[test]
