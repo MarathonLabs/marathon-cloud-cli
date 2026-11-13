@@ -21,37 +21,35 @@ use crate::{errors::InputError, filtering};
 
 #[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
 pub enum IosDevice {
-    #[clap(name = "iPhone-11")]
-    IPhone11,
     #[clap(name = "iPhone-16")]
     IPhone16,
     #[clap(name = "iPhone-16-Pro")]
     IPhone16Pro,
     #[clap(name = "iPhone-16-Pro-Max")]
     IPhone16ProMax,
-    #[clap(name = "iPhone-16-Plus")]
-    IPhone16Plus,
     #[clap(name = "iPhone-17")]
     IPhone17,
     #[clap(name = "iPhone-17-Pro")]
     IPhone17Pro,
     #[clap(name = "iPhone-17-Pro-Max")]
     IPhone17ProMax,
+    #[clap(name = "iPhone-18-Pro")]
+    IPhone18Pro,
+    #[clap(name = "iPhone-18-Pro-Max")]
+    IPhone18ProMax,
+    #[clap(name = "iPhone-Duo")]
+    IPhoneDuo,
 }
 
 impl Display for IosDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            IosDevice::IPhone11 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-11"),
             IosDevice::IPhone16 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16"),
             IosDevice::IPhone16Pro => {
                 f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro")
             }
             IosDevice::IPhone16ProMax => {
                 f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max")
-            }
-            IosDevice::IPhone16Plus => {
-                f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-16-Plus")
             }
             IosDevice::IPhone17 => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-17"),
             IosDevice::IPhone17Pro => {
@@ -60,26 +58,34 @@ impl Display for IosDevice {
             IosDevice::IPhone17ProMax => {
                 f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max")
             }
+            IosDevice::IPhone18Pro => {
+                f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro")
+            }
+            IosDevice::IPhone18ProMax => {
+                f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro-Max")
+            }
+            IosDevice::IPhoneDuo => f.write_str("com.apple.CoreSimulator.SimDeviceType.iPhone-Duo"),
         }
     }
 }
 
-#[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
+/// Oldest first: `Ord` is release order.
+#[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OsVersion {
-    #[clap(name = "18.2")]
-    Ios18_2,
     #[clap(name = "18.4")]
     Ios18_4,
     #[clap(name = "26.1")]
     Ios26_1,
+    #[clap(name = "27.2")]
+    Ios27_2,
 }
 
 impl Display for OsVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OsVersion::Ios18_2 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-18-2"),
             OsVersion::Ios18_4 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-18-4"),
             OsVersion::Ios26_1 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-26-1"),
+            OsVersion::Ios27_2 => f.write_str("com.apple.CoreSimulator.SimRuntime.iOS-27-2"),
         }
     }
 }
@@ -94,6 +100,8 @@ pub enum XcodeVersion {
     Xcode16_3,
     #[clap(name = "26.1")]
     Xcode26_1,
+    #[clap(name = "27.2")]
+    Xcode27_2,
 }
 
 impl Display for XcodeVersion {
@@ -103,30 +111,62 @@ impl Display for XcodeVersion {
             XcodeVersion::Xcode16_2 => f.write_str("16.2"),
             XcodeVersion::Xcode16_3 => f.write_str("16.3"),
             XcodeVersion::Xcode26_1 => f.write_str("26.1"),
+            XcodeVersion::Xcode27_2 => f.write_str("27.2"),
         }
     }
 }
 
+/// The simulators Marathon Cloud has for each iOS version, newest first.
 pub(crate) fn get_supported_configs() -> Vec<(Option<IosDevice>, Option<OsVersion>)> {
     vec![
-        // iOS-18-2
-        (Some(IosDevice::IPhone11), Some(OsVersion::Ios18_2)),
-        (Some(IosDevice::IPhone16), Some(OsVersion::Ios18_2)),
-        (Some(IosDevice::IPhone16Pro), Some(OsVersion::Ios18_2)),
-        (Some(IosDevice::IPhone16ProMax), Some(OsVersion::Ios18_2)),
-        (Some(IosDevice::IPhone16Plus), Some(OsVersion::Ios18_2)),
-        // iOS-18-4
-        (Some(IosDevice::IPhone11), Some(OsVersion::Ios18_4)),
-        (Some(IosDevice::IPhone16), Some(OsVersion::Ios18_4)),
-        (Some(IosDevice::IPhone16Pro), Some(OsVersion::Ios18_4)),
-        (Some(IosDevice::IPhone16ProMax), Some(OsVersion::Ios18_4)),
-        (Some(IosDevice::IPhone16Plus), Some(OsVersion::Ios18_4)),
+        // iOS-27-2
+        (Some(IosDevice::IPhone17), Some(OsVersion::Ios27_2)),
+        (Some(IosDevice::IPhone17Pro), Some(OsVersion::Ios27_2)),
+        (Some(IosDevice::IPhone17ProMax), Some(OsVersion::Ios27_2)),
+        (Some(IosDevice::IPhone18Pro), Some(OsVersion::Ios27_2)),
+        (Some(IosDevice::IPhone18ProMax), Some(OsVersion::Ios27_2)),
+        (Some(IosDevice::IPhoneDuo), Some(OsVersion::Ios27_2)),
         // iOS-26-1
-        (Some(IosDevice::IPhone16Pro), Some(OsVersion::Ios26_1)),
         (Some(IosDevice::IPhone17), Some(OsVersion::Ios26_1)),
         (Some(IosDevice::IPhone17Pro), Some(OsVersion::Ios26_1)),
         (Some(IosDevice::IPhone17ProMax), Some(OsVersion::Ios26_1)),
+        // iOS-18-4
+        (Some(IosDevice::IPhone16), Some(OsVersion::Ios18_4)),
+        (Some(IosDevice::IPhone16Pro), Some(OsVersion::Ios18_4)),
+        (Some(IosDevice::IPhone16ProMax), Some(OsVersion::Ios18_4)),
     ]
+}
+
+/// The `--os-version` and `--device` values of every supported combination,
+/// one per line, a blank line between iOS versions.
+fn supported_configs_help() -> String {
+    let mut help = String::new();
+    let mut previous_os: Option<OsVersion> = None;
+    for (device, os_version) in get_supported_configs() {
+        let (Some(device), Some(os_version)) = (device, os_version) else {
+            continue;
+        };
+        if previous_os
+            .as_ref()
+            .is_some_and(|previous| previous != &os_version)
+        {
+            help.push('\n');
+        }
+        help.push_str(&format!(
+            "    --os-version {} --device {}\n",
+            value_name(&os_version),
+            value_name(&device)
+        ));
+        previous_os = Some(os_version);
+    }
+    help
+}
+
+fn value_name<T: clap::ValueEnum>(value: &T) -> String {
+    value
+        .to_possible_value()
+        .map(|value| value.get_name().to_owned())
+        .unwrap_or_default()
 }
 
 pub(crate) async fn infer_parameters(
@@ -152,6 +192,13 @@ pub(crate) async fn infer_parameters(
     if filtered_configs.len() == 1 {
         let (final_device, final_os) = filtered_configs[0];
         return Ok((final_device.clone().unwrap(), final_os.clone().unwrap()));
+    }
+
+    // A device on several iOS versions without --os-version runs on the newest
+    if let (Some(device), None) = (&device, &os_version) {
+        if let Some(newest) = filtered_configs.iter().filter_map(|(_, o)| o.clone()).max() {
+            return Ok((device.clone(), newest));
+        }
     }
 
     // If multiple configurations are still valid, we need more specific parameters
@@ -383,28 +430,15 @@ async fn validate_device_configuration(
             Ok((dev, os)) => (Some(dev), Some(os)),
             Err(_) => {
                 return Err(Err(ConfigurationError::UnsupportedRunConfiguration {
-                    message: "
-Please set --xcode-version, --os-version, and --device correctly.
+                    message: format!(
+                        "
+Please set --os-version and --device correctly.
 Supported iOS settings combinations are:
-    --os-version 18.2 --device iPhone-16
-    --os-version 18.2 --device iPhone-16-Pro
-    --os-version 18.2 --device iPhone-16-Pro-Max
-    --os-version 18.2 --device iPhone-16-Plus
-    --os-version 18.2 --device iPhone-11
-
-    --os-version 18.4 --device iPhone-16
-    --os-version 18.4 --device iPhone-16-Pro
-    --os-version 18.4 --device iPhone-16-Pro-Max
-    --os-version 18.4 --device iPhone-16-Plus
-    --os-version 18.4 --device iPhone-11
-
-    --os-version 26.1 --device iPhone-17
-    --os-version 26.1 --device iPhone-17-Pro
-    --os-version 26.1 --device iPhone-17-Pro-Max
-    --os-version 26.1 --device iPhone-16-Pro
-First example: If you choose --device iPhone-17 then the --os-version will be inferred (26.1).
-Second example: If you choose --device iPhone-11 then you will receive an error because --os-version param is ambiguous."
-                        .into(),
+{}
+If you set only --device, it runs on the newest --os-version that has it: --device iPhone-17 runs on 27.2.
+If you set only --os-version, set --device too: every iOS version has several devices.",
+                        supported_configs_help().trim_end()
+                    ),
                 }.into()));
             }
         }
@@ -417,15 +451,34 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_infer_parameters_device_and_xcode_version_provided() -> Result<()> {
-        let provided_device = Some(IosDevice::IPhone17);
-        let expected_os_version = OsVersion::Ios26_1;
-
+    async fn test_infer_parameters_device_only_runs_on_newest_os_version() -> Result<()> {
         let (inferred_device, inferred_os_version) =
-            infer_parameters(provided_device, None).await?;
+            infer_parameters(Some(IosDevice::IPhone17), None).await?;
 
         assert_eq!(inferred_device, IosDevice::IPhone17);
-        assert_eq!(inferred_os_version, expected_os_version);
+        assert_eq!(inferred_os_version, OsVersion::Ios27_2);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_infer_parameters_device_only_on_one_os_version() -> Result<()> {
+        let (inferred_device, inferred_os_version) =
+            infer_parameters(Some(IosDevice::IPhone16), None).await?;
+
+        assert_eq!(inferred_device, IosDevice::IPhone16);
+        assert_eq!(inferred_os_version, OsVersion::Ios18_4);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_infer_parameters_iphone_duo_runs_on_27_2() -> Result<()> {
+        let (inferred_device, inferred_os_version) =
+            infer_parameters(Some(IosDevice::IPhoneDuo), None).await?;
+
+        assert_eq!(inferred_device, IosDevice::IPhoneDuo);
+        assert_eq!(inferred_os_version, OsVersion::Ios27_2);
 
         Ok(())
     }
@@ -438,36 +491,60 @@ mod tests {
 
     #[tokio::test]
     async fn test_infer_parameters_complete_input_valid() -> Result<()> {
-        let provided_device = Some(IosDevice::IPhone16);
-        let provided_os_version = Some(OsVersion::Ios18_2);
-
         let (inferred_device, inferred_os_version) =
-            infer_parameters(provided_device, provided_os_version).await?;
+            infer_parameters(Some(IosDevice::IPhone17), Some(OsVersion::Ios26_1)).await?;
 
-        assert_eq!(inferred_device, IosDevice::IPhone16);
-        assert_eq!(inferred_os_version, OsVersion::Ios18_2);
+        assert_eq!(inferred_device, IosDevice::IPhone17);
+        assert_eq!(inferred_os_version, OsVersion::Ios26_1);
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_infer_parameters_invalid_device_and_xcode_combination_should_error() {
-        let provided_os_version = Some(OsVersion::Ios18_2);
-        let result = infer_parameters(None, provided_os_version).await;
+    async fn test_infer_parameters_os_version_only_should_error() {
+        let result = infer_parameters(None, Some(OsVersion::Ios27_2)).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
-    async fn test_infer_parameters_valid_for_iphone_16_and_os_version_18_4() -> Result<()> {
-        let provided_device = Some(IosDevice::IPhone16);
-        let provided_os_version = Some(OsVersion::Ios18_4);
+    async fn test_infer_parameters_device_not_on_os_version_should_error() {
+        let result = infer_parameters(Some(IosDevice::IPhone16), Some(OsVersion::Ios27_2)).await;
+        assert!(result.is_err());
+    }
 
-        let (inferred_device, inferred_os_version) =
-            infer_parameters(provided_device, provided_os_version).await?;
+    #[test]
+    fn test_os_version_order_is_release_order() {
+        assert!(OsVersion::Ios18_4 < OsVersion::Ios26_1);
+        assert!(OsVersion::Ios26_1 < OsVersion::Ios27_2);
+    }
 
-        assert_eq!(inferred_device, IosDevice::IPhone16);
-        assert_eq!(inferred_os_version, OsVersion::Ios18_4);
+    #[test]
+    fn test_supported_configs_help_lists_every_combination() {
+        let help = supported_configs_help();
 
-        Ok(())
+        assert!(help.starts_with("    --os-version 27.2 --device iPhone-17\n"));
+        assert!(help.contains("    --os-version 27.2 --device iPhone-Duo\n\n    --os-version 26.1"));
+        assert!(help.ends_with("    --os-version 18.4 --device iPhone-16-Pro-Max\n"));
+        assert_eq!(
+            help.lines().filter(|line| !line.is_empty()).count(),
+            get_supported_configs().len()
+        );
+    }
+
+    #[test]
+    fn test_retired_values_are_rejected() {
+        use clap::ValueEnum;
+
+        assert!(OsVersion::from_str("18.2", false).is_err());
+        assert!(IosDevice::from_str("iPhone-11", false).is_err());
+        assert!(IosDevice::from_str("iPhone-16-Plus", false).is_err());
+        assert_eq!(
+            OsVersion::Ios27_2.to_string(),
+            "com.apple.CoreSimulator.SimRuntime.iOS-27-2"
+        );
+        assert_eq!(
+            IosDevice::from_str("iPhone-Duo", false).map(|device| device.to_string()),
+            Ok("com.apple.CoreSimulator.SimDeviceType.iPhone-Duo".to_owned())
+        );
     }
 }
