@@ -69,8 +69,7 @@ impl Display for IosDevice {
     }
 }
 
-/// Oldest first: `Ord` is release order.
-#[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, clap::ValueEnum, Clone, PartialEq, Eq)]
 pub enum OsVersion {
     #[clap(name = "18.4")]
     Ios18_4,
@@ -192,13 +191,6 @@ pub(crate) async fn infer_parameters(
     if filtered_configs.len() == 1 {
         let (final_device, final_os) = filtered_configs[0];
         return Ok((final_device.clone().unwrap(), final_os.clone().unwrap()));
-    }
-
-    // A device on several iOS versions without --os-version runs on the newest
-    if let (Some(device), None) = (&device, &os_version) {
-        if let Some(newest) = filtered_configs.iter().filter_map(|(_, o)| o.clone()).max() {
-            return Ok((device.clone(), newest));
-        }
     }
 
     // If multiple configurations are still valid, we need more specific parameters
@@ -435,7 +427,7 @@ async fn validate_device_configuration(
 Please set --os-version and --device correctly.
 Supported iOS settings combinations are:
 {}
-If you set only --device, it runs on the newest --os-version that has it: --device iPhone-17 runs on 27.2.
+If you set only --device, --os-version is inferred when the device is on one iOS version; iPhone-17, iPhone-17-Pro and iPhone-17-Pro-Max are on 26.1 and 27.2, so set --os-version with them.
 If you set only --os-version, set --device too: every iOS version has several devices.",
                         supported_configs_help().trim_end()
                     ),
@@ -451,14 +443,30 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_infer_parameters_device_only_runs_on_newest_os_version() -> Result<()> {
-        let (inferred_device, inferred_os_version) =
-            infer_parameters(Some(IosDevice::IPhone17), None).await?;
+    async fn test_infer_parameters_device_on_several_os_versions_should_error() {
+        for device in [
+            IosDevice::IPhone17,
+            IosDevice::IPhone17Pro,
+            IosDevice::IPhone17ProMax,
+        ] {
+            let result = infer_parameters(Some(device.clone()), None).await;
+            assert!(result.is_err(), "{device:?} alone must need --os-version");
+        }
+    }
 
-        assert_eq!(inferred_device, IosDevice::IPhone17);
-        assert_eq!(inferred_os_version, OsVersion::Ios27_2);
+    #[tokio::test]
+    async fn test_device_on_several_os_versions_error_lists_every_combination() {
+        let Err(Err(error)) = validate_device_configuration(None, Some(IosDevice::IPhone17)).await
+        else {
+            panic!("--device iPhone-17 without --os-version must be rejected");
+        };
+        let Some(ConfigurationError::UnsupportedRunConfiguration { message }) =
+            error.downcast_ref::<ConfigurationError>()
+        else {
+            panic!("expected UnsupportedRunConfiguration, got: {error}");
+        };
 
-        Ok(())
+        assert!(message.contains(supported_configs_help().trim_end()));
     }
 
     #[tokio::test]
@@ -478,6 +486,17 @@ mod tests {
             infer_parameters(Some(IosDevice::IPhoneDuo), None).await?;
 
         assert_eq!(inferred_device, IosDevice::IPhoneDuo);
+        assert_eq!(inferred_os_version, OsVersion::Ios27_2);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_infer_parameters_iphone_18_pro_runs_on_27_2() -> Result<()> {
+        let (inferred_device, inferred_os_version) =
+            infer_parameters(Some(IosDevice::IPhone18Pro), None).await?;
+
+        assert_eq!(inferred_device, IosDevice::IPhone18Pro);
         assert_eq!(inferred_os_version, OsVersion::Ios27_2);
 
         Ok(())
@@ -510,12 +529,6 @@ mod tests {
     async fn test_infer_parameters_device_not_on_os_version_should_error() {
         let result = infer_parameters(Some(IosDevice::IPhone16), Some(OsVersion::Ios27_2)).await;
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_os_version_order_is_release_order() {
-        assert!(OsVersion::Ios18_4 < OsVersion::Ios26_1);
-        assert!(OsVersion::Ios26_1 < OsVersion::Ios27_2);
     }
 
     #[test]
